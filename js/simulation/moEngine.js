@@ -14,7 +14,21 @@
    simulated signal literally IS a documented indicator -- the MO's
    falsePositivePossibilities and recommendedActions are always pulled
    verbatim from that matched pattern's real taxonomy data, or left
-   generic if nothing matches confidently. */
+   generic if nothing matches confidently.
+
+   DISCOVERY / NOVELTY: every MO's "signature" (its sorted distinct
+   signal types) is tallied across the whole run in engine.signatures.
+   The first time a signature appears, and how strongly it resembles
+   an existing taxonomy pattern, decides its classification:
+     KNOWN_MO          - recurring signature, seen many times before
+     MO_VARIANT        - strongly resembles a known pattern, but this
+                          exact signal combination hasn't recurred yet
+     POTENTIAL_NEW_MO  - some resemblance to a known pattern, rare/new
+     EMERGING_BEHAVIOR - no confident resemblance to anything known
+   This never invents a new taxonomy pattern -- it only says "this
+   combination of already-real signal types hasn't been seen (much)
+   before," which is a claim about the simulation's own history, not
+   about the real world. */
 const FWMoEngine = (() => {
   const CREATE_THRESHOLD = 3.5;      // combined weight*reliability needed to open an MO
   const MIN_SIGNAL_TYPES = 2;        // require a chain of >=2 distinct signal kinds
@@ -59,10 +73,13 @@ const FWMoEngine = (() => {
     return 'CRITICAL';
   }
 
-  function matchPattern(signals) {
-    if (typeof FW === 'undefined' || !FW.patterns) return null;
+  // Returns every taxonomy pattern with at least one keyword vote,
+  // sorted strongest match first, so buildMo can pick the best while
+  // also keeping runners-up for "related historical patterns."
+  function rankPatterns(signals) {
+    if (typeof FW === 'undefined' || !FW.patterns) return [];
     const patterns = FW.patterns();
-    if (!patterns || !patterns.length) return null;
+    if (!patterns || !patterns.length) return [];
 
     const votes = new Map();
     signals.forEach(s => {
@@ -74,11 +91,44 @@ const FWMoEngine = (() => {
         });
       });
     });
-    if (!votes.size) return null;
+    return Array.from(votes.entries())
+      .map(([id, votes]) => ({ pattern: patterns.find(p => p.id === id), votes }))
+      .filter(r => r.pattern)
+      .sort((a, b) => b.votes - a.votes);
+  }
 
-    let bestId = null, bestVotes = 0;
-    votes.forEach((v, id) => { if (v > bestVotes) { bestVotes = v; bestId = id; } });
-    return patterns.find(p => p.id === bestId) || null;
+  function matchPattern(signals) {
+    const ranked = rankPatterns(signals);
+    return ranked.length ? ranked[0].pattern : null;
+  }
+
+  // Sorted, de-duplicated signal-type fingerprint -- the unit the
+  // discovery engine tracks recurrence/novelty against.
+  function signalSignature(signals) {
+    return Array.from(new Set(signals.map(s => s.type))).sort().join('+');
+  }
+
+  function classifyDiscovery(ranked, priorCount) {
+    const topVotes = ranked.length ? ranked[0].votes : 0;
+    if (!ranked.length) return 'EMERGING_BEHAVIOR';       // no resemblance to anything known
+    if (priorCount === 0) return topVotes >= 3 ? 'MO_VARIANT' : 'POTENTIAL_NEW_MO';
+    if (priorCount < 3) return 'POTENTIAL_NEW_MO';
+    return 'KNOWN_MO';                                     // recurring combination, well understood by now
+  }
+
+  function noveltyFromRecurrence(priorCount) {
+    return Math.max(5, 100 - priorCount * 18);
+  }
+
+  function differencesFromKnown(ranked, classification) {
+    if (classification === 'KNOWN_MO') return [];
+    if (!ranked.length) {
+      return ['This signal combination has no confident resemblance to any documented pattern in the taxonomy.'];
+    }
+    const names = ranked.slice(1, 3).map(r => r.pattern.name);
+    const base = [`Resembles ${ranked[0].pattern.name} but this exact combination of signal types hasn't recurred (yet) in this simulation.`];
+    if (names.length) base.push(`Also shares partial characteristics with: ${names.join(', ')}.`);
+    return base;
   }
 
   function buildEvidence(signals) {
@@ -100,7 +150,14 @@ const FWMoEngine = (() => {
     const id = 'MO-' + String(engine.nextMoId++).padStart(4, '0');
     const rawScore = scoreSignals(signals);
     const confidence = confidenceFromScore(rawScore);
-    const pattern = matchPattern(signals);
+    const ranked = rankPatterns(signals);
+    const pattern = ranked.length ? ranked[0].pattern : null;
+
+    const signature = signalSignature(signals);
+    const priorCount = engine.signatures.get(signature) || 0;
+    engine.signatures.set(signature, priorCount + 1);
+    const classification = classifyDiscovery(ranked, priorCount);
+    const noveltyScore = noveltyFromRecurrence(priorCount);
 
     return {
       id,
@@ -109,10 +166,16 @@ const FWMoEngine = (() => {
       confidence,
       severity: confidenceLabel(confidence),
       status: 'NEW',
+      classification,
+      noveltyScore,
+      recurrenceCount: priorCount + 1,
+      signature,
       entities: { truckId: truck.id, driverId: truck.driverId, trailerId: truck.trailerId, carrierId: truck.carrierId },
       signals: signals.map(s => s.id),
       timeline: signals.map(s => ({ t: s.createdAt, type: s.type })).sort((a, b) => a.t - b.t),
       relatedPattern: pattern ? pattern.id : null,
+      relatedHistoricalPatterns: ranked.slice(0, 3).map(r => ({ id: r.pattern.id, name: r.pattern.name, votes: r.votes })),
+      differencesFromKnownPatterns: differencesFromKnown(ranked, classification),
       falsePositivePossibilities: pattern ? pattern.false_positives.slice(0, 2) : [],
       recommendedActions: recommendedActionsFor(pattern),
       evidence: buildEvidence(signals),
@@ -133,7 +196,17 @@ const FWMoEngine = (() => {
   }
 
   function createEngine() {
-    return { nextMoId: 1, mos: new Map(), byEntity: new Map() };
+    return { nextMoId: 1, mos: new Map(), byEntity: new Map(), signatures: new Map() };
+  }
+
+  // Snapshot of the discovery engine's own history -- how many
+  // distinct signal-combinations it has ever seen, and which are
+  // still rare/novel. Useful for a "what's new" summary view.
+  function discoverySummary(engine) {
+    const all = Array.from(engine.mos.values());
+    const byClass = { KNOWN_MO: 0, MO_VARIANT: 0, POTENTIAL_NEW_MO: 0, EMERGING_BEHAVIOR: 0 };
+    all.forEach(mo => { if (byClass[mo.classification] != null) byClass[mo.classification]++; });
+    return { totalSignatures: engine.signatures.size, totalMos: all.length, byClassification: byClass };
   }
 
   // Call once per simulation step (or batched) after behaviorEngine +
@@ -177,8 +250,9 @@ const FWMoEngine = (() => {
   }
 
   return {
-    createEngine, process, setStatus, scoreSignals, matchPattern,
+    createEngine, process, setStatus, scoreSignals, matchPattern, rankPatterns,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
+    signalSignature, classifyDiscovery, noveltyFromRecurrence, discoverySummary,
     OPEN_STATUSES, CLOSED_STATUSES, CREATE_THRESHOLD, MIN_SIGNAL_TYPES
   };
 })();

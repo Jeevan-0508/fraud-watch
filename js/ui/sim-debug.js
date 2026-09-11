@@ -71,6 +71,26 @@ const FWSimDebug = (() => {
     return map[sev] || map.LOW;
   }
 
+  function classificationBadgeClass(cls) {
+    const map = {
+      KNOWN_MO: 'bg-slate-700 text-slate-300',
+      MO_VARIANT: 'bg-indigo-900 text-indigo-300',
+      POTENTIAL_NEW_MO: 'bg-fuchsia-900 text-fuchsia-300',
+      EMERGING_BEHAVIOR: 'bg-rose-900 text-rose-300'
+    };
+    return map[cls] || map.KNOWN_MO;
+  }
+
+  function classificationLabel(cls) {
+    const map = {
+      KNOWN_MO: 'Known MO',
+      MO_VARIANT: 'New Variant',
+      POTENTIAL_NEW_MO: 'Potential New MO',
+      EMERGING_BEHAVIOR: 'Emerging Behavior'
+    };
+    return map[cls] || cls;
+  }
+
   function renderClock(state) {
     if (!els.clock) return;
     const c = state.clock;
@@ -129,21 +149,39 @@ const FWSimDebug = (() => {
     if (!els.moList) return;
     const mos = Array.from(state.moEngine.mos.values())
       .sort((a, b) => b.lastObserved - a.lastObserved);
+
+    const summary = FWMoEngine.discoverySummary(state.moEngine);
+    const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
+      <span>${summary.totalSignatures} distinct behavior patterns seen</span>
+      <span class="text-fuchsia-400">${summary.byClassification.POTENTIAL_NEW_MO} potential new MOs</span>
+      <span class="text-indigo-400">${summary.byClassification.MO_VARIANT} new variants</span>
+      <span class="text-rose-400">${summary.byClassification.EMERGING_BEHAVIOR} unmatched behavior</span>
+      <span>${summary.byClassification.KNOWN_MO} confirmed recurring</span>
+    </div>`;
+
     if (!mos.length) {
-      els.moList.innerHTML = '<p class="text-slate-600 text-xs italic">No open cases yet — normal traffic only.</p>';
+      els.moList.innerHTML = summaryHtml + '<p class="text-slate-600 text-xs italic">No open cases yet — normal traffic only.</p>';
       return;
     }
-    els.moList.innerHTML = mos.slice(0, 12).map(mo => {
+    els.moList.innerHTML = summaryHtml + mos.slice(0, 12).map(mo => {
       const fp = (mo.falsePositivePossibilities || []).slice(0, 2)
         .map(f => `<li>${typeof f === 'string' ? f : (f.looks_like || JSON.stringify(f))}</li>`).join('');
       const actions = (mo.recommendedActions || []).slice(0, 2).map(a => `<li>${a}</li>`).join('');
+      const diffs = (mo.differencesFromKnownPatterns || []).map(d => `<li>${d}</li>`).join('');
+      const related = (mo.relatedHistoricalPatterns || []).map(p => p.name).join(', ');
       return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2 mb-2">
         <div class="flex items-center justify-between mb-1">
           <span class="font-mono text-[11px] text-slate-300">${mo.id} · ${mo.entities.truckId}</span>
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${severityBadgeClass(mo.severity)}">${mo.severity} · ${Math.round(mo.confidence)}%</span>
         </div>
         <div class="text-xs text-white mb-1">${mo.title || mo.matchedPatternName || 'Unclassified pattern'}</div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${classificationBadgeClass(mo.classification)}">${classificationLabel(mo.classification)}</span>
+          <span class="text-[10px] text-slate-500">novelty ${mo.noveltyScore} · seen ${mo.recurrenceCount}×</span>
+        </div>
         <div class="text-[10px] text-slate-500 mb-1">status: ${mo.status}</div>
+        ${related ? `<div class="text-[10px] text-slate-500 mb-1">Closest known patterns: ${related}</div>` : ''}
+        ${diffs ? `<div class="text-[10px] text-slate-500">${diffs.replace(/<li>/g, '').replace(/<\/li>/g, ' ')}</div>` : ''}
         ${fp ? `<div class="text-[10px] text-slate-500">Could be innocent: <ul class="list-disc list-inside">${fp}</ul></div>` : ''}
         ${actions ? `<div class="text-[10px] text-slate-500">Recommended: <ul class="list-disc list-inside">${actions}</ul></div>` : ''}
       </div>`;
