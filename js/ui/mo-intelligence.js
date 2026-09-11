@@ -78,7 +78,12 @@ const FWMoIntelligence = (() => {
     const def = ACTIONS.find(a => a.action === action);
     if (!def) return;
     FWMoEngine.setStatus(mo, def.status, `Analyst action: ${def.label} (MO Intelligence Center)`);
+    // Closing a case is the only action that asserts something checkable,
+    // so it gets logged and checked against the simulation's own record
+    // (outcomeEngine, Phases 30/58). Non-terminal actions return null.
+    if (window.FWOutcomeEngine) FWOutcomeEngine.recordVerdict(state, mo, def.status);
     render(state);
+    if (window.FWCalibrationView) FWCalibrationView.render(state);
   }
 
   function handleInvestigation(moId, actionKey) {
@@ -271,6 +276,16 @@ const FWMoIntelligence = (() => {
     </div>`;
   }
 
+  function renderVerdictOutcome(mo) {
+    const v = mo.verdictOutcome;
+    if (!v) return '';
+    return `<div class="mb-2 pt-2 border-t border-slate-800">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Checked against the simulation's record</div>
+      <div class="text-[10px] text-slate-400">${v.narrative}</div>
+      <div class="text-[9px] text-slate-500 italic mt-1">Shown after closing only. "Unexplained" means no benign cause is on record for it — not that an act is proven.</div>
+    </div>`;
+  }
+
   function renderActions(mo) {
     const buttons = ACTIONS.map(a =>
       `<button data-mo-action="${a.action}" data-mo-id="${mo.id}" class="px-2 py-1 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 ${mo.status === a.status ? 'ring-1 ring-sky-500' : ''}">${a.label}</button>`
@@ -301,6 +316,7 @@ const FWMoIntelligence = (() => {
         ${renderDifferences(mo)}
         ${renderFalsePositives(mo)}
         ${renderInvestigation(mo)}
+        ${renderVerdictOutcome(mo)}
         <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Recommended</div>
         <ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mb-1">${(mo.recommendedActions || []).map(a => `<li>${a}</li>`).join('')}</ul>
         ${renderActions(mo)}

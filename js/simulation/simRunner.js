@@ -22,8 +22,9 @@ const FWSimRunner = (() => {
     const eventEngine = FWEventEngine.createEngine(seed + 1);
     const signalEngine = FWSignalEngine.createEngine();
     const moEngine = FWMoEngine.createEngine();
+    const outcomeEngine = FWOutcomeEngine.createEngine();
     state = {
-      seed, rng, clock, registry, eventEngine, signalEngine, moEngine,
+      seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;
