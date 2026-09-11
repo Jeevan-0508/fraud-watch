@@ -133,8 +133,23 @@ const FWMoEngine = (() => {
 
   function buildEvidence(signals) {
     return signals
-      .map(s => ({ signalType: s.type, contribution: Math.round(s.weight * s.reliability * 10) / 10, reliability: s.reliability, at: s.createdAt }))
+      .map(s => ({ signalId: s.id, signalType: s.type, contribution: Math.round(s.weight * s.reliability * 10) / 10, reliability: s.reliability, at: s.createdAt }))
       .sort((a, b) => a.at - b.at);
+  }
+
+  // An MO's evidence record only ever GROWS. A signal decaying means it
+  // stops counting toward confidence, not that it never happened -- so
+  // scoring uses the currently-active set while the case keeps the full
+  // history of every signal it was ever built on. (Before this, refresh
+  // overwrote the list, and a case opened on a three-signal chain could
+  // later show one signal, which also made its own past uninvestigable.)
+  function mergeEvidence(mo, signals) {
+    const seen = new Set((mo.evidence || []).map(e => e.signalId));
+    const added = buildEvidence(signals).filter(e => !seen.has(e.signalId));
+    mo.evidence = (mo.evidence || []).concat(added).sort((a, b) => a.at - b.at);
+    mo.signals = mo.evidence.map(e => e.signalId);
+    mo.timeline = mo.evidence.map(e => ({ t: e.at, type: e.signalType }));
+    mo.activeSignals = signals.map(s => s.id);
   }
 
   function recommendedActionsFor(pattern) {
@@ -164,6 +179,9 @@ const FWMoEngine = (() => {
       title: pattern ? `Possible ${pattern.name}` : 'Unclassified correlated anomaly',
       category: pattern ? pattern.category : 'unclassified',
       confidence,
+      baseConfidence: confidence,
+      investigationAdjustment: 0,
+      investigation: { findings: [], completed: [], effortSeconds: 0 },
       severity: confidenceLabel(confidence),
       status: 'NEW',
       classification,
@@ -172,7 +190,8 @@ const FWMoEngine = (() => {
       signature,
       entities: { truckId: truck.id, driverId: truck.driverId, trailerId: truck.trailerId, carrierId: truck.carrierId },
       signals: signals.map(s => s.id),
-      timeline: signals.map(s => ({ t: s.createdAt, type: s.type })).sort((a, b) => a.t - b.t),
+      activeSignals: signals.map(s => s.id),
+      timeline: buildEvidence(signals).map(e => ({ t: e.at, type: e.signalType })),
       relatedPattern: pattern ? pattern.id : null,
       relatedHistoricalPatterns: ranked.slice(0, 3).map(r => ({ id: r.pattern.id, name: r.pattern.name, votes: r.votes })),
       differencesFromKnownPatterns: differencesFromKnown(ranked, classification),
@@ -181,17 +200,29 @@ const FWMoEngine = (() => {
       evidence: buildEvidence(signals),
       firstObserved: Math.min(...signals.map(s => s.createdAt)),
       lastObserved: now,
+      autoFaded: false,
       resolutionReason: null
     };
   }
 
+  // Displayed confidence = what the correlation engine derived from the
+  // signals, plus whatever the player's own investigative findings have
+  // moved it by (investigationEngine, Phases 28-29). Kept as two stored
+  // numbers so new signals arriving never silently erase the analyst's
+  // gathered evidence, and so the UI can always show which part of the
+  // number came from the engine and which from the investigation.
+  function recomputeConfidence(mo) {
+    const base = mo.baseConfidence != null ? mo.baseConfidence : mo.confidence;
+    const adj = mo.investigationAdjustment || 0;
+    mo.confidence = Math.max(1, Math.min(100, Math.round(base + adj)));
+    mo.severity = confidenceLabel(mo.confidence);
+    return mo.confidence;
+  }
+
   function refreshMo(mo, signals, now) {
-    mo.signals = signals.map(s => s.id);
-    mo.timeline = signals.map(s => ({ t: s.createdAt, type: s.type })).sort((a, b) => a.t - b.t);
-    mo.evidence = buildEvidence(signals);
-    const confidence = confidenceFromScore(scoreSignals(signals));
-    mo.confidence = confidence;
-    mo.severity = confidenceLabel(confidence);
+    mergeEvidence(mo, signals);
+    mo.baseConfidence = confidenceFromScore(scoreSignals(signals));
+    recomputeConfidence(mo);
     mo.lastObserved = now;
   }
 
@@ -223,7 +254,12 @@ const FWMoEngine = (() => {
         const untouched = existing.status === 'INVESTIGATING' || existing.status === 'ESCALATED';
         if (active.length === 0 && !untouched && (now - existing.lastObserved) > DISMISS_IDLE_SECONDS) {
           existing.status = 'DISMISSED';
-          existing.resolutionReason = 'Signals faded before correlation was sustained.';
+          // Faded by the engine, not judged by an analyst -- flagged so
+          // later modules can tell "nobody ever looked at this" apart
+          // from "an analyst closed it", and can still allow record
+          // checks on it (investigationEngine, Phases 28-29).
+          existing.autoFaded = true;
+          existing.resolutionReason = 'Signals faded before correlation was sustained. No analyst reviewed it.';
           faded.push(existing);
         } else if (active.length > 0) {
           refreshMo(existing, active, now);
@@ -246,11 +282,12 @@ const FWMoEngine = (() => {
 
   function setStatus(mo, status, reason) {
     mo.status = status;
+    mo.autoFaded = false; // an analyst has now touched it, whatever it was before
     if (reason) mo.resolutionReason = reason;
   }
 
   return {
-    createEngine, process, setStatus, scoreSignals, matchPattern, rankPatterns,
+    createEngine, process, setStatus, recomputeConfidence, scoreSignals, mergeEvidence, matchPattern, rankPatterns,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
     signalSignature, classifyDiscovery, noveltyFromRecurrence, discoverySummary,
     OPEN_STATUSES, CLOSED_STATUSES, CREATE_THRESHOLD, MIN_SIGNAL_TYPES

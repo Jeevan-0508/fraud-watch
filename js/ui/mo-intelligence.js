@@ -49,6 +49,11 @@ const FWMoIntelligence = (() => {
           handleAction(actionBtn.dataset.moId, actionBtn.dataset.moAction);
           return;
         }
+        const investBtn = e.target.closest('[data-mo-invest]');
+        if (investBtn) {
+          handleInvestigation(investBtn.dataset.moId, investBtn.dataset.moInvest);
+          return;
+        }
         const viewBtn = e.target.closest('[data-mo-view]');
         if (viewBtn) {
           const id = viewBtn.dataset.moView;
@@ -73,6 +78,15 @@ const FWMoIntelligence = (() => {
     const def = ACTIONS.find(a => a.action === action);
     if (!def) return;
     FWMoEngine.setStatus(mo, def.status, `Analyst action: ${def.label} (MO Intelligence Center)`);
+    render(state);
+  }
+
+  function handleInvestigation(moId, actionKey) {
+    const state = FWSimRunner.getState();
+    if (!state) return;
+    const mo = state.moEngine.mos.get(moId);
+    if (!mo) return;
+    FWInvestigationEngine.performAction(state, mo, actionKey);
     render(state);
   }
 
@@ -143,8 +157,9 @@ const FWMoIntelligence = (() => {
 
   function renderEvidenceList(mo) {
     if (!mo.evidence || !mo.evidence.length) return '';
+    const active = new Set(mo.activeSignals || mo.signals || []);
     const rows = mo.evidence.map(e =>
-      `<li>${e.signalType.replace(/_/g, ' ')} — contribution ${e.contribution}, reliability ${Math.round(e.reliability * 100)}% (${fmtSimTime(e.at)})</li>`
+      `<li>${e.signalType.replace(/_/g, ' ')} — contribution ${e.contribution}, reliability ${Math.round(e.reliability * 100)}% (${fmtSimTime(e.at)})${active.has(e.signalId) ? '' : ' <span class="text-slate-600">· decayed, no longer counting toward confidence</span>'}</li>`
     ).join('');
     return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Signals & evidence</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
   }
@@ -180,6 +195,82 @@ const FWMoIntelligence = (() => {
     return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Possible legitimate explanations</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
   }
 
+  function fmtEffort(seconds) {
+    const h = Math.floor(seconds / 3600), m = Math.round((seconds % 3600) / 60);
+    if (h && m) return `${h}h ${m}m`;
+    if (h) return `${h}h`;
+    return `${m}m`;
+  }
+
+  function outcomeBadgeClass(outcome) {
+    const map = {
+      EXCULPATORY: 'bg-emerald-900 text-emerald-300',
+      MIXED: 'bg-amber-900 text-amber-300',
+      CORROBORATING: 'bg-orange-900 text-orange-300',
+      INCONCLUSIVE: 'bg-slate-800 text-slate-500'
+    };
+    return map[outcome] || map.INCONCLUSIVE;
+  }
+
+  function fmtDelta(delta) {
+    if (!delta) return 'no change';
+    return `${delta > 0 ? '+' : ''}${delta} pts`;
+  }
+
+  function renderFindings(mo) {
+    const findings = (mo.investigation && mo.investigation.findings) || [];
+    if (!findings.length) return '';
+    const rows = findings.map(f => `<li class="mb-1">
+      <span class="px-1 py-0.5 rounded text-[9px] font-semibold ${outcomeBadgeClass(f.outcome)}">${f.outcome}</span>
+      <span class="text-slate-400">${fmtDelta(f.confidenceDelta)} · ${fmtSimTime(f.at)}</span>
+      <div class="text-slate-400">${f.narrative}</div>
+    </li>`).join('');
+    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Findings</div><ul class="text-[10px] text-slate-400 list-none">${rows}</ul></div>`;
+  }
+
+  /* Investigation panel (Phases 28-29). Two things are stated plainly here
+     because they're true of the underlying engine: confidence is shown
+     split into the engine-derived part and the investigation-derived part,
+     and gathering evidence can move it either way -- finding a documented
+     explanation lowers it more than finding nothing raises it, because a
+     record is verifiable and an absence isn't. */
+  function renderInvestigation(mo) {
+    const state = FWSimRunner.getState();
+    if (!state) return '';
+    const investigable = FWInvestigationEngine.isInvestigable(mo);
+    const sum = FWInvestigationEngine.summary(mo);
+    const base = mo.baseConfidence != null ? mo.baseConfidence : mo.confidence;
+
+    const meter = `<div class="text-[10px] text-slate-400 mb-1">
+      Confidence ${Math.round(mo.confidence)}% = ${Math.round(base)}% from correlated signals
+      ${sum.adjustment ? `<b class="${sum.adjustment < 0 ? 'text-emerald-400' : 'text-orange-400'}">${fmtDelta(sum.adjustment)}</b> from ${sum.checksRun} completed check${sum.checksRun === 1 ? '' : 's'}` : '· no investigative checks run yet'}
+      ${sum.effortSeconds ? ` · ${fmtEffort(sum.effortSeconds)} of analyst effort spent` : ''}
+    </div>`;
+
+    const actions = FWInvestigationEngine.availableActions(state, mo);
+    let controls;
+    if (!investigable) {
+      controls = `<div class="text-[10px] text-slate-500 italic">An analyst closed this case — investigative actions are locked.</div>`;
+    } else if (!actions.length) {
+      controls = `<div class="text-[10px] text-slate-500 italic">No record source in this simulation can speak to this signal combination.</div>`;
+    } else {
+      controls = `<div class="flex flex-wrap gap-1.5">` + actions.map(a =>
+        `<button data-mo-invest="${a.key}" data-mo-id="${mo.id}" ${a.done ? 'disabled' : ''}
+          title="${a.question}"
+          class="px-2 py-1 rounded-md text-[10px] font-semibold ${a.done ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-sky-900 hover:bg-sky-800 text-sky-200'}">${a.label}${a.done ? ' ✓' : ` · ${fmtEffort(a.effortSeconds)}`}</button>`
+      ).join('') + `</div>`;
+    }
+
+    return `<div class="mb-2 pt-2 border-t border-slate-800">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Investigate</div>
+      ${meter}
+      ${mo.autoFaded ? `<div class="text-[10px] text-slate-500 italic mb-1">This case faded on its own before any analyst reviewed it. The records can still be checked.</div>` : ''}
+      ${controls}
+      <div class="text-[9px] text-slate-500 italic mt-1">Each source can be checked once per case. A check may come back inconclusive and change nothing. Finding no explanation is an absence of evidence, not proof — it moves confidence far less than finding a documented one.</div>
+      ${renderFindings(mo)}
+    </div>`;
+  }
+
   function renderActions(mo) {
     const buttons = ACTIONS.map(a =>
       `<button data-mo-action="${a.action}" data-mo-id="${mo.id}" class="px-2 py-1 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 ${mo.status === a.status ? 'ring-1 ring-sky-500' : ''}">${a.label}</button>`
@@ -209,6 +300,7 @@ const FWMoIntelligence = (() => {
         ${renderHistoricalMatch(mo)}
         ${renderDifferences(mo)}
         ${renderFalsePositives(mo)}
+        ${renderInvestigation(mo)}
         <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Recommended</div>
         <ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mb-1">${(mo.recommendedActions || []).map(a => `<li>${a}</li>`).join('')}</ul>
         ${renderActions(mo)}
@@ -257,5 +349,5 @@ const FWMoIntelligence = (() => {
     els.list.innerHTML = mos.map(renderCard).join('');
   }
 
-  return { init, render, setFilter, handleAction };
+  return { init, render, setFilter, handleAction, handleInvestigation };
 })();

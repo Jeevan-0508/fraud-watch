@@ -44,7 +44,12 @@ const FWSignalEngine = (() => {
       reliability: def.reliability,
       createdAt: event.timestamp,
       expiresAt: event.timestamp + def.decaySeconds,
-      sourceEventId: event.id
+      sourceEventId: event.id,
+      // Hidden answer key carried over from falsePositiveEngine so a case
+      // stays investigable after the source event has aged out of the
+      // recent-event buffer. Never rendered: only investigationEngine
+      // reads it, and only in response to a deliberate analyst check.
+      groundTruth: (event.metadata && event.metadata.groundTruth) || null
     };
     engine.log.push(signal);
     if (engine.log.length > 5000) engine.log.shift();
