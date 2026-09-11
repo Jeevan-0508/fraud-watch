@@ -1,11 +1,12 @@
-/* game.js — the dispatch simulator: spawns shipments on an SVG map,
-   reveals real taxonomy indicators as clues, scores flag/clear decisions. */
+/* game.js — the dispatch simulator: spawns shipments on an SVG cargo-yard
+   scene, reveals real taxonomy indicators as clues over a dispatch radio
+   feed, and scores bust/wave decisions with arcade-style reveal drama. */
 const FWGame = (() => {
   const NS = 'http://www.w3.org/2000/svg';
   const ORIGIN_X = 40, DEST_X = 960;
   const LANE_Y = [60, 140, 220, 300, 380];
 
-  let svg, alertFeed, inspectorBody, revealBackdrop, revealCard;
+  let svg, stage, alertFeed, inspector, revealBackdrop, revealCard, revealFlash;
   let statEls = {};
   let running = false;
   let shipments = [];
@@ -21,7 +22,7 @@ const FWGame = (() => {
     level: 1, categoryCaught: {}
   };
 
-  function el(tag, attrs) {
+  function elNS(tag, attrs) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
     return e;
@@ -40,16 +41,16 @@ const FWGame = (() => {
 
   function buildStatic() {
     svg.innerHTML = '';
-    svg.appendChild(el('rect', { x: 0, y: 0, width: 1000, height: 460, fill: 'transparent' }));
     LANE_Y.forEach(y => {
-      svg.appendChild(el('line', { class: 'lane-track', x1: ORIGIN_X + 30, y1: y, x2: DEST_X - 30, y2: y }));
+      svg.appendChild(elNS('line', { class: 'lane-track', x1: ORIGIN_X + 30, y1: y, x2: DEST_X - 30, y2: y }));
     });
-    svg.appendChild(el('rect', { class: 'depot', x: ORIGIN_X - 22, y: 20, width: 34, height: 420, rx: 6 }));
-    svg.appendChild(el('rect', { class: 'depot', x: DEST_X - 12, y: 20, width: 34, height: 420, rx: 6 }));
-    const t1 = el('text', { x: ORIGIN_X - 5, y: 452, fill: '#64748b', 'font-size': '11', 'text-anchor': 'middle' });
-    t1.textContent = 'ORIGIN'; svg.appendChild(t1);
-    const t2 = el('text', { x: DEST_X + 5, y: 452, fill: '#64748b', 'font-size': '11', 'text-anchor': 'middle' });
-    t2.textContent = 'DEPOT'; svg.appendChild(t2);
+    svg.appendChild(elNS('circle', { class: 'depot-glow', cx: DEST_X, cy: 230, r: 140 }));
+    svg.appendChild(elNS('rect', { class: 'depot', x: ORIGIN_X - 22, y: 20, width: 34, height: 420, rx: 6 }));
+    svg.appendChild(elNS('rect', { class: 'depot', x: DEST_X - 12, y: 20, width: 34, height: 420, rx: 6 }));
+    const t1 = elNS('text', { x: ORIGIN_X - 5, y: 452, fill: '#475569', 'font-size': '10', 'text-anchor': 'middle' });
+    t1.textContent = 'YARD'; svg.appendChild(t1);
+    const t2 = elNS('text', { x: DEST_X + 5, y: 452, fill: '#475569', 'font-size': '10', 'text-anchor': 'middle' });
+    t2.textContent = 'DEPOT GATE'; svg.appendChild(t2);
   }
 
   function spawn() {
@@ -77,41 +78,71 @@ const FWGame = (() => {
   }
 
   function renderTruck(s) {
-    const g = el('g', { class: 'truck', transform: `translate(${s.x - 23},${s.y - 11})`, 'data-id': s.id });
-    g.appendChild(el('rect', { class: 'truck-body', x: 0, y: 0, width: 46, height: 22, rx: 4, fill: '#1c2531', stroke: '#334155' }));
-    const label = el('text', { x: 23, y: 15, 'font-size': '9', fill: '#94a3b8', 'text-anchor': 'middle' });
+    const g = elNS('g', { class: 'truck', transform: `translate(${s.x - 24},${s.y - 12})`, 'data-id': s.id });
+    g.appendChild(elNS('circle', { class: 'spotlight-ring', cx: 24, cy: 12, r: 16 }));
+    g.appendChild(elNS('rect', { class: 'truck-body', x: 0, y: 2, width: 34, height: 20, rx: 3, fill: '#1c2531', stroke: '#334155' }));
+    g.appendChild(elNS('rect', { class: 'truck-cab', x: 34, y: 5, width: 12, height: 17, rx: 2 }));
+    g.appendChild(elNS('circle', { cx: 46, cy: 9, r: 1.6, fill: '#facc15' }));
+    const label = elNS('text', { x: 17, y: 15, 'font-size': '8', fill: '#94a3b8', 'text-anchor': 'middle' });
     label.textContent = s.id.slice(-4);
     g.appendChild(label);
-    const dot = el('circle', { class: 'truck-clue-dot', cx: 42, cy: 3, r: 0, style: 'display:none' });
+    const dot = elNS('circle', { class: 'truck-clue-dot', cx: 44, cy: -1, r: 0, style: 'display:none' });
     g.appendChild(dot);
     g.addEventListener('click', () => selectShipment(s.id));
     svg.appendChild(g);
     s.group = g; s.dotEl = dot;
   }
 
+  function rects() {
+    return { stageRect: stage.getBoundingClientRect(), svgRect: svg.getBoundingClientRect() };
+  }
+
+  function positionInspector(s) {
+    const { stageRect, svgRect } = rects();
+    const scaleX = svgRect.width / 1000, scaleY = svgRect.height / 460;
+    const offX = svgRect.left - stageRect.left, offY = svgRect.top - stageRect.top;
+    let left = offX + s.x * scaleX;
+    let top = offY + s.y * scaleY;
+    const w = 256;
+    left = Math.max(w / 2 + 8, Math.min(stageRect.width - w / 2 - 8, left));
+    top = Math.max(90, top);
+    inspector.style.left = left + 'px';
+    inspector.style.top = top + 'px';
+    inspector.style.transform = 'translate(-50%, -112%)';
+  }
+
   function selectShipment(id) {
+    if (selectedId) {
+      const prev = shipments.find(x => x.id === selectedId);
+      if (prev && prev.group) prev.group.classList.remove('spotlighted');
+    }
     selectedId = id;
+    const s = shipments.find(x => x.id === id && !x.resolved);
+    if (s && s.group) s.group.classList.add('spotlighted');
     renderInspector();
   }
 
   function renderInspector() {
     const s = shipments.find(x => x.id === selectedId && !x.resolved);
-    if (!s) { inspectorBody.innerHTML = '<p class="text-slate-500">Select a shipment on the map.</p>'; return; }
+    if (!s) { inspector.classList.add('hidden'); return; }
+    inspector.classList.remove('hidden');
     const clues = [];
     for (let i = 0; i < s.revealedIdx; i++) {
-      const ind = s.indicators[i];
-      clues.push(`<li class="text-slate-300"><span class="text-amber-400">⚠</span> ${ind.signal}</li>`);
+      clues.push(`<li class="text-slate-200"><span class="text-amber-400">⚠</span> ${s.indicators[i].signal}</li>`);
     }
     if (s.revealedDecoy && s.decoy) {
-      clues.push(`<li class="text-slate-300"><span class="text-amber-400">⚠</span> ${s.decoy.fp.looks_like}</li>`);
+      clues.push(`<li class="text-slate-200"><span class="text-amber-400">⚠</span> ${s.decoy.fp.looks_like}</li>`);
     }
-    inspectorBody.innerHTML = `
-      <p class="font-semibold text-white mb-1">${s.id} <span class="text-xs text-slate-500">lane ${s.lane + 1}</span></p>
-      <ul class="text-sm space-y-1 mb-3 min-h-[40px]">${clues.length ? clues.join('') : '<li class="text-slate-500">No clues surfaced yet — keep watching.</li>'}</ul>
-      <div class="flex gap-2">
-        <button id="btn-flag" class="flex-1 bg-red-500 hover:bg-red-400 text-white font-semibold rounded-lg py-1.5 text-sm">Flag fraud</button>
-        <button id="btn-clear" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-[#0b0f14] font-semibold rounded-lg py-1.5 text-sm">Clear</button>
+    inspector.innerHTML = `
+      <div class="bg-[#0d1420] border border-sky-500/40 rounded-xl p-3 shadow-xl shadow-black/50">
+        <p class="font-orbitron text-xs text-sky-300 mb-1.5">${s.id} · LANE ${s.lane + 1}</p>
+        <ul class="text-xs space-y-1 mb-2.5 min-h-[32px]">${clues.length ? clues.join('') : '<li class="text-slate-500">No clues yet — keep watching.</li>'}</ul>
+        <div class="flex gap-2">
+          <button id="btn-flag" class="flex-1 bg-red-500 hover:bg-red-400 text-white font-bold rounded-lg py-1.5 text-xs">🚨 BUST</button>
+          <button id="btn-clear" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-[#0b0f14] font-bold rounded-lg py-1.5 text-xs">✅ WAVE THROUGH</button>
+        </div>
       </div>`;
+    positionInspector(s);
     document.getElementById('btn-flag').onclick = () => decide(s, 'flag');
     document.getElementById('btn-clear').onclick = () => decide(s, 'clear');
   }
@@ -119,7 +150,7 @@ const FWGame = (() => {
   function pushAlert(text, tone = 'info') {
     const colors = { info: 'border-sky-400', warn: 'border-amber-400', bad: 'border-red-400', good: 'border-emerald-400' };
     const div = document.createElement('div');
-    div.className = `alert-item text-xs bg-[#111823] rounded-lg px-3 py-2 ${colors[tone] || colors.info}`;
+    div.className = `alert-item text-[11px] leading-snug bg-[#0e1520] rounded px-2 py-1 ${colors[tone] || colors.info}`;
     div.textContent = text;
     alertFeed.prepend(div);
     while (alertFeed.children.length > 40) alertFeed.removeChild(alertFeed.lastChild);
@@ -134,16 +165,16 @@ const FWGame = (() => {
     s.resolved = true;
     const progress = Math.min(1, (s.x - ORIGIN_X) / (DEST_X - ORIGIN_X));
     const speedFrac = action === 'auto' ? 0 : (1 - progress);
-    let correct, delta, tone;
+    let correct, delta;
 
     if (s.type === 'fraud') {
-      if (action === 'flag') { correct = true; delta = Math.round(60 + 80 * speedFrac); tone = 'good'; }
-      else if (action === 'clear') { correct = false; delta = -50; tone = 'bad'; }
-      else { correct = false; delta = -70; tone = 'bad'; }
+      if (action === 'flag') { correct = true; delta = Math.round(60 + 80 * speedFrac); }
+      else if (action === 'clear') { correct = false; delta = -50; }
+      else { correct = false; delta = -70; }
     } else {
-      if (action === 'clear') { correct = true; delta = Math.round(20 + 20 * speedFrac); tone = 'good'; }
-      else if (action === 'flag') { correct = false; delta = -30; tone = 'bad'; }
-      else { correct = true; delta = 10; tone = 'good'; }
+      if (action === 'clear') { correct = true; delta = Math.round(20 + 20 * speedFrac); }
+      else if (action === 'flag') { correct = false; delta = -30; }
+      else { correct = true; delta = 10; }
     }
 
     state.streak = correct ? state.streak + 1 : 0;
@@ -157,16 +188,13 @@ const FWGame = (() => {
     }
 
     if (action === 'auto' && s.type === 'clean') {
-      pushAlert(`${s.id} delivered clean — no pattern present.`, 'good');
-    } else if (action === 'auto' && s.type === 'fraud') {
-      pushAlert(`BREACH: ${s.id} reached the depot unflagged — ${s.pattern.name}.`, 'bad');
-      queueReveal(s, action, correct, delta);
+      pushAlert(`${s.id} cleared the gate — no pattern present.`, 'good');
     } else {
       queueReveal(s, action, correct, delta);
     }
 
     updateStats();
-    if (selectedId === s.id) { selectedId = null; renderInspector(); }
+    if (selectedId === s.id) { selectedId = null; inspector.classList.add('hidden'); }
     fadeOut(s);
   }
 
@@ -183,12 +211,25 @@ const FWGame = (() => {
     if (!revealShowing) showNextReveal();
   }
 
+  function verdict(s, action, correct) {
+    if (s.type === 'fraud') {
+      if (action === 'flag') return { text: 'BUSTED!', icon: '🚨', color: 'text-emerald-400', flash: 'flash-good' };
+      if (action === 'clear') return { text: 'IT GOT AWAY', icon: '🕵️', color: 'text-red-400', flash: 'flash-bad' };
+      return { text: 'BREACH!', icon: '🚨', color: 'text-red-400', flash: 'flash-bad' };
+    }
+    if (action === 'flag') return { text: 'FALSE ALARM', icon: '🚫', color: 'text-amber-400', flash: 'flash-bad' };
+    return { text: 'CLEAN — WAVED THROUGH', icon: '✅', color: 'text-emerald-400', flash: 'flash-good' };
+  }
+
   function showNextReveal() {
     if (!revealQueue.length) { revealShowing = false; return; }
     revealShowing = true;
     const { s, action, correct, delta } = revealQueue.shift();
-    const headColor = correct ? 'text-emerald-400' : 'text-red-400';
-    const headText = correct ? 'Correct call' : (action === 'auto' ? 'Missed — breach' : 'Wrong call');
+    const v = verdict(s, action, correct);
+
+    revealFlash.className = v.flash;
+    revealFlash.classList.remove('hidden');
+    setTimeout(() => revealFlash.classList.add('hidden'), 650);
 
     let body;
     if (s.type === 'fraud') {
@@ -207,7 +248,6 @@ const FWGame = (() => {
         <p class="text-sm text-sky-300">${cm.text}</p>`;
     } else if (s.decoy) {
       body = `
-        <h3 class="text-lg font-bold text-white mb-1">Clean shipment</h3>
         <p class="text-sm text-slate-400 mb-3">This looked suspicious but wasn't. The clue mimicked <b>${s.decoy.pattern.name}</b>:</p>
         <p class="text-sm text-slate-300 mb-2">"${s.decoy.fp.looks_like}"</p>
         <p class="text-xs text-slate-500 uppercase mb-1">What it actually was</p>
@@ -215,17 +255,19 @@ const FWGame = (() => {
         <p class="text-xs text-slate-500 uppercase mb-1">How to rule it out</p>
         <p class="text-sm text-sky-300">${s.decoy.fp.how_to_rule_out}</p>`;
     } else {
-      body = `<h3 class="text-lg font-bold text-white mb-1">Clean shipment</h3>
-        <p class="text-sm text-slate-400">No fraud pattern, no notable clues. Straightforward delivery.</p>`;
+      body = `<p class="text-sm text-slate-400">No fraud pattern, no notable clues. Straightforward delivery.</p>`;
     }
 
     revealCard.innerHTML = `
-      <div class="flex items-center justify-between mb-3">
-        <span class="font-bold ${headColor}">${headText}</span>
-        <span class="font-mono text-sm ${delta >= 0 ? 'text-emerald-400' : 'text-red-400'}">${delta >= 0 ? '+' : ''}${delta}</span>
+      <div class="text-center mb-3">
+        <span class="siren text-3xl">${v.icon}</span>
+        <div class="verdict-text text-3xl sm:text-4xl ${v.color}">${v.text}</div>
+        <div class="font-mono text-sm mt-1 ${delta >= 0 ? 'text-emerald-400' : 'text-red-400'}">${delta >= 0 ? '+' : ''}${delta} pts</div>
       </div>
-      ${body}
-      <button id="reveal-close" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 rounded-lg py-2 text-sm font-semibold">Continue</button>`;
+      <div class="reveal-detail bg-[#0d1420] border border-slate-700 rounded-xl p-4 text-left">
+        ${body}
+        <button id="reveal-close" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 rounded-lg py-2 text-sm font-semibold">Continue</button>
+      </div>`;
     revealBackdrop.classList.remove('hidden');
     document.getElementById('reveal-close').onclick = () => {
       revealBackdrop.classList.add('hidden');
@@ -276,11 +318,10 @@ const FWGame = (() => {
         if (selectedId === s.id) renderInspector();
       }
 
-      if (s.group) s.group.setAttribute('transform', `translate(${s.x - 23},${s.y - 11})`);
+      if (s.group) s.group.setAttribute('transform', `translate(${s.x - 24},${s.y - 12})`);
+      if (selectedId === s.id) positionInspector(s);
 
-      if (s.x >= DEST_X - 15) {
-        resolve(s, 'auto');
-      }
+      if (s.x >= DEST_X - 15) resolve(s, 'auto');
     });
 
     shipments = shipments.filter(s => !s.resolved || (performance.now() - s.spawnTs) < 60000);
@@ -290,17 +331,18 @@ const FWGame = (() => {
   function start() {
     if (running) return;
     running = true; lastTs = null; spawnAcc = 0;
-    document.getElementById('btn-start').textContent = 'Running…';
-    document.getElementById('btn-start').disabled = true;
+    document.getElementById('start-overlay').classList.add('hidden');
     requestAnimationFrame(tick);
   }
 
   function init() {
+    stage = document.getElementById('stage');
     svg = document.getElementById('map');
     alertFeed = document.getElementById('alert-feed');
-    inspectorBody = document.getElementById('inspector-body');
+    inspector = document.getElementById('inspector');
     revealBackdrop = document.getElementById('reveal-backdrop');
     revealCard = document.getElementById('reveal-card');
+    revealFlash = document.getElementById('reveal-flash');
     statEls = {
       score: document.getElementById('stat-score'),
       accuracy: document.getElementById('stat-accuracy'),

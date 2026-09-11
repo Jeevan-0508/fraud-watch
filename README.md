@@ -9,26 +9,28 @@ straight from that taxonomy's `docs/data.json`.
 
 ## What it is
 
-Shipments stream across a dispatch map, most clean, some running an actual pattern from the
-taxonomy — double brokering, phantom carrier, GPS spoofing, insider collusion, and so on. As a
-suspicious shipment travels toward the depot it surfaces 1–3 real indicators as clues in a live
-alert feed. Flag it or clear it before it arrives. Speed and accuracy score you; difficulty ramps
-with fewer clues and faster trucks as you go.
+Trucks roll out of the yard toward the depot gate, most clean, some running an actual fraud
+pattern from the taxonomy — double brokering, phantom carrier, GPS spoofing, insider collusion,
+and so on. As a suspicious shipment rolls down the lane, real indicators crackle over the dispatch
+radio feed. Click the truck, read the clues, then **BUST** it or **WAVE IT THROUGH** before it
+hits the gate. Score on speed and accuracy; difficulty ramps with fewer clues and faster trucks the
+longer you last.
 
-On every resolution, a reveal shows exactly which pattern it was (or wasn't), which indicators
-gave it away, and which real countermeasure — preventive, detective or responsive — would have
-caught it.
+Every call lands with a verdict, not a quiet log line: a siren flash, a big "BUSTED!" or "IT GOT
+AWAY", points ticking up or down — then the real detail underneath: which pattern it actually was,
+which indicators gave it away, and which real countermeasure (preventive, detective, or responsive)
+would have caught it.
 
-Clean shipments aren't just blank filler: some carry a decoy clue borrowed from the taxonomy's own
-`false_positives` data, so "looks suspicious" and "is suspicious" aren't the same thing here either
-— matching how the source material treats false positives as the hard part of this work.
+Clean trucks aren't blank filler either: some carry a decoy clue borrowed from the taxonomy's own
+`false_positives` data, so a truck that *looks* suspicious on the radio isn't always guilty — same
+as the real thing.
 
-## Training mode
+## Field guide
 
-A second mode strips out the game entirely: step through all 12 patterns one at a time with their
-real indicators (signal, phase, weight), false positives (looks like / actually / how to rule it
-out), the full preventive/detective/responsive countermeasure set, and regulatory hooks. Built to
-double as an onboarding tool for anyone new to carrier-fraud detection, not just a game screen.
+A slide-over panel (top right, doesn't interrupt the game) steps through all 12 patterns one at a
+time with their real indicators (signal, phase, weight), false positives (looks like / actually /
+how to rule it out), the full preventive/detective/responsive countermeasure set, and regulatory
+hooks. Doubles as an onboarding reference for anyone new to carrier-fraud detection.
 
 ## Data, verified
 
