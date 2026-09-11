@@ -1,0 +1,125 @@
+/* simulation/behaviorEngine.js — gives trucks a real lifecycle instead
+   of pure random event rolls (Slice 1's eventEngine.step was noise;
+   this replaces that role for trucks with state-machine-driven
+   progression + occasional disruptions). Disruptions are NOT fraud —
+   they are plain facts ("driver changed", "route deviated") that the
+   signal engine (next module) turns into weighted signals. Whether a
+   disruption has an innocent explanation is undetermined at this
+   layer on purpose: SIGNAL != PROOF is enforced by keeping this module
+   ignorant of "suspicious" as a concept. */
+const FWBehaviorEngine = (() => {
+  const LIFECYCLE = ['DISPATCHED', 'EN_ROUTE_TO_PORT', 'CHECKPOINT', 'LOADING',
+    'DEPARTURE', 'TRANSIT', 'DEPOT', 'DELIVERY', 'COMPLETED'];
+
+  const STAGE_DURATION_RANGE = { min: 300, max: 900 }; // 5-15 sim-minutes per stage
+
+  // Stages where a disruption is plausible at all (no point deviating
+  // route while parked at LOADING, for example).
+  const DISRUPTION_ELIGIBLE_STAGES = new Set(['EN_ROUTE_TO_PORT', 'CHECKPOINT', 'DEPARTURE', 'TRANSIT', 'DEPOT']);
+
+  const DISRUPTION_TYPES = ['UNEXPECTED_STOP', 'ROUTE_DEVIATION', 'DRIVER_CHANGED',
+    'TRAILER_SWAPPED', 'MANIFEST_CHANGED', 'SEAL_MISMATCH', 'GPS_SIGNAL_LOST'];
+
+  // Kept low deliberately: normal lifecycle progression must vastly
+  // outnumber disruptions, or every truck looks suspicious constantly.
+  const DISRUPTION_CHANCE_PER_TICK = 0.015;
+
+  function attachBehavior(truck, rng) {
+    truck.behavior = {
+      stageIndex: 0,
+      stageElapsed: 0,
+      stageDuration: rng.int(STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max)
+    };
+    truck.status = LIFECYCLE[0];
+    return truck.behavior;
+  }
+
+  function advanceStage(truck, rng, eventEngine, timestamp) {
+    const b = truck.behavior;
+    b.stageIndex = (b.stageIndex + 1) % LIFECYCLE.length; // loops: COMPLETED -> DISPATCHED (new trip)
+    b.stageElapsed = 0;
+    b.stageDuration = rng.int(STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max);
+    const to = LIFECYCLE[b.stageIndex];
+    const from = truck.status;
+    truck.status = to;
+    const ev = FWEventEngine.emit(eventEngine, {
+      type: 'TRUCK_STAGE_ADVANCED', entityId: truck.id,
+      relatedEntities: [truck.driverId, truck.trailerId].filter(Boolean),
+      severity: 'info', metadata: { from, to, summary: `${from} -> ${to}` }
+    }, timestamp);
+    FWEntityEngine.recordHistory(truck, ev);
+    return ev;
+  }
+
+  // A disruption is a plain fact recorded against the truck (and,
+  // where relevant, mutates who/what is actually attached to it —
+  // a real driver swap changes truck.driverId, it doesn't just log text).
+  function applyDisruption(truck, type, registry, rng, eventEngine, timestamp) {
+    const related = [truck.driverId, truck.trailerId].filter(Boolean);
+    const metadata = { summary: type.replace(/_/g, ' ').toLowerCase() };
+
+    if (type === 'DRIVER_CHANGED') {
+      const drivers = FWEntityEngine.all(registry, 'driver');
+      const candidates = drivers.filter(d => d.id !== truck.driverId && !d.assignedTruckId);
+      if (candidates.length) {
+        const oldDriver = FWEntityEngine.get(registry, 'driver', truck.driverId);
+        const newDriver = rng.pick(candidates);
+        if (oldDriver) { oldDriver.assignedTruckId = null; oldDriver.status = 'OFF_SHIFT'; }
+        newDriver.assignedTruckId = truck.id; newDriver.status = 'DRIVING';
+        metadata.fromDriverId = truck.driverId; metadata.toDriverId = newDriver.id;
+        truck.driverId = newDriver.id;
+      } else { return null; } // no spare driver available this tick, skip
+    } else if (type === 'TRAILER_SWAPPED') {
+      const trailers = FWEntityEngine.all(registry, 'trailer');
+      const candidates = trailers.filter(t => t.id !== truck.trailerId && t.status === 'IN_STORAGE');
+      if (candidates.length) {
+        const oldTrailer = FWEntityEngine.get(registry, 'trailer', truck.trailerId);
+        const newTrailer = rng.pick(candidates);
+        if (oldTrailer) { oldTrailer.assignedTruckId = null; oldTrailer.status = 'IN_STORAGE'; }
+        newTrailer.assignedTruckId = truck.id; newTrailer.status = 'ASSIGNED';
+        metadata.fromTrailerId = truck.trailerId; metadata.toTrailerId = newTrailer.id;
+        truck.trailerId = newTrailer.id;
+      } else { return null; }
+    } else if (type === 'SEAL_MISMATCH') {
+      const trailer = FWEntityEngine.get(registry, 'trailer', truck.trailerId);
+      if (!trailer) return null;
+      const oldSeal = trailer.sealId;
+      trailer.sealId = 'SEAL-' + rng.int(10000, 99999);
+      metadata.fromSealId = oldSeal; metadata.toSealId = trailer.sealId;
+    } else if (type === 'GPS_SIGNAL_LOST') {
+      truck.lastGPSUpdate = null;
+    } else if (type === 'ROUTE_DEVIATION') {
+      metadata.deviationKm = rng.int(2, 12);
+    } else if (type === 'UNEXPECTED_STOP') {
+      metadata.stoppedMinutes = rng.int(5, 40);
+    } else if (type === 'MANIFEST_CHANGED') {
+      truck.assignedShipmentId && metadata; // shipment manifest bump handled by caller if present
+    }
+
+    const ev = FWEventEngine.emit(eventEngine, {
+      type, entityId: truck.id, relatedEntities: related, severity: 'warn', metadata
+    }, timestamp);
+    FWEntityEngine.recordHistory(truck, ev);
+    return ev;
+  }
+
+  function step(registry, rng, eventEngine, timestamp, dtSeconds) {
+    const emitted = [];
+    const trucks = FWEntityEngine.all(registry, 'truck');
+    trucks.forEach(truck => {
+      if (!truck.behavior) attachBehavior(truck, rng);
+      truck.behavior.stageElapsed += dtSeconds;
+      if (truck.behavior.stageElapsed >= truck.behavior.stageDuration) {
+        emitted.push(advanceStage(truck, rng, eventEngine, timestamp));
+      }
+      if (DISRUPTION_ELIGIBLE_STAGES.has(truck.status) && rng.chance(DISRUPTION_CHANCE_PER_TICK)) {
+        const type = rng.pick(DISRUPTION_TYPES);
+        const ev = applyDisruption(truck, type, registry, rng, eventEngine, timestamp);
+        if (ev) emitted.push(ev);
+      }
+    });
+    return emitted;
+  }
+
+  return { step, attachBehavior, LIFECYCLE, DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK };
+})();
