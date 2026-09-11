@@ -79,12 +79,17 @@ const FWSimDebug = (() => {
       FWShiftView.init();
       FWSimRunner.onTick(FWShiftView.render);
     }
+    if (window.FWExposureView) {
+      FWExposureView.init();
+      FWSimRunner.onTick(FWExposureView.render);
+    }
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
     if (window.FWNetworkView) FWNetworkView.render(FWSimRunner.getState());
     if (window.FWCalibrationView) FWCalibrationView.render(FWSimRunner.getState());
     if (window.FWShiftView) FWShiftView.render(FWSimRunner.getState());
+    if (window.FWExposureView) FWExposureView.render(FWSimRunner.getState());
   }
 
   function fmtPct(x) { return Math.round(x * 100) + '%'; }

@@ -22,8 +22,9 @@
        which is why a wrong escalation stays possible.
 
    Deltas below are design-intent calibration, not measured from any real
-   dataset. No monetary/exposure figure is produced or implied anywhere in
-   this module -- no loss model exists in this codebase yet (Phase 50). */
+   dataset. This module produces no monetary figure itself: it records
+   effortSeconds, which exposureModel.js (Phase 50) later prices as
+   measured hours against a stated rate. */
 const FWInvestigationEngine = (() => {
   const MAX_UPWARD_ADJUSTMENT = 30;    // absence-of-explanation can only ever nudge
   const MAX_DOWNWARD_ADJUSTMENT = -85; // records can nearly clear a case

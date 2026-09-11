@@ -11,8 +11,12 @@
      - "Unexplained" never becomes "fraud", and the panel never tells the
        player they were right or wrong -- only whether the call leaned
        past what the record supported.
-   No monetary or exposure figure appears here: no loss model exists in
-   this codebase yet (Phase 50), so there is nothing honest to show. */
+   No monetary or exposure figure appears here even though a cost model
+   now exists (Phase 50, exposureModel.js). Deliberate: that model prices
+   the process, and pricing a *calibration* outcome would mean pricing an
+   over- or under-call, which is the first entry on its refused list. The
+   effort those calls consumed is reported in the Exposure & Cost panel
+   instead, in hours. */
 const FWCalibrationView = (() => {
   let els = {};
 

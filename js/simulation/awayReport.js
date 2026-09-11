@@ -2,12 +2,12 @@
    were away" report (mega-spec Phase 9). No DOM here; js/ui/away-report.js
    owns when to snapshot/show and how to render it.
 
-   Deliberately honest about what it does NOT know yet: there is no
-   exposure/loss model in this codebase (mega-spec Phase 50), so this
-   never invents a euro figure. It reports real counters only --
-   events, new cases, and where existing cases moved to -- and says so
-   explicitly rather than showing a fabricated "estimated exposure"
-   line. */
+   Since Phase 50 there IS a cost/exposure model (exposureModel.js), so
+   this reports the exposure band newly attached to cases opened while you
+   were away. That is a band and it is what was at stake -- not a loss,
+   not an expected loss. Loss and loss-avoided figures stay refused for
+   the reasons exposureModel.NOT_MODELLED gives, so this report still
+   never shows an "estimated exposure" line. */
 const FWAwayReportEngine = (() => {
   function snapshot(state) {
     if (!state) return null;
@@ -35,6 +35,24 @@ const FWAwayReportEngine = (() => {
       return acc;
     }, {});
 
+    // Exposure band attached to cases opened while away. Bands are summed,
+    // which widens the range -- correct, because the uncertainty compounds
+    // rather than averaging out.
+    let newExposure = { attached: false, low: null, high: null, label: 'no consignments attached', cases: 0 };
+    if (window.FWExposureModel) {
+      let low = 0, high = 0, n = 0;
+      newlyCreated.forEach(m => {
+        const ex = FWExposureModel.exposureForMo(state, m);
+        if (ex.attached) { low += ex.low; high += ex.high; n += 1; }
+      });
+      if (n) {
+        newExposure = {
+          attached: true, low, high, cases: n,
+          label: FWExposureModel.fmt(low) + ' – ' + FWExposureModel.fmt(high)
+        };
+      }
+    }
+
     const statusDeltas = {};
     const allStatuses = new Set([...Object.keys(before.byStatus), ...Object.keys(after.byStatus)]);
     allStatuses.forEach(s => {
@@ -48,6 +66,7 @@ const FWAwayReportEngine = (() => {
       eventsSinceThen,
       newMosSinceThen,
       newByClassification,
+      newExposure,
       statusDeltas,
       hasContent: simSecondsElapsed > 0 && (eventsSinceThen > 0 || newMosSinceThen > 0 || Object.keys(statusDeltas).length > 0)
     };

@@ -23,8 +23,9 @@
    often you closed a case without checking any records first, how often
    you called it before the evidence was in) and it reports them against
    the SIMULATION's own answer key, never as a real-world base rate. No
-   monetary or exposure figure is produced -- no loss model exists yet
-   (Phase 50). */
+   monetary figure is produced here. The effort each closed case consumed
+   is recorded on its ledger entry in seconds, and exposureModel.js
+   (Phase 50) is the only module allowed to price it. */
 const FWOutcomeEngine = (() => {
   const MIN_SAMPLE_FOR_RATES = 5; // below this, report counts only, no percentages
 

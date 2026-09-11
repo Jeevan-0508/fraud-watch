@@ -68,6 +68,15 @@ const FWAwayReport = (() => {
     const statusRows = Object.entries(report.statusDeltas)
       .map(([status, delta]) => `<li>${status.replace(/_/g, ' ')}: ${delta > 0 ? '+' : ''}${delta}</li>`).join('');
 
+    const ex = report.newExposure;
+    const exposureRow = (ex && ex.attached)
+      ? `<div class="mb-3 bg-[#0e1520] border border-slate-800 rounded-lg p-2">
+          <div class="text-[10px] font-semibold text-slate-400 uppercase mb-0.5">Exposure attached to the new cases</div>
+          <div class="text-sky-300 font-mono text-sm">${ex.label}</div>
+          <div class="text-[10px] text-slate-500">across ${ex.cases} of the new case${ex.cases === 1 ? '' : 's'} — the value of goods that were at stake, not a loss and not an estimate of one</div>
+        </div>`
+      : '';
+
     return `
       <div class="text-2xl font-orbitron text-white mb-1">Simulation advanced ${fmtDuration(report.simSecondsElapsed)}</div>
       <div class="text-xs text-slate-400 mb-4">while this tab wasn't the active view</div>
@@ -83,7 +92,8 @@ const FWAwayReport = (() => {
       </div>
       ${classRows ? `<div class="mb-3"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">New cases by discovery classification</div><ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">${classRows}</ul></div>` : ''}
       ${statusRows ? `<div class="mb-3"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Case status movement</div><ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">${statusRows}</ul></div>` : ''}
-      <p class="text-[10px] text-slate-600 italic">No exposure/loss estimate shown -- that model doesn't exist in this simulation yet, so this deliberately doesn't show a made-up euro figure. Open MO Intelligence Center to review what's new.</p>
+      ${exposureRow}
+      <p class="text-[10px] text-slate-600 italic">No loss or loss-avoided figure is shown. The cost model (Exposure &amp; Cost panel) refuses both: one needs a probability of loss this simulation does not have, the other needs a counterfactual nobody can observe. Open MO Intelligence Center to review what's new.</p>
     `;
   }
 
