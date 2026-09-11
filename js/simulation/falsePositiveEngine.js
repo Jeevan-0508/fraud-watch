@@ -12,12 +12,17 @@
 
    LEGITIMATE_CHANCE is deliberately high: NORMAL >> SUSPICIOUS >>
    CONFIRMED FRAUD means most things that look odd are still nothing.
-   Calibrated against a real ROC/TIO fraud-investigation ticket sample
-   (38 cases, resolve-category distribution): ~82% closed as "no fraud
-   suspected". No case identifiers, carriers, or names from that
-   sample are stored anywhere -- only the aggregate resolution rate. */
+   NOT calibrated against the real ROC/TIO ticket sample referenced in
+   docs/real-world-mo-ingestion.md -- that sample is 38 confirmed real
+   incidents (missing trailers / theft that actually happened), not a
+   population that includes benign disruptions. Its "False Positive
+   (No Fraud Suspected)" resolve-category label means "internal
+   collusion by a named suspect was not substantiated," not "nothing
+   happened" -- the loss was still real in every one of those cases.
+   That field is the wrong axis to calibrate this constant against;
+   this value is the original design-intent estimate instead. */
 const FWFalsePositiveEngine = (() => {
-  const LEGITIMATE_CHANCE = 0.8;
+  const LEGITIMATE_CHANCE = 0.65;
 
   const CAUSES = {
     GPS_SIGNAL_LOST: ['Signal dead zone near the warehouse block', 'Telematics antenna outage, logged by maintenance'],

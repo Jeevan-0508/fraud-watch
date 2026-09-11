@@ -37,10 +37,26 @@ tracker). The ingestion was manual and one-way:
    against the existing (already de-identified) `freight-fraud-taxonomy`
    patterns already shipped in `data/fraud-data.json`, exactly like
    every other disruption type in the engine.
-4. One aggregate statistic was kept: of the 38 tickets, ~82% resolved
-   as "no fraud suspected." That single number was used to recalibrate
-   `FWFalsePositiveEngine.LEGITIMATE_CHANCE` from 0.65 to 0.8 — a
-   data-informed tuning of a probability constant, not a stored case.
+4. **Correction (this section originally misread the data — left in
+   for the record):** an earlier version of this note claimed ~82% of
+   the 38 tickets resolved as "no fraud suspected," and used that to
+   push `FWFalsePositiveEngine.LEGITIMATE_CHANCE` from 0.65 to 0.8.
+   That was wrong and has been reverted. All 38 tickets in the sample
+   are **real, confirmed loss incidents** (missing trailers / theft
+   that genuinely happened) — this data source is exclusively
+   already-flagged fraud/loss cases, not a mixed population that
+   includes benign disruptions. The source system's "Resolve Category:
+   False Positive (No Fraud Suspected)" label describes whether a
+   *specific named suspect's internal collusion* was substantiated,
+   not whether an incident occurred at all — the loss was real in
+   every one of those 38 cases regardless of that label. That field
+   is simply the wrong axis to calibrate a "how often is an anomaly
+   totally benign" constant against, and no aggregate stat from this
+   sample is used for that calibration anymore. `LEGITIMATE_CHANCE`
+   is back to its original 0.65 design-intent value. The six
+   behavioral primitives above are unaffected by this correction —
+   they describe *how* a real incident unfolds, which is a separate
+   and valid read of the same free text.
 
 ## What this explicitly is not
 
