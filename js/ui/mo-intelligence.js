@@ -212,6 +212,10 @@ const FWMoIntelligence = (() => {
       EXCULPATORY: 'bg-emerald-900 text-emerald-300',
       MIXED: 'bg-amber-900 text-amber-300',
       CORROBORATING: 'bg-orange-900 text-orange-300',
+      // Deliberately not a warning colour and not a success colour. "There
+      // was nothing to look at" is neither, and tinting it either way
+      // would make a coverage gap read as a result.
+      NO_RECORD_EXISTS: 'bg-slate-800 text-sky-300',
       INCONCLUSIVE: 'bg-slate-800 text-slate-500'
     };
     return map[outcome] || map.INCONCLUSIVE;
@@ -261,8 +265,8 @@ const FWMoIntelligence = (() => {
     } else {
       controls = `<div class="flex flex-wrap gap-1.5">` + actions.map(a =>
         `<button data-mo-invest="${a.key}" data-mo-id="${mo.id}" ${a.done ? 'disabled' : ''}
-          title="${a.question}"
-          class="px-2 py-1 rounded-md text-[10px] font-semibold ${a.done ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-sky-900 hover:bg-sky-800 text-sky-200'}">${a.label}${a.done ? ' ✓' : ` · ${fmtEffort(a.effortSeconds)}`}</button>`
+          title="${a.question}${a.siteRecordLikelihood != null ? ` About a ${a.siteRecordLikelihood}% chance a record covering this exists at all, from the site coverage assumptions.` : ''}"
+          class="px-2 py-1 rounded-md text-[10px] font-semibold ${a.done ? 'bg-slate-900 text-slate-600 cursor-not-allowed' : 'bg-sky-900 hover:bg-sky-800 text-sky-200'}">${a.label}${a.done ? ' ✓' : ` · ${fmtEffort(a.effortSeconds)}`}${!a.done && a.siteRecordLikelihood != null ? ` · ~${a.siteRecordLikelihood}% has a record` : ''}</button>`
       ).join('') + `</div>`;
     }
 
@@ -271,7 +275,8 @@ const FWMoIntelligence = (() => {
       ${meter}
       ${mo.autoFaded ? `<div class="text-[10px] text-slate-500 italic mb-1">This case faded on its own before any analyst reviewed it. The records can still be checked.</div>` : ''}
       ${controls}
-      <div class="text-[9px] text-slate-500 italic mt-1">Each source can be checked once per case. A check may come back inconclusive and change nothing. Finding no explanation is an absence of evidence, not proof — it moves confidence far less than finding a documented one.</div>
+      <div class="text-[9px] text-slate-500 italic mt-1">Each source can be checked once per case. A check may come back inconclusive and change nothing. Finding no explanation is an absence of evidence, not proof — it moves confidence far less than finding a documented one. A site record check can also come back with no record existing at all, which moves confidence by exactly nothing: a missing record where watching is thin is what thin watching produces.</div>
+      ${sum.noRecordChecks ? `<div class="text-[10px] text-sky-300/80 mt-1">${sum.noRecordChecks} check${sum.noRecordChecks === 1 ? '' : 's'} found no record to examine. That is a gap in what this port observes, counted separately from checks that were run and came back empty.</div>` : ''}
       ${renderFindings(mo)}
     </div>`;
   }

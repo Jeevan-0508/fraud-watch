@@ -20,6 +20,19 @@
        costs the same effort and changes nothing. Investigating is not a
        guaranteed oracle -- sometimes you burn the check and learn zero,
        which is why a wrong escalation stays possible.
+     - A NO_RECORD_EXISTS finding (Phase 5) is a different animal from
+       INCONCLUSIVE and is kept separate for a reason. INCONCLUSIVE is a
+       contingent failure: the record probably exists and this attempt did
+       not get it. NO_RECORD_EXISTS is structural: the site does not
+       produce a record of that kind at that hour, so there is nothing to
+       fetch and no repeat attempt will change that. Its delta is exactly
+       zero and it is not allowed to be anything else, because an absent
+       record at a thinly-watched site is the EXPECTED output of thin
+       watching -- reading it as corroboration would charge a carrier for
+       the port's own coverage gap. The finding is still worth having: it
+       tells the analyst that the corroborating reading is unavailable
+       precisely where concealment is most plausible, which is a fact
+       about their own blind spot rather than about the case.
 
    Deltas below are design-intent calibration, not measured from any real
    dataset. This module produces no monetary figure itself: it records
@@ -75,6 +88,24 @@ const FWInvestigationEngine = (() => {
       exculpatoryDelta: -22,
       corroboratingDelta: 9
     },
+    PULL_SITE_ACCESS_RECORD: {
+      label: 'Pull site access record',
+      question: 'Does the site where this was observed hold a gate, dock or yard record covering it?',
+      // Any signal type can in principle be covered by a site record --
+      // what decides whether the check is worth anything is WHERE the
+      // signal was observed, not what kind it was. So this action is
+      // gated on the case having a site at all (requiresSite) rather than
+      // on its signal composition.
+      covers: ['UNEXPECTED_STOP', 'ROUTE_DEVIATION', 'DRIVER_CHANGED', 'TRAILER_SWAPPED',
+        'MANIFEST_CHANGED', 'SEAL_MISMATCH', 'GPS_SIGNAL_LOST', 'FALSE_MILESTONE_STAMP',
+        'CARRIER_UNRESPONSIVE', 'EQUIPMENT_CARRIER_MISMATCH', 'DUPLICATE_ASSET_ID',
+        'HANDOVER_GAP', 'STAGED_BREAKDOWN'],
+      requiresSite: true,
+      effortSeconds: 2700,
+      inconclusiveChance: 0.1,
+      exculpatoryDelta: -18,
+      corroboratingDelta: 6
+    },
     ROADSIDE_SITE_CHECK: {
       label: 'Roadside / site check',
       question: 'Does the vehicle state on site match the reported breakdown or stop?',
@@ -87,6 +118,49 @@ const FWInvestigationEngine = (() => {
   };
 
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+
+  // ---- site-record support (Phase 5) ----
+
+  // The signals in this case that were observed at a site at all. Signals
+  // observed on the open road are not something a site record can speak
+  // to, and pretending otherwise would manufacture coverage.
+  function sitedSignals(signals) {
+    return signals.filter(s => s.facilityId);
+  }
+
+  // How likely a record covering this case exists, derived from the SAME
+  // stated coverage parameters facilityEngine publishes -- weighted by how
+  // many of the case's signals each site accounts for, so a case mostly
+  // observed at a gatehouse is not judged by its one depot signal.
+  function siteRecordChance(state, mo, covered) {
+    if (!window.FWFacilityEngine || !state || !state.registry) return null;
+    const counts = new Map();
+    sitedSignals(covered).forEach(s => counts.set(s.facilityId, (counts.get(s.facilityId) || 0) + 1));
+    if (!counts.size) return null;
+    let num = 0, den = 0;
+    const sites = [];
+    counts.forEach((n, id) => {
+      const f = FWEntityEngine.get(state.registry, 'facility', id);
+      if (!f) return;
+      const cov = FWFacilityEngine.meanCoverage(f);
+      sites.push({ facilityId: id, name: f.name, kindLabel: FWFacilityEngine.archetype(f.kind).label, coverage: cov, signalCount: n });
+      num += cov * n; den += n;
+    });
+    if (!den) return null;
+    sites.sort((a, b) => b.signalCount - a.signalCount);
+    return { chance: num / den, sites };
+  }
+
+  function narrateNoRecord(def, ctx) {
+    const list = ctx.sites.map(s => `${s.name} (${s.kindLabel}, assumed coverage ${Math.round(s.coverage * 100)}%)`).join('; ');
+    return `${def.label}: no such record exists. ${list} does not produce a record covering this at the hour it was observed, so there is nothing to fetch and repeating the check will not change that. ` +
+      'Confidence is unchanged by design: a missing record at a thinly-watched site is what thin watching produces, so treating its absence as support would be charging the carrier for this port\'s coverage gap. ' +
+      'What this does tell you is that the corroborating reading is unavailable here — which is a fact about the blind spot, not about the case.';
+  }
+
+  function narrateSiteUnavailable() {
+    return 'Every signal in this case was observed on the open road, at no site, so there is no site record to pull. That is an absence of a source, not an inconclusive check, and no effort is spent.';
+  }
 
   // A case an analyst deliberately closed is locked. A case the engine
   // faded on its own is NOT: "the signals stopped before correlation was
@@ -129,12 +203,22 @@ const FWInvestigationEngine = (() => {
       .map(key => {
         const def = ACTION_CATALOG[key];
         const covered = coveredSignals(state, mo, def);
+        // An action that needs a site is offered only when the case has
+        // one. Offering it on a wholly road-observed case would invite the
+        // analyst to spend an hour learning there was never a source.
+        const siteCtx = def.requiresSite ? siteRecordChance(state, mo, covered) : null;
+        const applicable = covered.length > 0 && (!def.requiresSite || !!siteCtx);
         return {
           key,
           label: def.label,
           question: def.question,
           effortSeconds: def.effortSeconds,
-          applicable: covered.length > 0,
+          applicable,
+          requiresSite: !!def.requiresSite,
+          // Stated up front, before the analyst spends the effort: how
+          // likely this source holds anything at all.
+          siteRecordLikelihood: siteCtx ? Math.round(siteCtx.chance * 100) : null,
+          sites: siteCtx ? siteCtx.sites : null,
           signalTypes: Array.from(new Set(covered.map(s => s.type))),
           done: record.completed.includes(key)
         };
@@ -181,26 +265,44 @@ const FWInvestigationEngine = (() => {
     const covered = coveredSignals(state, mo, def);
     if (!covered.length) return null;
 
+    // A site-record check on a case with no site is refused outright
+    // rather than run and reported as inconclusive, and costs nothing.
+    const siteCtx = def.requiresSite ? siteRecordChance(state, mo, covered) : null;
+    if (def.requiresSite && !siteCtx) return null;
+
     const types = Array.from(new Set(covered.map(s => s.type)));
     const now = FWSimRunner.absoluteNow(state.clock);
-    const inconclusive = state.rng ? state.rng.chance(def.inconclusiveChance) : false;
+
+    // Does a record covering this even exist? Rolled BEFORE the ordinary
+    // inconclusive roll, because "there is nothing to fetch" is a
+    // different answer from "the fetch failed", and only the first one is
+    // guaranteed not to move confidence.
+    const noRecord = def.requiresSite && state.rng
+      ? !state.rng.chance(siteCtx.chance) : false;
+    const inconclusive = !noRecord && state.rng ? state.rng.chance(def.inconclusiveChance) : false;
 
     let outcome, delta, narrative;
-    if (inconclusive) {
+    if (noRecord) {
+      outcome = 'NO_RECORD_EXISTS';
+      delta = 0;
+      narrative = narrateNoRecord(def, siteCtx);
+    } else if (inconclusive) {
       outcome = 'INCONCLUSIVE';
       delta = 0;
       narrative = narrateInconclusive(def);
     } else {
-      const causes = explainedCauses(covered);
-      const explained = covered.filter(s => s.groundTruth && s.groundTruth.legitimate).length;
-      const fraction = explained / covered.length;
+      // A site record can only speak to what was observed at a site.
+      const scope = def.requiresSite ? sitedSignals(covered) : covered;
+      const causes = explainedCauses(scope);
+      const explained = scope.filter(s => s.groundTruth && s.groundTruth.legitimate).length;
+      const fraction = explained / scope.length;
       delta = Math.round(def.exculpatoryDelta * fraction + def.corroboratingDelta * (1 - fraction));
       if (fraction >= 0.5) {
         outcome = 'EXCULPATORY';
-        narrative = narrateExculpatory(def, causes, explained, covered.length);
+        narrative = narrateExculpatory(def, causes, explained, scope.length);
       } else if (fraction > 0) {
         outcome = 'MIXED';
-        narrative = narrateMixed(def, causes, explained, covered.length);
+        narrative = narrateMixed(def, causes, explained, scope.length);
       } else {
         outcome = 'CORROBORATING';
         narrative = narrateCorroborating(def, types);
@@ -210,8 +312,15 @@ const FWInvestigationEngine = (() => {
     const finding = {
       actionKey, label: def.label, question: def.question,
       outcome, confidenceDelta: delta, signalTypes: types,
-      effortSeconds: def.effortSeconds, at: now, narrative
+      effortSeconds: def.effortSeconds, at: now, narrative,
+      sites: siteCtx ? siteCtx.sites : null,
+      siteRecordLikelihood: siteCtx ? Math.round(siteCtx.chance * 100) : null
     };
+
+    // Belt and braces on the one invariant this outcome exists to hold.
+    if (outcome === 'NO_RECORD_EXISTS' && delta !== 0) {
+      throw new Error('NO_RECORD_EXISTS must never move confidence');
+    }
 
     record.findings.push(finding);
     record.completed.push(actionKey);
@@ -225,18 +334,31 @@ const FWInvestigationEngine = (() => {
 
   function summary(mo) {
     const record = ensureRecord(mo);
-    const byOutcome = { EXCULPATORY: 0, MIXED: 0, CORROBORATING: 0, INCONCLUSIVE: 0 };
+    const byOutcome = { EXCULPATORY: 0, MIXED: 0, CORROBORATING: 0, INCONCLUSIVE: 0, NO_RECORD_EXISTS: 0 };
     record.findings.forEach(f => { if (byOutcome[f.outcome] != null) byOutcome[f.outcome]++; });
     return {
       checksRun: record.findings.length,
       effortSeconds: record.effortSeconds,
       adjustment: mo.investigationAdjustment || 0,
-      byOutcome
+      byOutcome,
+      // Checks that came back with nothing to fetch. Surfaced separately
+      // from inconclusive ones so "we could not see there" never gets
+      // averaged into "we looked and found nothing".
+      noRecordChecks: byOutcome.NO_RECORD_EXISTS
     };
   }
 
+  const OUTCOME_NOTE = {
+    EXCULPATORY: 'A documented explanation was found on record. Records are verifiable, so this weighs heavily.',
+    MIXED: 'Part of what was checked has a documented explanation and part does not. The remainder is unexplained, which is not the same as suspicious.',
+    CORROBORATING: 'No documented explanation was found. That is an absence of an innocent explanation, not evidence of fraud, so it moves confidence only slightly.',
+    INCONCLUSIVE: 'The source could not be reached or its records were incomplete. The effort is spent and nothing is learned.',
+    NO_RECORD_EXISTS: 'No record of this kind exists at that site and hour, so there was never anything to fetch. Confidence is unchanged by design — a missing record where watching is thin is what thin watching produces.'
+  };
+
   return {
-    ACTION_CATALOG, availableActions, performAction, summary, isInvestigable,
-    signalsForMo, MAX_UPWARD_ADJUSTMENT, MAX_DOWNWARD_ADJUSTMENT
+    ACTION_CATALOG, OUTCOME_NOTE, availableActions, performAction, summary, isInvestigable,
+    signalsForMo, sitedSignals, siteRecordChance, narrateSiteUnavailable,
+    MAX_UPWARD_ADJUSTMENT, MAX_DOWNWARD_ADJUSTMENT
   };
 })();
