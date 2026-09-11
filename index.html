@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fraud Watch — Dispatch Fraud Simulator</title>
+<meta name="description" content="A playable dispatch-fraud simulator built on the freight-fraud-taxonomy dataset: 12 real fraud patterns, 77 indicators, 137 countermeasures. Spot the fraud before the shipment arrives.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2032%2032%27%3E%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%277%27%20fill%3D%27%230b0f14%27%2F%3E%3Cpath%20d%3D%27M6%2020h5l2-4h6l2%204h5%27%20fill%3D%27none%27%20stroke%3D%27%2338bdf8%27%20stroke-width%3D%272.2%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%3Ccircle%20cx%3D%2711.5%27%20cy%3D%2722.5%27%20r%3D%272.3%27%20fill%3D%27%2338bdf8%27%2F%3E%3Ccircle%20cx%3D%2722.5%27%20cy%3D%2722.5%27%20r%3D%272.3%27%20fill%3D%27%2338bdf8%27%2F%3E%3C%2Fsvg%3E">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="text-slate-200 font-sans min-h-screen">
+
+<header class="border-b border-slate-800 bg-[#0d1420]">
+  <div class="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <a href="https://github.com/Jeevan-0508" target="_blank" rel="noopener" title="Jeevan Siddhabhaktula — Risk. Governance. AI.">
+        <img src="jk-logo.png" alt="JK" width="40" height="40" class="rounded">
+      </a>
+      <div>
+        <h1 class="text-xl font-bold text-white leading-tight">Fraud Watch</h1>
+        <p class="text-xs text-slate-400">Dispatch-fraud simulator · built on <a class="text-sky-400 hover:underline" href="https://github.com/Jeevan-0508/freight-fraud-taxonomy" target="_blank" rel="noopener">freight-fraud-taxonomy</a></p>
+      </div>
+    </div>
+    <div class="flex gap-2" id="mode-tabs">
+      <button data-mode="game" class="tab-btn active px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 transition">Dispatch Game</button>
+      <button data-mode="training" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 transition">Training Mode</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-5 py-5">
+
+  <!-- ============ GAME MODE ============ -->
+  <section id="view-game">
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-4" id="stat-strip">
+      <div class="bg-[#111823] rounded-xl px-4 py-3 border border-slate-800">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wide">Score</div>
+        <div class="text-2xl font-bold text-white" id="stat-score">0</div>
+      </div>
+      <div class="bg-[#111823] rounded-xl px-4 py-3 border border-slate-800">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wide">Accuracy</div>
+        <div class="text-2xl font-bold text-emerald-400" id="stat-accuracy">—</div>
+      </div>
+      <div class="bg-[#111823] rounded-xl px-4 py-3 border border-slate-800">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wide">Streak</div>
+        <div class="text-2xl font-bold text-sky-400" id="stat-streak">0</div>
+      </div>
+      <div class="bg-[#111823] rounded-xl px-4 py-3 border border-slate-800">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wide">Level</div>
+        <div class="text-2xl font-bold text-white" id="stat-level">1</div>
+      </div>
+      <div class="bg-[#111823] rounded-xl px-4 py-3 border border-slate-800">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wide">Resolved</div>
+        <div class="text-2xl font-bold text-white" id="stat-resolved">0</div>
+      </div>
+      <div class="bg-[#111823] rounded-xl px-4 py-3 border border-slate-800 flex flex-col justify-center">
+        <button id="btn-start" class="bg-sky-500 hover:bg-sky-400 text-[#0b0f14] font-bold rounded-lg py-1.5 text-sm">Start</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
+
+      <!-- Map -->
+      <div class="bg-[#0d1420] border border-slate-800 rounded-xl p-3">
+        <div class="flex items-center justify-between px-1 pb-2">
+          <p class="text-sm text-slate-400">Click a truck to inspect its clues, then flag or clear it before it reaches the depot.</p>
+        </div>
+        <svg id="map" viewBox="0 0 1000 460" class="w-full h-auto"></svg>
+      </div>
+
+      <!-- Right rail: inspector + alert feed -->
+      <div class="flex flex-col gap-4">
+        <div class="bg-[#0d1420] border border-slate-800 rounded-xl p-3" id="inspector">
+          <h3 class="text-sm font-semibold text-slate-300 mb-2">Inspector</h3>
+          <div id="inspector-body" class="text-sm text-slate-400">Select a shipment on the map.</div>
+        </div>
+        <div class="bg-[#0d1420] border border-slate-800 rounded-xl p-3 flex-1 min-h-[220px]">
+          <h3 class="text-sm font-semibold text-slate-300 mb-2">Alert feed</h3>
+          <div id="alert-feed" class="space-y-2 max-h-[320px] overflow-y-auto scrollbar-thin"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div class="bg-[#0d1420] border border-slate-800 rounded-xl p-4">
+        <h3 class="text-sm font-semibold text-slate-300 mb-2">Decisions</h3>
+        <canvas id="chart-decisions" height="180"></canvas>
+      </div>
+      <div class="bg-[#0d1420] border border-slate-800 rounded-xl p-4">
+        <h3 class="text-sm font-semibold text-slate-300 mb-2">Fraud caught by category</h3>
+        <canvas id="chart-categories" height="180"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRAINING MODE ============ -->
+  <section id="view-training" class="hidden">
+    <div class="bg-[#0d1420] border border-slate-800 rounded-xl p-5">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <p class="text-xs text-slate-500 uppercase tracking-wide" id="tr-progress">Pattern 1 of 12</p>
+          <h2 class="text-2xl font-bold text-white" id="tr-name">—</h2>
+          <div class="flex gap-2 mt-2" id="tr-badges"></div>
+        </div>
+        <div class="flex gap-2">
+          <button id="tr-prev" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">← Prev</button>
+          <button id="tr-next" class="px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-[#0b0f14] font-semibold text-sm">Next →</button>
+        </div>
+      </div>
+
+      <p class="text-slate-300 mb-4" id="tr-summary"></p>
+
+      <div class="mb-4">
+        <h4 class="text-sm font-semibold text-slate-400 mb-1">How it works</h4>
+        <ol class="list-decimal list-inside text-sm text-slate-300 space-y-1" id="tr-howitworks"></ol>
+      </div>
+
+      <div class="flex gap-2 mb-3" id="tr-tabs">
+        <button data-tab="indicators" class="tab-btn active px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800">Indicators</button>
+        <button data-tab="falsepos" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800">False positives</button>
+        <button data-tab="counter" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800">Countermeasures</button>
+        <button data-tab="reg" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800">Regulatory hooks</button>
+      </div>
+
+      <div id="tr-panel" class="min-h-[220px]"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Reveal modal -->
+<div id="reveal-backdrop" class="hidden fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-4">
+  <div class="reveal-enter bg-[#0d1420] border border-slate-700 rounded-2xl max-w-lg w-full p-5 z-50" id="reveal-card"></div>
+</div>
+
+<footer class="max-w-7xl mx-auto px-5 py-8 text-xs text-slate-500">
+  Fraud content sourced verbatim from
+  <a class="text-sky-400 hover:underline" href="https://github.com/Jeevan-0508/freight-fraud-taxonomy" target="_blank" rel="noopener">freight-fraud-taxonomy</a>
+  (CC BY 4.0). Game code MIT licensed.
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/training.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

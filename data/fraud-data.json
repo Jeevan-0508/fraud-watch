@@ -1,0 +1,1752 @@
+{
+  "meta": {
+    "taxonomy": "Freight & Carrier Fraud Risk Taxonomy",
+    "version": "1.0.0",
+    "pattern_count": 12,
+    "categories": [
+      "cargo_loss",
+      "contractual",
+      "digital",
+      "documentary",
+      "financial",
+      "identity",
+      "insider",
+      "regulatory"
+    ],
+    "indicator_count": 77,
+    "countermeasure_count": 137
+  },
+  "patterns": [
+    {
+      "id": "FFT-001",
+      "name": "Double Brokering",
+      "aliases": [
+        "unauthorised re-brokering",
+        "double brokerage",
+        "illegal re-tendering"
+      ],
+      "category": "contractual",
+      "severity": "high",
+      "prevalence": "common",
+      "modes": [
+        "road",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "North America"
+      ],
+      "summary": "A carrier that has been awarded a load does not move it, but silently re-tenders it to an unvetted third party while continuing to present itself as the performing carrier. The shipper loses visibility of who is physically holding the cargo, and the liability chain no longer matches the contractual chain.",
+      "how_it_works": [
+        "An entity wins a load on a spot market or through a broker, presenting valid-looking operating authority and insurance.",
+        "Instead of dispatching its own equipment, it posts the same load to another marketplace at a lower rate.",
+        "A second carrier collects the freight, often unaware that the load has been re-brokered.",
+        "The original entity invoices the shipper and either pays the second carrier late, pays it partially, or disappears without paying it at all.",
+        "If the cargo is stolen or damaged, the insurance certificate on file belongs to an entity that never touched the goods, and the actual holder may be uninsured."
+      ],
+      "indicators": [
+        {
+          "phase": "pre_award",
+          "signal": "Carrier accepts a rate materially below the prevailing corridor market rate without a plausible backhaul explanation",
+          "observable_in": "Tender or bid record compared with lane rate benchmark",
+          "weight": 3,
+          "notes": "On its own this is only commercial behaviour. It gains weight in combination with a thin asset profile."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Registered fleet size or reported power units cannot plausibly cover the volume the entity is bidding on",
+          "observable_in": "National operator licence register versus tender volume",
+          "weight": 4
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Contact telephone or email domain differs from the domain registered to the licensed operator",
+          "observable_in": "Onboarding contact record versus operator licence record",
+          "weight": 3
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Tractor unit, trailer plate or driver name at pickup does not match the dispatch confirmation",
+          "observable_in": "Gate check, driver ID check, photograph at loading",
+          "weight": 5,
+          "notes": "This is the single strongest and cheapest detection point. It requires only that someone compares two fields at the gate."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Telematics or ELD feed is unavailable, and position updates arrive only as manual driver check calls",
+          "observable_in": "Visibility platform",
+          "weight": 3
+        },
+        {
+          "phase": "post_event",
+          "signal": "An unknown third carrier contacts the shipper directly chasing payment for the same load",
+          "observable_in": "Accounts payable enquiries",
+          "weight": 5,
+          "notes": "Near-conclusive. An unpaid subcontractor surfacing is often the first time the shipper learns the load was re-brokered."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Claim is submitted by, or on behalf of, an entity that does not appear anywhere in the contractual chain",
+          "observable_in": "Claims file",
+          "weight": 4
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "A different tractor and driver arrive than were confirmed at dispatch.",
+          "actually": "Legitimate last-minute dispatch reallocation inside the same operator, which is routine in day-to-day fleet management.",
+          "how_to_rule_out": "Check whether the substituted unit is registered to the same operator licence, and whether the change was notified through the normal dispatch channel before arrival rather than explained at the gate."
+        },
+        {
+          "looks_like": "A subcontracted carrier appears on the transport document.",
+          "actually": "Contractually permitted subcontracting that was disclosed and approved in the transport agreement.",
+          "how_to_rule_out": "Confirm the subcontractor appears on the approved-subcontractor list and that liability and insurance were extended in writing. Disclosed subcontracting is not double brokering; the defining feature of this pattern is concealment."
+        },
+        {
+          "looks_like": "A very low accepted rate.",
+          "actually": "A genuine repositioning move where the carrier needs to relocate equipment and would otherwise run empty.",
+          "how_to_rule_out": "Look at whether the entity's other recent movements form a coherent geographic pattern consistent with repositioning."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Require written disclosure and prior approval of any subcontracting, and make undisclosed re-tendering an express termination event in the transport contract.",
+          "Verify operating authority and insurance against the issuing register directly, not against a document supplied by the counterparty.",
+          "Cross-check that the entity's declared fleet capacity is consistent with the volume it is being awarded.",
+          "Confirm bank details out of band before the first payment, and treat any later change of bank details as a new verification event."
+        ],
+        "detective": [
+          "Make it mandatory to record tractor plate, trailer plate and driver identity at loading, and reconcile all three against the dispatch confirmation automatically rather than by eye.",
+          "Alert on the same load reference appearing on more than one freight marketplace.",
+          "Monitor accounts payable for payment enquiries from entities that are not in the contractual chain, and treat every one as a potential re-brokering disclosure.",
+          "Track the share of movements per carrier with no telematics coverage."
+        ],
+        "responsive": [
+          "Suspend further tendering to the entity immediately and freeze open invoices pending reconciliation.",
+          "Establish who physically held the cargo and whether that party carried valid liability cover, before settling any claim.",
+          "Notify the affected subcontractor directly, since it is a victim of the same scheme and is usually the best source of evidence.",
+          "Record the case against the entity and its identified principals, not only against the trading name, so a re-registered successor entity can be recognised."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        },
+        {
+          "instrument": "CMR Convention",
+          "provision": "Art. 3 and Art. 17",
+          "relevance": "The contracting carrier remains liable for the acts of the parties it employs to perform the carriage, which is precisely what a concealed re-tender obscures."
+        }
+      ],
+      "related": [
+        "FFT-002",
+        "FFT-003",
+        "FFT-011",
+        "FFT-012"
+      ],
+      "references": [
+        {
+          "title": "Fraud prevention resources for transportation intermediaries",
+          "publisher": "Transportation Intermediaries Association",
+          "url": "https://www.tianet.org/"
+        },
+        {
+          "title": "Convention on the Contract for the International Carriage of Goods by Road (CMR) and the e-CMR Additional Protocol",
+          "publisher": "United Nations Treaty Collection (depositary record)",
+          "url": "https://treaties.un.org/Pages/ViewDetails.aspx?src=TREATY&mtdsg_no=XI-B-11&chapter=11"
+        },
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-002",
+      "name": "Phantom Carrier",
+      "aliases": [
+        "fictitious carrier",
+        "ghost carrier",
+        "non-existent haulier"
+      ],
+      "category": "identity",
+      "severity": "critical",
+      "prevalence": "common",
+      "modes": [
+        "road",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "North America"
+      ],
+      "summary": "An entity is created for the specific purpose of collecting freight and disappearing. It has no operational history, no real fleet and no intention of delivering. The documentation is fabricated or copied well enough to pass a paperwork-only onboarding check.",
+      "how_it_works": [
+        "A newly registered company, or a company with no transport history, presents itself as an established haulier.",
+        "Operating authority, insurance certificates and VAT identifiers are fabricated, or copied from a real operator with details altered.",
+        "The entity bids aggressively on high-value, easily resold commodities and accepts almost any rate.",
+        "It collects one or several loads in a short window, sometimes on the same day across different shippers.",
+        "The entity then ceases all contact. Registered addresses turn out to be virtual offices, mail drops or unrelated residential premises."
+      ],
+      "indicators": [
+        {
+          "phase": "pre_award",
+          "signal": "Company registered within the last six to twelve months with no verifiable transport operating history",
+          "observable_in": "Commercial register and operator licence register",
+          "weight": 3,
+          "notes": "New companies are legitimate and common. Weight comes from combination, not from newness alone."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Registered address is a virtual office, mailbox service, or an address shared with unrelated companies",
+          "observable_in": "Commercial register address, compared against known virtual-office providers",
+          "weight": 4
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Insurance certificate is supplied as an image or edited document rather than confirmed by the insurer or broker directly",
+          "observable_in": "Onboarding document set",
+          "weight": 4,
+          "notes": "See FFT-011 for the detail of certificate fraud."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Bids concentrate almost exclusively on high value-density, easily resold commodities such as consumer electronics, pharmaceuticals, tobacco, or branded apparel",
+          "observable_in": "Bid history by commodity class",
+          "weight": 3
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Contact identity has no verifiable footprint: no traceable landline, no consistent business presence, personal email domain",
+          "observable_in": "Contact verification during onboarding",
+          "weight": 2
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Vehicle presenting at pickup carries no operator livery and plates are not registered to the contracting entity",
+          "observable_in": "Gate check and plate verification",
+          "weight": 5
+        },
+        {
+          "phase": "in_transit",
+          "signal": "All contact stops immediately after loading and the vehicle stops reporting position",
+          "observable_in": "Visibility platform and dispatch contact log",
+          "weight": 5
+        },
+        {
+          "phase": "post_event",
+          "signal": "Registered address, on inspection, has no transport operation at it",
+          "observable_in": "Site verification or local enquiry",
+          "weight": 5
+        },
+        {
+          "phase": "post_event",
+          "signal": "The same principals or the same address reappear behind a newly registered entity",
+          "observable_in": "Register of directors and shareholders across entities",
+          "weight": 4,
+          "notes": "This is what makes the pattern repeatable, and why case records must be kept against people and addresses, not just trading names."
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "A newly registered company with no transport history bidding on freight.",
+          "actually": "A genuine new entrant, or a newly incorporated vehicle of an existing operator restructuring its business.",
+          "how_to_rule_out": "Verify operating authority directly with the issuing authority, confirm insurance with the insurer, and confirm that declared equipment exists and is registered to the entity. A real new entrant passes all three; a phantom fails at least one."
+        },
+        {
+          "looks_like": "A shared or serviced office address.",
+          "actually": "Small legitimate hauliers and freight agents commonly use serviced offices while operating from a separate yard.",
+          "how_to_rule_out": "Ask for the operational depot or parking location separately from the registered address, and verify that it exists and is capable of holding the declared fleet."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Verify operating authority, insurance and tax identifiers at source with the issuing body, and never accept a counterparty-supplied document as the primary evidence.",
+          "Require the operational depot address separately from the registered address, and verify it independently.",
+          "Apply a graduated exposure limit to new counterparties: cap cargo value and prohibit high-risk commodity classes until a delivery history exists.",
+          "Screen the registered address and the named principals against prior incident records before award, not only the company name."
+        ],
+        "detective": [
+          "Automatically flag a first-time counterparty bidding on a load above a defined value threshold for manual release.",
+          "Reconcile plate and driver identity at the gate against the dispatch record, and hold the load if they do not match.",
+          "Alert when position reporting and contact both cease within the first hours after loading, rather than waiting for the delivery window to close."
+        ],
+        "responsive": [
+          "Treat a non-contactable carrier holding loaded cargo as a theft in progress and escalate to law enforcement immediately rather than as a service failure.",
+          "Preserve the full onboarding document set, correspondence and gate photographs as evidence before any account is closed.",
+          "Record the incident against principals, addresses, bank accounts and telephone numbers so a re-registered successor can be matched.",
+          "Share the identifiers through the relevant industry or law enforcement channel, since these entities move between shippers rapidly."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        }
+      ],
+      "related": [
+        "FFT-001",
+        "FFT-003",
+        "FFT-004",
+        "FFT-011"
+      ],
+      "references": [
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Organised property crime and cargo theft in the EU",
+          "publisher": "Europol",
+          "url": "https://www.europol.europa.eu/"
+        },
+        {
+          "title": "Fraud prevention resources for transportation intermediaries",
+          "publisher": "Transportation Intermediaries Association",
+          "url": "https://www.tianet.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-003",
+      "name": "Carrier Identity Takeover",
+      "aliases": [
+        "dormant authority hijack",
+        "operator identity theft",
+        "carrier impersonation"
+      ],
+      "category": "identity",
+      "severity": "critical",
+      "prevalence": "occasional",
+      "modes": [
+        "road",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "North America"
+      ],
+      "summary": "Rather than inventing a company, the perpetrator adopts the identity of a real, licensed operator, typically one that is dormant, recently sold, or simply obscure. Every credential presented checks out because it belongs to a genuine business. Only the contact details, and the party actually collecting the freight, are substituted.",
+      "how_it_works": [
+        "A real operator with valid authority is selected, often one that is inactive, recently dissolved, or has minimal online presence.",
+        "The perpetrator registers lookalike contact channels: a similar domain, a new telephone number, an email address that closely resembles the genuine one.",
+        "Genuine licence numbers, insurance references and registration data are presented, so verification against public registers succeeds.",
+        "Freight is awarded and collected under the borrowed identity.",
+        "The real operator is unaware until it is contacted about a load it never carried, or a claim it never caused."
+      ],
+      "indicators": [
+        {
+          "phase": "pre_award",
+          "signal": "Contact domain is a close variant of the operator's genuine domain, differing by a character, a suffix or a top-level domain",
+          "observable_in": "Onboarding contact record compared with the domain historically associated with the licence holder",
+          "weight": 5,
+          "notes": "The strongest single indicator of this pattern, and cheap to check."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Contact telephone or email details for a known licence number have changed recently and the change was not initiated through an existing relationship",
+          "observable_in": "Change history on the carrier master record",
+          "weight": 4
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Bank details supplied do not match the account name of the licensed operator, or are held in a different country from the operator",
+          "observable_in": "Payment master data",
+          "weight": 5
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Licence is valid but the operator has no recent activity, filings or movements",
+          "observable_in": "Register filing history and any available activity data",
+          "weight": 3
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Equipment presenting at pickup is not registered to the licence holder",
+          "observable_in": "Plate verification at gate",
+          "weight": 5
+        },
+        {
+          "phase": "post_event",
+          "signal": "The genuine operator denies all knowledge of the movement when contacted on independently obtained details",
+          "observable_in": "Direct verification using details from the register, not from the tender",
+          "weight": 5,
+          "notes": "Always re-contact using details obtained independently. Contacting the number supplied by the perpetrator simply reaches the perpetrator."
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "Contact details for an existing carrier have changed.",
+          "actually": "Genuine rebranding, domain migration, office relocation, or acquisition.",
+          "how_to_rule_out": "Confirm the change through the pre-existing channel, not the new one, and require confirmation from a known contact. A genuine change survives verification through the old channel; a takeover does not."
+        },
+        {
+          "looks_like": "Bank account name differs from the operator name.",
+          "actually": "Legitimate use of a factoring company or a group treasury account, which is common in road freight.",
+          "how_to_rule_out": "Require a written assignment or factoring agreement, and verify it with the factor directly. Legitimate factoring is documented and verifiable."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Treat any change to contact details or bank details on an existing carrier record as a high-risk event requiring out-of-band verification through the previously known channel.",
+          "Bind the carrier master record to a verified domain and telephone number, and alert on any deviation at tender.",
+          "Require that the payee name match the licensed operator, or that a verified factoring assignment be on file.",
+          "Verify licence status and licence-holder identity together, rather than checking only that a licence number is valid."
+        ],
+        "detective": [
+          "Run automated lookalike-domain detection against the domains of onboarded carriers.",
+          "Flag tenders where a dormant licence suddenly becomes commercially active.",
+          "Reconcile equipment registration against licence holder at the gate."
+        ],
+        "responsive": [
+          "Notify the impersonated operator, which is a victim and will usually cooperate, and which may already hold evidence.",
+          "Preserve the lookalike domain, email headers, telephone numbers and bank details, since these are the artefacts that link cases together.",
+          "Report to the licensing authority, because impersonation of a licence holder affects the integrity of the register itself.",
+          "Re-verify all counterparties onboarded in the same period through the same channel, since these campaigns rarely target a single shipper."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        }
+      ],
+      "related": [
+        "FFT-002",
+        "FFT-001",
+        "FFT-011"
+      ],
+      "references": [
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Organised property crime and cargo theft in the EU",
+          "publisher": "Europol",
+          "url": "https://www.europol.europa.eu/"
+        },
+        {
+          "title": "Fraud prevention resources for transportation intermediaries",
+          "publisher": "Transportation Intermediaries Association",
+          "url": "https://www.tianet.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-004",
+      "name": "Fictitious Pickup",
+      "aliases": [
+        "theft by deception at origin",
+        "fraudulent collection",
+        "load theft at loading"
+      ],
+      "category": "cargo_loss",
+      "severity": "critical",
+      "prevalence": "occasional",
+      "modes": [
+        "road",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "North America"
+      ],
+      "summary": "Cargo is handed over voluntarily at the loading point to someone who is not entitled to it. No lock is forced and no vehicle is broken into, which is what makes this pattern both effective and difficult to classify: operationally it looks like a normal collection, and the loss is often first recorded as a delivery failure rather than a theft.",
+      "how_it_works": [
+        "The perpetrator obtains enough information about a genuine booking to present convincingly: reference numbers, consignee, commodity, collection window.",
+        "Information is acquired by impersonating a carrier or broker, by intercepting correspondence, or through an insider at any point in the chain.",
+        "A driver arrives inside or just before the booked window, presenting paperwork consistent with the genuine booking.",
+        "Loading staff release the cargo because the reference matches and there is time pressure at the dock.",
+        "The genuine carrier arrives later to find the load already collected, by which point the cargo is gone and the trail is cold."
+      ],
+      "indicators": [
+        {
+          "phase": "pre_award",
+          "signal": "Requests for load reference numbers, collection windows or consignee detail arrive from an unverified channel",
+          "observable_in": "Correspondence with the booking desk",
+          "weight": 3
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Driver arrives early, ahead of the booked window, and applies pressure to be loaded quickly",
+          "observable_in": "Gate log and dock staff observation",
+          "weight": 3,
+          "notes": "Common enough legitimately that it must be combined with an identity mismatch to carry weight."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Driver identity document does not match the name on the dispatch confirmation",
+          "observable_in": "Driver ID check at gate",
+          "weight": 5
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Tractor or trailer plate does not match the dispatch record",
+          "observable_in": "Plate check at gate",
+          "weight": 5
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Paperwork is presented as a photograph or printout with inconsistent formatting, or the driver cannot produce the transport order through the carrier's own system",
+          "observable_in": "Document inspection at gate",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Two vehicles present for the same load reference",
+          "observable_in": "Gate log",
+          "weight": 5,
+          "notes": "Effectively conclusive, and the reason gate logs should be checked against open bookings in real time rather than reconciled later."
+        },
+        {
+          "phase": "post_event",
+          "signal": "The contracted carrier reports arriving to find the load already collected",
+          "observable_in": "Carrier exception report",
+          "weight": 5
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "An unexpected driver and vehicle arrive for a booked load.",
+          "actually": "A legitimate last-minute reallocation within the operator, or an approved subcontractor, that was not communicated to the dock.",
+          "how_to_rule_out": "Verify with the operator by calling the number held on the carrier master record, never the number offered by the driver, and confirm the substitution before releasing cargo."
+        },
+        {
+          "looks_like": "Driver presents printed or photographed paperwork.",
+          "actually": "Normal practice for many small operators, particularly on subcontracted or spot work.",
+          "how_to_rule_out": "Do not treat document format as the test. Test identity: does the vehicle belong to the contracted operator and does the operator confirm this driver for this load."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Issue a single-use collection code per booking, communicated to the carrier through the established channel and required at the gate.",
+          "Make release conditional on a three-way match of driver identity, vehicle registration and booking reference, with no discretion to override under time pressure.",
+          "Restrict distribution of load reference and consignee data to parties with a verified need, and treat unsolicited requests for it as a security event.",
+          "Give dock staff explicit authority to refuse loading on an identity mismatch, and remove any performance metric that penalises them for doing so."
+        ],
+        "detective": [
+          "Check the gate log against open bookings in real time so that a second presentation for the same reference is caught while the vehicle is still on site.",
+          "Photograph vehicle, plate and driver document at every collection and retain the images against the booking.",
+          "Alert when a collection is recorded outside the booked window."
+        ],
+        "responsive": [
+          "Treat the event as a theft from the moment of the mismatch, not from the expiry of the delivery window, since the first hours determine whether recovery is possible.",
+          "Preserve gate photographs, access-control records and CCTV immediately, before routine retention periods overwrite them.",
+          "Establish how the booking data leaked, since a fictitious pickup requires information that was obtained from somewhere and the leak will otherwise be used again.",
+          "Notify the genuine carrier, which is a witness and may be able to identify the impersonating party."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        }
+      ],
+      "related": [
+        "FFT-002",
+        "FFT-003",
+        "FFT-009",
+        "FFT-010"
+      ],
+      "references": [
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Organised property crime and cargo theft in the EU",
+          "publisher": "Europol",
+          "url": "https://www.europol.europa.eu/"
+        },
+        {
+          "title": "Road transport safety and security guidance",
+          "publisher": "IRU",
+          "url": "https://www.iru.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-005",
+      "name": "Systematic Pilferage",
+      "aliases": [
+        "partial load theft",
+        "skimming",
+        "shortage fraud"
+      ],
+      "category": "cargo_loss",
+      "severity": "medium",
+      "prevalence": "endemic",
+      "modes": [
+        "road",
+        "parcel",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "North America"
+      ],
+      "summary": "Rather than taking a whole load, small quantities are removed repeatedly across many movements. Each individual shortage is small enough to be absorbed as a discrepancy, written off, or blamed on miscount at origin. The pattern is only visible in aggregate, which is why it can persist for long periods and why it is frequently the most expensive fraud class in cumulative terms.",
+      "how_it_works": [
+        "Cargo is accessed during a movement, at a stop, or at a transfer point, and a small proportion is removed.",
+        "The shortage is small relative to the consignment, so it falls within tolerance or is disputed as an origin count error.",
+        "Because each event is individually trivial, no investigation is triggered and no case record is created.",
+        "The behaviour repeats across the same route, the same driver, the same transfer point or the same consignee.",
+        "Cumulative loss becomes material long before any single event does."
+      ],
+      "indicators": [
+        {
+          "phase": "post_event",
+          "signal": "Shortage rate for a specific route, driver, transfer point or consignee is persistently above the network baseline",
+          "observable_in": "Discrepancy data aggregated by dimension rather than by event",
+          "weight": 4,
+          "notes": "This pattern is invisible at event level by design. Detection is entirely a matter of aggregation."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Shortages cluster on high value-density, easily resold items within otherwise mixed consignments",
+          "observable_in": "Discrepancy records by SKU class",
+          "weight": 4
+        },
+        {
+          "phase": "post_event",
+          "signal": "Shortage quantities sit consistently just below the threshold that would trigger a formal investigation",
+          "observable_in": "Discrepancy value distribution against the escalation threshold",
+          "weight": 5,
+          "notes": "A distribution that bunches immediately under a control threshold indicates knowledge of the threshold, which narrows the population considerably."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Discrepancies persist on a lane after the consignee and origin count processes have both been independently verified",
+          "observable_in": "Reconciliation after controlled count",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Unexplained stops, or dwell time materially above the corridor norm, correlate with the affected movements",
+          "observable_in": "Telematics stop analysis",
+          "weight": 3
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Seal number recorded at destination differs from the number recorded at origin, or the seal is reported as replaced in transit",
+          "observable_in": "Seal record",
+          "weight": 4,
+          "notes": "See FFT-007."
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "Persistent shortages on a lane.",
+          "actually": "A genuine count, labelling or system error at origin, or a units-of-measure mismatch between systems.",
+          "how_to_rule_out": "Run a controlled count at origin and at destination for a defined period before treating the pattern as theft. Process error survives a controlled count; pilferage usually stops during it."
+        },
+        {
+          "looks_like": "Shortages concentrated on one driver.",
+          "actually": "That driver is simply assigned disproportionately to the affected lane or shift.",
+          "how_to_rule_out": "Normalise by exposure. Compare shortages per movement or per consignment handled, never absolute counts, and test whether the lane or the individual is the better explanation."
+        },
+        {
+          "looks_like": "Losses concentrated on high-value items.",
+          "actually": "High-value items are more likely to be counted carefully and therefore more likely to have discrepancies detected at all.",
+          "how_to_rule_out": "Compare detection rates as well as loss rates, and check whether low-value shortages are simply not being recorded."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Use tamper-evident, uniquely numbered seals and record the number at every custody transfer rather than only at origin and destination.",
+          "Segregate high value-density items and apply a distinct handling and verification regime rather than the general one.",
+          "Rotate assignment of drivers and handlers on affected lanes, which both disrupts an established scheme and provides a natural control comparison.",
+          "Avoid publishing internal investigation thresholds, since a known threshold is a target to stay beneath."
+        ],
+        "detective": [
+          "Aggregate discrepancies continuously by route, driver, vehicle, transfer point, consignee and SKU class, and alert on sustained deviation from baseline rather than on individual events.",
+          "Monitor the distribution of shortage values for bunching immediately below control thresholds.",
+          "Reconcile seal numbers at every custody change automatically.",
+          "Correlate discrepancy events against unplanned stops and dwell outliers in telematics data."
+        ],
+        "responsive": [
+          "Establish process error or theft with a controlled count before any accusation, because this pattern has a genuinely high false-positive rate.",
+          "Preserve seal records, telematics history and handover documentation for the whole affected period, not only for the triggering event.",
+          "Quantify cumulative rather than per-event loss when deciding on proportionate response, since the per-event figure systematically understates the harm.",
+          "Review whether the escalation threshold itself created the pattern, and change it if the distribution suggests it was known."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        }
+      ],
+      "related": [
+        "FFT-007",
+        "FFT-009"
+      ],
+      "references": [
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Organised property crime and cargo theft in the EU",
+          "publisher": "Europol",
+          "url": "https://www.europol.europa.eu/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-006",
+      "name": "Unsecured Parking Theft",
+      "aliases": [
+        "curtain slashing",
+        "roadside cargo theft",
+        "truck stop theft"
+      ],
+      "category": "cargo_loss",
+      "severity": "high",
+      "prevalence": "endemic",
+      "modes": [
+        "road"
+      ],
+      "geography": [
+        "EU"
+      ],
+      "summary": "Cargo is taken from a stationary vehicle at an unsecured stop, most often during a statutory rest period at night. This is the highest-volume cargo crime pattern in European road freight and it is overwhelmingly a function of where and when a vehicle stops rather than of who is carrying it.",
+      "how_it_works": [
+        "A loaded vehicle stops at a lay-by, service area or industrial estate that has no access control, lighting or surveillance.",
+        "The stop is typically driven by driving-time regulation rather than chosen for security, which makes it predictable.",
+        "Curtains are cut or doors are opened while the driver rests, frequently without the driver being aware.",
+        "Cargo is removed in minutes into a following vehicle.",
+        "The loss is often discovered only at delivery, by which time the location and time window are uncertain."
+      ],
+      "indicators": [
+        {
+          "phase": "pre_award",
+          "signal": "Planned route and schedule force a rest period in a corridor segment with no certified secure parking within range",
+          "observable_in": "Route plan compared against secure parking availability",
+          "weight": 4,
+          "notes": "This is the key preventable exposure, and it is visible before the vehicle ever moves."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "High value-density commodity is planned to move in a soft-sided trailer",
+          "observable_in": "Load plan and equipment type",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Overnight stop recorded at a location that is not a certified secure parking area",
+          "observable_in": "Telematics stop location against secure parking registry",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Stop duration of several hours in a known high-incidence corridor segment",
+          "observable_in": "Telematics dwell analysis against incident geography",
+          "weight": 3
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Trailer door or curtain sensor triggers during a rest period",
+          "observable_in": "Trailer intrusion sensor, where fitted",
+          "weight": 5
+        },
+        {
+          "phase": "post_event",
+          "signal": "Loss discovered at delivery with no identified stop, indicating that stop-level visibility is absent",
+          "observable_in": "Claim narrative and telematics coverage",
+          "weight": 3,
+          "notes": "Not an indicator of the crime so much as of a control gap that makes this pattern viable and unattributable."
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "A long unplanned stop in a high-risk area.",
+          "actually": "A breakdown, traffic incident, border queue or enforced congestion stop, none of which the driver chose.",
+          "how_to_rule_out": "Correlate with breakdown and incident reports and with traffic data for the corridor before treating a stop as a policy breach."
+        },
+        {
+          "looks_like": "Curtain damage at delivery.",
+          "actually": "Accidental damage from loading equipment or road debris, which is common on soft-sided equipment.",
+          "how_to_rule_out": "Compare the cut geometry and location with the load plan, and verify against seal and count records whether anything is actually missing."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Plan routes so that every statutory rest falls within reach of a certified secure parking area, and treat a route that cannot meet this as an exception requiring approval.",
+          "Move high value-density commodities in hard-sided or rigid equipment rather than soft-sided trailers.",
+          "Prohibit overnight stops in identified high-incidence corridor segments through contractual route and stop policy, not through guidance alone.",
+          "Where a soft-sided trailer is unavoidable, fit anti-slash curtain material and intrusion detection."
+        ],
+        "detective": [
+          "Geofence certified secure parking areas and alert on any rest period taken outside them.",
+          "Alert on stop duration above a corridor-specific threshold in segments with elevated incident history.",
+          "Fit and monitor door and curtain sensors so that the loss is detected at the stop rather than at the delivery."
+        ],
+        "responsive": [
+          "Report immediately with the precise stop location and time window, since recovery and investigation both depend on narrowing these.",
+          "Feed the confirmed location back into route and parking policy, so that corridor risk assessment reflects observed rather than assumed exposure.",
+          "Review whether the schedule itself made a compliant secure stop impossible, and correct the planning rule rather than the driver."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        },
+        {
+          "instrument": "Regulation (EC) No 561/2006",
+          "provision": "Driving time and rest periods",
+          "relevance": "Mandatory rest periods determine where and when a loaded vehicle must stop, which is what makes this exposure structural and therefore plannable."
+        }
+      ],
+      "related": [
+        "FFT-005",
+        "FFT-007"
+      ],
+      "references": [
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Secure truck parking area standards and certification",
+          "publisher": "ESPORG",
+          "url": "https://www.esporg.eu/"
+        },
+        {
+          "title": "Organised property crime and cargo theft in the EU",
+          "publisher": "Europol",
+          "url": "https://www.europol.europa.eu/"
+        },
+        {
+          "title": "Road transport safety and security guidance",
+          "publisher": "IRU",
+          "url": "https://www.iru.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-007",
+      "name": "Seal Tampering and Reseal Fraud",
+      "aliases": [
+        "seal substitution",
+        "reseal",
+        "seal integrity fraud"
+      ],
+      "category": "documentary",
+      "severity": "medium",
+      "prevalence": "common",
+      "modes": [
+        "road",
+        "sea",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "Global"
+      ],
+      "summary": "A load is accessed and then closed again with a substituted or reapplied seal so that the consignment appears intact on arrival. The purpose is not to hide the cargo loss forever but to move the point of apparent loss away from the party responsible, usually by making it look like a shortage at origin.",
+      "how_it_works": [
+        "The original seal is removed, defeated, or reapplied after access.",
+        "A replacement seal is fitted, often with a number that resembles the original, or the destination record is altered to match the replacement.",
+        "The consignment presents as sealed and intact at delivery.",
+        "The resulting shortage is attributed to a miscount at origin because the seal appeared unbroken.",
+        "Responsibility is therefore displaced to a party that had no opportunity to cause the loss."
+      ],
+      "indicators": [
+        {
+          "phase": "post_event",
+          "signal": "Seal number recorded at destination does not match the number recorded at origin",
+          "observable_in": "Seal record at both ends",
+          "weight": 5,
+          "notes": "Conclusive of substitution, but only detectable if the number is actually recorded at both ends. In practice the control most often fails because the number is never captured, not because it matches."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Seal is intact but the consignment is short",
+          "observable_in": "Delivery count against seal status",
+          "weight": 4
+        },
+        {
+          "phase": "post_event",
+          "signal": "Seal type, colour or issuer differs from the one issued at origin",
+          "observable_in": "Photograph of seal at delivery",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Seal reported as broken and replaced in transit for an operational reason, such as an inspection, without independent corroboration",
+          "observable_in": "In-transit exception report",
+          "weight": 3,
+          "notes": "Legitimate inspections do break seals. The indicator is the absence of corroborating authority documentation, not the replacement itself."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Physical evidence of defeat on the seal body: heat marks, adhesive residue, misaligned serial, deformation",
+          "observable_in": "Physical inspection of the retained seal",
+          "weight": 4
+        },
+        {
+          "phase": "post_event",
+          "signal": "Seals for a lane are drawn from a range that is not centrally controlled, or the sequence has gaps",
+          "observable_in": "Seal issue and reconciliation log",
+          "weight": 3
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "Seal number at destination differs from origin.",
+          "actually": "A lawful customs, police or roadside inspection broke the original seal and applied a new one, which is routine on international movements.",
+          "how_to_rule_out": "Require the inspecting authority's documentation and check that the replacement seal is one the authority issues. Legitimate inspections produce a paper trail."
+        },
+        {
+          "looks_like": "Seal appears damaged on arrival.",
+          "actually": "Mechanical or thermal damage in normal transit, particularly on long or multimodal moves.",
+          "how_to_rule_out": "Inspect whether the seal body shows defeat characteristics rather than wear, and verify the count independently before treating it as tampering."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Use uniquely numbered, tamper-evident seals drawn from a centrally controlled and reconciled range.",
+          "Require the seal number to be captured photographically at every custody transfer, not only at origin and destination.",
+          "Define and communicate a single lawful procedure for in-transit reseal, requiring authority documentation and immediate notification.",
+          "Never allow the party transporting the cargo to hold uncontrolled stock of blank seals for the lanes it operates."
+        ],
+        "detective": [
+          "Automatically reconcile seal numbers at every recorded custody change and raise an exception on any mismatch.",
+          "Reconcile issued against used seal ranges periodically and investigate gaps.",
+          "Retain seals from any consignment with a discrepancy for physical inspection rather than discarding them at the dock."
+        ],
+        "responsive": [
+          "Retain the physical seal as evidence, since defeat characteristics are the most reliable proof available and are lost once it is discarded.",
+          "Establish the last custody point at which the original number was independently verified, which bounds the responsible segment.",
+          "Verify any claimed authority inspection directly with that authority.",
+          "Treat a lane where seal numbers are not captured at intermediate custody changes as an unmeasured risk rather than a low risk."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "CMR Convention",
+          "provision": "Art. 8 and Art. 9",
+          "relevance": "The carrier's obligation to check apparent condition on taking over the goods, and the evidential value of the consignment note, both turn on what was recorded at each custody transfer."
+        }
+      ],
+      "related": [
+        "FFT-005",
+        "FFT-006",
+        "FFT-010"
+      ],
+      "references": [
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Convention on the Contract for the International Carriage of Goods by Road (CMR) and the e-CMR Additional Protocol",
+          "publisher": "United Nations Treaty Collection (depositary record)",
+          "url": "https://treaties.un.org/Pages/ViewDetails.aspx?src=TREATY&mtdsg_no=XI-B-11&chapter=11"
+        },
+        {
+          "title": "Road transport safety and security guidance",
+          "publisher": "IRU",
+          "url": "https://www.iru.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-008",
+      "name": "GPS Spoofing and Telematics Manipulation",
+      "aliases": [
+        "GNSS spoofing",
+        "tracker jamming",
+        "position falsification"
+      ],
+      "category": "digital",
+      "severity": "high",
+      "prevalence": "occasional",
+      "modes": [
+        "road",
+        "intermodal"
+      ],
+      "geography": [
+        "EU"
+      ],
+      "summary": "The position or movement data a shipper relies on is deliberately falsified or suppressed, so that a vehicle appears to be somewhere it is not, or appears to be moving normally while it is stopped. The purpose is to remove the time window and location that any investigation would otherwise start from.",
+      "how_it_works": [
+        "A jammer suppresses the satellite signal, or a spoofer transmits a false one that the receiver accepts as genuine.",
+        "Alternatively the telematics unit is physically disconnected, power-cycled, or its data connection is blocked.",
+        "The visibility platform either shows no update, an implausible position, or a plausible but false one.",
+        "Cargo is accessed while the record shows the vehicle in a benign location or in normal motion.",
+        "When the record resumes, the gap or the false track prevents the loss from being located in time or space."
+      ],
+      "indicators": [
+        {
+          "phase": "in_transit",
+          "signal": "Position jumps a distance that could not be covered in the elapsed time",
+          "observable_in": "Telematics track, tested for physical plausibility between consecutive fixes",
+          "weight": 5,
+          "notes": "A simple speed-plausibility check between consecutive fixes catches most crude spoofing and is rarely implemented."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Reported position is static or repeats identically while engine, odometer or fuel data indicate motion",
+          "observable_in": "Cross-comparison of position against independent vehicle telemetry",
+          "weight": 5,
+          "notes": "Cross-source contradiction is the most reliable detection available, because falsifying every channel consistently is difficult."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Complete loss of signal in an area with no known coverage problem, particularly during a rest period",
+          "observable_in": "Telematics gap analysis against known coverage",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Reported satellite count or signal quality drops abruptly to an implausible value while the vehicle is in open terrain",
+          "observable_in": "Receiver diagnostic fields, where exposed by the platform",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Signal loss events recur on the same driver, vehicle or corridor segment rather than being distributed randomly",
+          "observable_in": "Gap events aggregated by dimension",
+          "weight": 4
+        },
+        {
+          "phase": "post_event",
+          "signal": "Telematics unit found disconnected, powered down, or physically shielded on inspection",
+          "observable_in": "Vehicle inspection after the event",
+          "weight": 5
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "Total loss of position data.",
+          "actually": "Genuine coverage failure, tunnel or terrain shadowing, hardware fault, SIM or data plan failure, or regional interference not directed at this vehicle.",
+          "how_to_rule_out": "Check whether other vehicles in the same area and time lost signal too. Broad regional loss indicates environmental or infrastructure causes; an isolated single-vehicle gap does not."
+        },
+        {
+          "looks_like": "Implausible position jumps.",
+          "actually": "Known receiver artefacts, cold-start errors, multipath in urban canyons, or platform data-processing lag.",
+          "how_to_rule_out": "Check whether the artefact appears across the fleet on the same hardware and firmware, which points to a technical rather than deliberate cause."
+        },
+        {
+          "looks_like": "Sustained regional GNSS interference.",
+          "actually": "Documented wide-area interference affecting all users in a region, which is well reported in parts of Europe and is not aimed at any particular vehicle.",
+          "how_to_rule_out": "Compare against published interference monitoring for the region and period before drawing any conclusion about a specific movement."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Do not rely on a single position source. Combine satellite position with independent vehicle telemetry such as odometer, engine state or fuel, so that falsifying one channel produces a detectable contradiction.",
+          "Mount and wire telematics so that disconnection is not accessible without evident tampering, and alert on power loss.",
+          "Use tamper-evident sealing on the unit and include its integrity in the pre-departure check.",
+          "Fit independent trailer-side tracking on high-value movements so that tractor-side manipulation does not blind the whole movement."
+        ],
+        "detective": [
+          "Run automated speed and distance plausibility checks between consecutive fixes and alert on physically impossible transitions.",
+          "Alert on any position gap above a defined duration, and treat gaps during rest periods as higher priority than gaps in motion.",
+          "Aggregate signal-loss events by driver, vehicle, corridor and hardware version to separate deliberate from technical causes.",
+          "Compare individual gaps against fleet-wide loss in the same area and window before escalating."
+        ],
+        "responsive": [
+          "Inspect and photograph the telematics installation before the vehicle re-enters service, since physical evidence of tampering disappears quickly.",
+          "Preserve raw position and diagnostic data rather than the platform's cleaned track, because the artefacts that prove spoofing are usually removed by smoothing.",
+          "Reconstruct the movement from independent sources such as toll, fuel, weighbridge and access-control records.",
+          "Check published regional interference reporting for the period before attributing a gap to the driver."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        }
+      ],
+      "related": [
+        "FFT-006",
+        "FFT-005",
+        "FFT-009"
+      ],
+      "references": [
+        {
+          "title": "GNSS interference, jamming and spoofing monitoring",
+          "publisher": "EUSPA (EU Agency for the Space Programme)",
+          "url": "https://www.euspa.europa.eu/"
+        },
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Road transport safety and security guidance",
+          "publisher": "IRU",
+          "url": "https://www.iru.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-009",
+      "name": "Insider Collusion",
+      "aliases": [
+        "internal collusion",
+        "employee facilitation",
+        "inside job"
+      ],
+      "category": "insider",
+      "severity": "critical",
+      "prevalence": "occasional",
+      "modes": [
+        "road",
+        "parcel",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "Global"
+      ],
+      "summary": "A person with legitimate access supplies information or suppresses a control so that an external party can take cargo. The insider rarely handles the goods. What they provide is far more valuable: knowledge of which load is worth taking, when it moves, and which check will not be performed.",
+      "how_it_works": [
+        "An individual with legitimate access identifies high-value consignments and their timing.",
+        "That information, or an access credential, is passed to an external party.",
+        "A control that would normally detect the loss is bypassed, delayed or performed without scrutiny.",
+        "Cargo is taken through what appears operationally to be a normal process.",
+        "The absence of forced entry and the correctness of the paperwork direct the initial investigation away from the origin site."
+      ],
+      "indicators": [
+        {
+          "phase": "post_event",
+          "signal": "Losses concentrate on consignments whose value was known internally but not externally visible from packaging or documentation",
+          "observable_in": "Comparison of loss set against externally observable value cues",
+          "weight": 5,
+          "notes": "The strongest structural indicator. If the targeting could not have been done from outside, it was informed from inside."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Events cluster on a specific shift, gate, workstation or supervisory approval rather than distributing across the operation",
+          "observable_in": "Loss events aggregated by shift, location and approver",
+          "weight": 4
+        },
+        {
+          "phase": "post_event",
+          "signal": "The control that would have caught the loss was, in each case, the one not performed or performed by the same individual",
+          "observable_in": "Control execution log against loss events",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Access, override or exception authority used outside the pattern normal for that role",
+          "observable_in": "System access and override logs",
+          "weight": 3
+        },
+        {
+          "phase": "post_event",
+          "signal": "Losses stop abruptly during an unannounced audit or a staffing change and resume afterwards",
+          "observable_in": "Loss timeline against audit and roster changes",
+          "weight": 5,
+          "notes": "Close to conclusive when it recurs, and it is the reason unannounced controls are worth more than scheduled ones."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Undisclosed relationship between an employee with award or approval authority and a counterparty",
+          "observable_in": "Conflict-of-interest declaration compared against register data",
+          "weight": 4
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "Losses concentrated on one shift or individual.",
+          "actually": "That shift or person simply handles more volume, or handles the higher-value flow by design.",
+          "how_to_rule_out": "Normalise by exposure. Compare loss per consignment handled, and test whether volume alone explains the concentration before treating the person as the explanation."
+        },
+        {
+          "looks_like": "A control was not performed on the affected movements.",
+          "actually": "Systemic under-resourcing, in which the control is skipped routinely across the operation under time pressure.",
+          "how_to_rule_out": "Measure the control's execution rate overall. If it is skipped at a similar rate on unaffected movements, the finding is a process failure and not evidence of collusion."
+        },
+        {
+          "looks_like": "An employee has a connection to a counterparty.",
+          "actually": "An entirely innocent connection in an industry where local employment and supplier networks overlap heavily.",
+          "how_to_rule_out": "Establish whether the individual actually influenced the award or the control, since a disclosed and non-influential relationship is a governance matter, not a fraud finding."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Separate the person who knows a consignment's value from the person who executes the release, so that neither role alone is sufficient.",
+          "Restrict visibility of consignment value on a need-to-know basis rather than exposing it throughout the operation.",
+          "Require conflict-of-interest declarations from anyone with award, approval or override authority, and reconcile them against register data rather than accepting them at face value.",
+          "Rotate assignments and approvers on high-value flows and use mandatory leave to create natural control gaps."
+        ],
+        "detective": [
+          "Aggregate loss events by shift, gate, workstation and approving individual, normalised by volume handled.",
+          "Monitor override and exception authority for use outside role-normal patterns.",
+          "Run unannounced controls and compare loss rates during and outside them.",
+          "Maintain a confidential reporting channel and treat reports as an evidential lead rather than a personnel complaint."
+        ],
+        "responsive": [
+          "Preserve access logs, CCTV and rosters before initiating any interview, since these are the records most likely to be lost once the investigation becomes known.",
+          "Normalise by exposure before drawing any conclusion about an individual, because this pattern has the highest personal cost of a wrong call in the entire taxonomy.",
+          "Involve HR and legal from the outset so that evidence remains usable and the process remains defensible.",
+          "Close the information asymmetry that made targeting possible, since replacing the individual without changing the access does not close the exposure."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§8 Beschwerdeverfahren",
+          "relevance": "A functioning complaints procedure is both a legal obligation and, in practice, one of the most productive detection channels for this pattern."
+        },
+        {
+          "instrument": "Directive (EU) 2019/1937",
+          "provision": "Protection of persons who report breaches",
+          "relevance": "Insider-facilitated loss is frequently first surfaced by a colleague, so whistleblower protection is directly operative."
+        }
+      ],
+      "related": [
+        "FFT-004",
+        "FFT-005",
+        "FFT-008"
+      ],
+      "references": [
+        {
+          "title": "Occupational fraud research and the fraud triangle",
+          "publisher": "Association of Certified Fraud Examiners",
+          "url": "https://www.acfe.com/"
+        },
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        },
+        {
+          "title": "Organised property crime and cargo theft in the EU",
+          "publisher": "Europol",
+          "url": "https://www.europol.europa.eu/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-010",
+      "name": "Transport Document Fraud",
+      "aliases": [
+        "falsified consignment note",
+        "CMR fraud",
+        "proof of delivery forgery"
+      ],
+      "category": "documentary",
+      "severity": "medium",
+      "prevalence": "common",
+      "modes": [
+        "road",
+        "sea",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "Global"
+      ],
+      "summary": "The documents that establish what was carried, in what condition, and to whom it was released are altered, forged or reused. The cargo may never be missing at all: the purpose is often to shift liability, to support a claim, or to obtain payment for a delivery that did not occur as documented.",
+      "how_it_works": [
+        "A consignment note, delivery receipt or condition report is altered after signature, or created retrospectively.",
+        "Alternatively a genuine document from one movement is reused to evidence a different one.",
+        "Signatures are illegible, absent, or belong to a person the consignee cannot identify.",
+        "The document then becomes the primary evidence in a claim or payment dispute.",
+        "Because the paperwork is internally consistent, the dispute is resolved on the false record."
+      ],
+      "indicators": [
+        {
+          "phase": "post_event",
+          "signal": "Proof of delivery signature cannot be attributed to any person authorised by the consignee to receive goods",
+          "observable_in": "Consignee verification of the signatory",
+          "weight": 5
+        },
+        {
+          "phase": "post_event",
+          "signal": "Document metadata, sequence number or timestamp is inconsistent with the movement it purports to evidence",
+          "observable_in": "Document set compared with telematics and system timestamps",
+          "weight": 4
+        },
+        {
+          "phase": "post_event",
+          "signal": "The same document image or reference appears against more than one movement",
+          "observable_in": "Document deduplication across the claims and delivery record",
+          "weight": 5,
+          "notes": "Reuse is one of the easiest patterns to detect automatically and one of the least often checked."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Condition or quantity annotations appear in different ink, hand, font or layer from the rest of the document",
+          "observable_in": "Physical or forensic inspection of the original",
+          "weight": 4
+        },
+        {
+          "phase": "post_event",
+          "signal": "Reservations about apparent condition are absent on taking over the goods but a claim later relies on pre-existing damage",
+          "observable_in": "Consignment note reservations against the claim narrative",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Only a photographed or retyped copy is ever provided and the original is said to be unavailable",
+          "observable_in": "Document handling record",
+          "weight": 3,
+          "notes": "Common in legitimate operations, so weak on its own; it matters because it removes the ability to test the other indicators."
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "An unattributable delivery signature.",
+          "actually": "Genuine receipt by agency staff, a temporary worker, or a third-party site operator whom the consignee does not have on record.",
+          "how_to_rule_out": "Ask the consignee who was actually on site in that window rather than only whether the name is on the authorised list."
+        },
+        {
+          "looks_like": "Handwritten annotations added to a consignment note.",
+          "actually": "Legitimate reservations recorded at handover, which is exactly what the document is designed for.",
+          "how_to_rule_out": "Establish when the annotation was made and by whom. Contemporaneous reservations are the correct use of the document; retrospective additions are not."
+        },
+        {
+          "looks_like": "The same reference appearing twice.",
+          "actually": "A split delivery, a re-delivery after a failed attempt, or a documented partial movement.",
+          "how_to_rule_out": "Check whether the duplication is explained by a recorded split or re-delivery event before treating it as reuse."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Move to electronic consignment notes with authenticated, timestamped signature capture, which removes most of the alteration surface.",
+          "Maintain a verified list of persons authorised to receive at each consignee site, and require identification at handover.",
+          "Require reservations about apparent condition to be recorded at handover, with photographs, rather than accepted later.",
+          "Retain originals under controlled custody rather than accepting images as the record of truth."
+        ],
+        "detective": [
+          "Deduplicate delivery documents automatically by image hash and reference across movements and claims.",
+          "Reconcile document timestamps against telematics arrival and departure data and flag inconsistencies.",
+          "Sample-verify delivery signatures directly with consignees rather than only when a claim arises.",
+          "Flag claims that rely on a document for which no original can be produced."
+        ],
+        "responsive": [
+          "Secure the original document before any dispute is progressed, since the evidential value of a copy is limited.",
+          "Verify the signatory with the consignee directly rather than through the party relying on the document.",
+          "Reconstruct the movement from independent records such as telematics, gate, toll and access logs, which cannot be retrospectively edited as easily.",
+          "Treat a lane on which originals are routinely unavailable as an unmeasured liability exposure."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "CMR Convention",
+          "provision": "Art. 8, Art. 9 and the e-CMR Additional Protocol",
+          "relevance": "The consignment note is prima facie evidence of the conditions of carriage and of receipt, which is precisely why falsifying it is effective and why the e-CMR protocol matters."
+        }
+      ],
+      "related": [
+        "FFT-007",
+        "FFT-004",
+        "FFT-011"
+      ],
+      "references": [
+        {
+          "title": "Convention on the Contract for the International Carriage of Goods by Road (CMR) and the e-CMR Additional Protocol",
+          "publisher": "United Nations Treaty Collection (depositary record)",
+          "url": "https://treaties.un.org/Pages/ViewDetails.aspx?src=TREATY&mtdsg_no=XI-B-11&chapter=11"
+        },
+        {
+          "title": "Road transport safety and security guidance",
+          "publisher": "IRU",
+          "url": "https://www.iru.org/"
+        },
+        {
+          "title": "Annual Cargo Crime Statistics and Incident Information Service",
+          "publisher": "TAPA EMEA",
+          "url": "https://www.tapaemea.org/"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-011",
+      "name": "Insurance Certificate Fraud",
+      "aliases": [
+        "fake certificate of insurance",
+        "lapsed cover",
+        "COI fraud"
+      ],
+      "category": "financial",
+      "severity": "high",
+      "prevalence": "common",
+      "modes": [
+        "road",
+        "intermodal"
+      ],
+      "geography": [
+        "EU",
+        "North America"
+      ],
+      "summary": "A carrier presents evidence of liability or cargo cover that is forged, expired, cancelled, or materially narrower than it appears. Nothing is detected until a claim is made, at which point the shipper discovers it has been carrying uninsured exposure across every movement that carrier performed.",
+      "how_it_works": [
+        "A certificate is supplied as a document or image during onboarding rather than confirmed by the insurer.",
+        "The document is forged, altered as to limits or dates, or genuine but subsequently cancelled for non-payment.",
+        "Alternatively the cover is genuine but excludes the commodity, the territory, the equipment type or the theft peril actually relevant.",
+        "Because certificates are typically checked once at onboarding, the lapse is never observed.",
+        "The gap becomes visible only when a claim is declined."
+      ],
+      "indicators": [
+        {
+          "phase": "pre_award",
+          "signal": "Certificate supplied as an image or editable document rather than confirmed directly by the insurer or broker",
+          "observable_in": "Onboarding document set and verification record",
+          "weight": 4,
+          "notes": "The core structural weakness. Verification at source removes most of this pattern at negligible cost."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Insurer, broker or policy reference cannot be verified, or the insurer is not authorised in the relevant market",
+          "observable_in": "Regulator's register of authorised insurers",
+          "weight": 5
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Cover limits are exactly at, or suspiciously aligned with, the shipper's stated minimum",
+          "observable_in": "Certificate limits against the contractual minimum",
+          "weight": 2
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Policy period ends before the contract term, or renewal evidence is never provided",
+          "observable_in": "Certificate validity dates against contract dates",
+          "weight": 4
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Cover excludes the commodity class, territory, equipment type or theft peril actually being carried",
+          "observable_in": "Policy wording rather than the certificate summary",
+          "weight": 5,
+          "notes": "The exclusion is frequently the real exposure. A certificate can be perfectly genuine and still provide no cover for the movement at hand."
+        },
+        {
+          "phase": "post_event",
+          "signal": "Insurer declines on the basis of cancellation, non-disclosure or non-payment predating the loss",
+          "observable_in": "Claim correspondence",
+          "weight": 5
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "Cover limits exactly matching the required minimum.",
+          "actually": "Entirely normal commercial behaviour, since operators buy to the requirement rather than above it.",
+          "how_to_rule_out": "Do not treat this as an indicator alone. It has value only alongside a failure to verify at source."
+        },
+        {
+          "looks_like": "An unfamiliar insurer.",
+          "actually": "A legitimate specialist or regional transport insurer or mutual, of which there are many in European road freight.",
+          "how_to_rule_out": "Check the regulator's register of authorised insurers rather than relying on brand recognition."
+        },
+        {
+          "looks_like": "A certificate that has expired in the file.",
+          "actually": "An administrative lag in collecting renewal evidence where cover was in fact continuous.",
+          "how_to_rule_out": "Confirm continuity with the insurer for the relevant period. Continuous cover is confirmable; a lapse is not."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Verify cover directly with the insurer or broker at onboarding and never accept a counterparty-supplied document as primary evidence.",
+          "Read the policy wording for exclusions relevant to the commodity, territory, equipment and perils actually being moved, rather than relying on the certificate summary.",
+          "Require notice of cancellation or material change to be given to the shipper as a contractual term.",
+          "Check that the insurer is authorised in the relevant market."
+        ],
+        "detective": [
+          "Track certificate expiry dates automatically and suspend tendering when evidence of renewal is not on file, rather than treating expiry as an administrative backlog.",
+          "Re-verify cover with the insurer periodically for carriers above a defined exposure level, not only at onboarding.",
+          "Reconcile the commodity and territory actually tendered against the scope of cover on file, and alert on movements outside it."
+        ],
+        "responsive": [
+          "Quantify the full uninsured exposure across every movement the carrier performed in the affected period, not only the movement that produced the claim.",
+          "Preserve the certificate as supplied, since it is the evidence of misrepresentation.",
+          "Report a forged certificate to the named insurer, which has its own interest in the forgery and may already have other cases.",
+          "Review whether other carriers were onboarded through the same unverified route and re-verify that whole cohort."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        }
+      ],
+      "related": [
+        "FFT-001",
+        "FFT-002",
+        "FFT-003",
+        "FFT-012"
+      ],
+      "references": [
+        {
+          "title": "Fraud prevention resources for transportation intermediaries",
+          "publisher": "Transportation Intermediaries Association",
+          "url": "https://www.tianet.org/"
+        },
+        {
+          "title": "Road transport safety and security guidance",
+          "publisher": "IRU",
+          "url": "https://www.iru.org/"
+        },
+        {
+          "title": "Convention on the Contract for the International Carriage of Goods by Road (CMR) and the e-CMR Additional Protocol",
+          "publisher": "United Nations Treaty Collection (depositary record)",
+          "url": "https://treaties.un.org/Pages/ViewDetails.aspx?src=TREATY&mtdsg_no=XI-B-11&chapter=11"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "FFT-012",
+      "name": "Undisclosed Subcontracting Chain",
+      "aliases": [
+        "hidden tier",
+        "subcontracting depth risk",
+        "chain opacity"
+      ],
+      "category": "regulatory",
+      "severity": "high",
+      "prevalence": "common",
+      "modes": [
+        "road",
+        "intermodal"
+      ],
+      "geography": [
+        "EU"
+      ],
+      "summary": "The contracted carrier is not the performing carrier, and neither is the party it engaged. Each tier is individually lawful, but the chain is undisclosed, so the shipper cannot identify who is physically carrying its goods. This defeats sanctions screening, cabotage and posting compliance, insurance verification and human-rights due diligence simultaneously, because all of them depend on knowing the identity of the actual performing party.",
+      "how_it_works": [
+        "A load is awarded to a contracted carrier, which subcontracts it, possibly more than once.",
+        "Each tier is a real, licensed business, so no individual step looks fraudulent.",
+        "The shipper's records name only the first tier.",
+        "Screening, verification and due diligence are therefore performed against an entity that never touches the cargo.",
+        "A sanctioned party, an unlicensed operator, or a serious labour-standards breach can sit two tiers down and remain entirely invisible to the shipper's controls."
+      ],
+      "indicators": [
+        {
+          "phase": "pre_award",
+          "signal": "Contract permits subcontracting without any obligation to disclose the identity of the performing party",
+          "observable_in": "Transport contract terms",
+          "weight": 4,
+          "notes": "This is a control design defect rather than a behavioural signal, and it is where the exposure originates."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Contracted volume is materially greater than the entity's own declared capacity, implying routine subcontracting",
+          "observable_in": "Awarded volume against declared fleet capacity",
+          "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Vehicle or driver at pickup belongs to an entity that does not appear anywhere in the shipper's records",
+          "observable_in": "Gate record against contractual chain",
+          "weight": 5,
+          "notes": "The gate is the only place the real performing party reliably becomes visible."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Vehicle registration country and driver nationality pattern are inconsistent with the declared operator's establishment",
+          "observable_in": "Gate record and transport documentation",
+          "weight": 3
+        },
+        {
+          "phase": "post_event",
+          "signal": "Claims, penalties or enforcement notices name an entity absent from the shipper's carrier master data",
+          "observable_in": "Claims and enforcement correspondence",
+          "weight": 5
+        },
+        {
+          "phase": "post_event",
+          "signal": "Sanctions or adverse-media screening produces a hit on a party discovered only after an incident",
+          "observable_in": "Retrospective screening of the actual performing party",
+          "weight": 5,
+          "notes": "By this point the exposure has already been carried, which is the whole problem with screening only tier one."
+        }
+      ],
+      "false_positives": [
+        {
+          "looks_like": "A subcontractor's vehicle performing the movement.",
+          "actually": "Disclosed and approved subcontracting, which is normal, lawful and often unavoidable in European road freight.",
+          "how_to_rule_out": "Check whether the performing party is on the approved list and whether liability and insurance were extended. Disclosed subcontracting is a managed risk; the pattern here is specifically the absence of disclosure."
+        },
+        {
+          "looks_like": "A foreign-registered vehicle on a domestic leg.",
+          "actually": "Lawful cabotage or a lawful combined-transport leg within the permitted limits.",
+          "how_to_rule_out": "Check the operation against the applicable cabotage limits and documentation rather than inferring a breach from the registration plate alone."
+        },
+        {
+          "looks_like": "Deep subcontracting.",
+          "actually": "A legitimate groupage or network model in which multiple operators handle successive legs by design.",
+          "how_to_rule_out": "Establish whether the model is declared and documented. The risk is opacity, not depth."
+        }
+      ],
+      "countermeasures": {
+        "preventive": [
+          "Require disclosure of the performing party before collection as a contractual condition, and make non-disclosure a breach rather than a service issue.",
+          "Maintain an approved-subcontractor list and prohibit tiers beyond a defined depth for high-value or high-risk movements.",
+          "Flow down sanctions screening, insurance verification and labour-standards obligations contractually to every tier, with audit rights.",
+          "Screen the performing party, not only the contracting party, before release."
+        ],
+        "detective": [
+          "Reconcile the operator identity captured at the gate against the contractual chain automatically, and treat any unknown entity as an exception requiring resolution.",
+          "Re-screen the actual performing parties periodically against sanctions and adverse-media sources rather than screening tier one at onboarding only.",
+          "Monitor the ratio of awarded volume to declared capacity per carrier as a proxy for undisclosed subcontracting.",
+          "Reconcile claims and enforcement correspondence against carrier master data and investigate every unrecognised entity."
+        ],
+        "responsive": [
+          "Reconstruct the full chain for the affected movements and screen every identified tier retrospectively.",
+          "Assess whether the opacity itself constitutes a due-diligence failure, since the obligation attaches to the risk and not to the paperwork.",
+          "Document the finding and the remediation, because under the German regime the documentation of the analysis and the measures is itself the compliance artefact.",
+          "Close the contractual gap that permitted undisclosed subcontracting before resuming tendering."
+        ]
+      },
+      "regulatory_hooks": [
+        {
+          "instrument": "LkSG",
+          "provision": "§5 Risikoanalyse",
+          "relevance": "A documented risk analysis of direct suppliers must identify this pattern class where the carrier population plausibly exposes the company to it."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§6 Präventionsmaßnahmen",
+          "relevance": "Preventive measures listed here are the kind of control a company is expected to define and evidence once the risk is identified."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§9 Mittelbare Zulieferer",
+          "relevance": "Obligations extend to indirect suppliers where substantiated knowledge of a risk exists, which is exactly the situation an undisclosed subcontracting chain creates."
+        },
+        {
+          "instrument": "LkSG",
+          "provision": "§10 Dokumentations- und Berichtspflicht",
+          "relevance": "The analysis and the measures taken must be documented and reported, so an unidentifiable performing party is a documentation failure as well as a control failure."
+        },
+        {
+          "instrument": "CSDDD (Directive (EU) 2024/1760)",
+          "provision": "Risk-based due diligence across the chain of activities",
+          "relevance": "Extends comparable obligations EU-wide, making chain visibility a durable requirement rather than a German peculiarity."
+        },
+        {
+          "instrument": "Regulation (EU) 2020/1055",
+          "provision": "Cabotage and establishment rules",
+          "relevance": "Compliance cannot be assessed at all if the performing operator's identity and establishment are unknown."
+        }
+      ],
+      "related": [
+        "FFT-001",
+        "FFT-011",
+        "FFT-002"
+      ],
+      "references": [
+        {
+          "title": "Act on Corporate Due Diligence Obligations in Supply Chains (LkSG) — information in English",
+          "publisher": "BAFA (Federal Office for Economic Affairs and Export Control)",
+          "url": "https://www.bafa.de/DE/Lieferketten/Multilinguales_Angebot/multilinguales_angebot_node.html"
+        },
+        {
+          "title": "Consolidated list of persons, groups and entities subject to EU financial sanctions",
+          "publisher": "European Commission",
+          "url": "https://finance.ec.europa.eu/eu-and-world/sanctions-restrictive-measures_en"
+        },
+        {
+          "title": "Mobility Package I: access to the market and cabotage rules",
+          "publisher": "European Commission",
+          "url": "https://transport.ec.europa.eu/transport-modes/road/mobility-package-i_en"
+        },
+        {
+          "title": "Convention on the Contract for the International Carriage of Goods by Road (CMR) and the e-CMR Additional Protocol",
+          "publisher": "United Nations Treaty Collection (depositary record)",
+          "url": "https://treaties.un.org/Pages/ViewDetails.aspx?src=TREATY&mtdsg_no=XI-B-11&chapter=11"
+        }
+      ],
+      "version": "1.0.0",
+      "last_reviewed": "2026-09-05"
+    }
+  ]
+}
