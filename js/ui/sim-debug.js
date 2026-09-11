@@ -62,9 +62,14 @@ const FWSimDebug = (() => {
       FWEntityInspector.init();
       FWSimRunner.onTick((state) => { if (FWEntityInspector.isOpen()) FWEntityInspector.render(state); });
     }
+    if (window.FWNetworkView) {
+      FWNetworkView.init();
+      FWSimRunner.onTick(FWNetworkView.render);
+    }
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
+    if (window.FWNetworkView) FWNetworkView.render(FWSimRunner.getState());
   }
 
   function fmtPct(x) { return Math.round(x * 100) + '%'; }
