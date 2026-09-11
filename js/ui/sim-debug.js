@@ -79,6 +79,10 @@ const FWSimDebug = (() => {
       FWShiftView.init();
       FWSimRunner.onTick(FWShiftView.render);
     }
+    if (window.FWFacilityView) {
+      FWFacilityView.init();
+      FWSimRunner.onTick(FWFacilityView.render);
+    }
     if (window.FWExposureView) {
       FWExposureView.init();
       FWSimRunner.onTick(FWExposureView.render);
@@ -89,6 +93,7 @@ const FWSimDebug = (() => {
     if (window.FWNetworkView) FWNetworkView.render(FWSimRunner.getState());
     if (window.FWCalibrationView) FWCalibrationView.render(FWSimRunner.getState());
     if (window.FWShiftView) FWShiftView.render(FWSimRunner.getState());
+    if (window.FWFacilityView) FWFacilityView.render(FWSimRunner.getState());
     if (window.FWExposureView) FWExposureView.render(FWSimRunner.getState());
   }
 
@@ -149,7 +154,7 @@ const FWSimDebug = (() => {
   function renderCounts(state) {
     if (!els.counts) return;
     const reg = state.registry;
-    const parts = FWEntityEngine.KINDS.map(k => `${FWEntityEngine.all(reg, k).length} ${k}s`);
+    const parts = FWEntityEngine.KINDS.map(k => `${FWEntityEngine.all(reg, k).length} ${FWEntityEngine.plural(k)}`);
     els.counts.textContent = parts.join(' · ') + ` · ${state.totalEvents} events so far`;
   }
 

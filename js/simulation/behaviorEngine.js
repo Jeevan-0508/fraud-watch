@@ -38,17 +38,32 @@ const FWBehaviorEngine = (() => {
   // outnumber disruptions, or every truck looks suspicious constantly.
   const DISRUPTION_CHANCE_PER_TICK = 0.015;
 
-  function attachBehavior(truck, rng) {
+  function attachBehavior(truck, rng, registry) {
     truck.behavior = {
       stageIndex: 0,
       stageElapsed: 0,
       stageDuration: rng.int(STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max)
     };
     truck.status = LIFECYCLE[0];
+    if (registry && window.FWFacilityEngine) {
+      const site = FWFacilityEngine.assignForStage(registry, truck.status, rng);
+      truck.facilityId = site ? site.id : null;
+    }
     return truck.behavior;
   }
 
-  function advanceStage(truck, rng, eventEngine, timestamp) {
+  // Where the truck physically is for its current stage (Phase 5). Some
+  // stages are on a public road and belong to no site: null is the
+  // correct answer there, not a missing value to be filled in with the
+  // last site it touched.
+  function relocate(truck, registry, rng) {
+    if (!registry || !window.FWFacilityEngine) return null;
+    const site = FWFacilityEngine.assignForStage(registry, truck.status, rng);
+    truck.facilityId = site ? site.id : null;
+    return site;
+  }
+
+  function advanceStage(truck, rng, eventEngine, timestamp, registry) {
     const b = truck.behavior;
     b.stageIndex = (b.stageIndex + 1) % LIFECYCLE.length; // loops: COMPLETED -> DISPATCHED (new trip)
     b.stageElapsed = 0;
@@ -56,10 +71,13 @@ const FWBehaviorEngine = (() => {
     const to = LIFECYCLE[b.stageIndex];
     const from = truck.status;
     truck.status = to;
+    const site = relocate(truck, registry, rng);
+    const metadata = { from, to, summary: `${from} -> ${to}` };
+    if (site) { metadata.facilityId = site.id; metadata.facilityName = site.name; }
     const ev = FWEventEngine.emit(eventEngine, {
       type: 'TRUCK_STAGE_ADVANCED', entityId: truck.id,
-      relatedEntities: [truck.driverId, truck.trailerId].filter(Boolean),
-      severity: 'info', metadata: { from, to, summary: `${from} -> ${to}` }
+      relatedEntities: [truck.driverId, truck.trailerId, truck.facilityId].filter(Boolean),
+      severity: 'info', metadata
     }, timestamp);
     FWEntityEngine.recordHistory(truck, ev);
     return ev;
@@ -69,9 +87,11 @@ const FWBehaviorEngine = (() => {
   // where relevant, mutates who/what is actually attached to it —
   // a real driver swap changes truck.driverId, it doesn't just log text).
   function applyDisruption(truck, type, registry, rng, eventEngine, timestamp, opts = {}) {
-    const related = [truck.driverId, truck.trailerId].filter(Boolean);
+    const site = truck.facilityId ? FWEntityEngine.get(registry, 'facility', truck.facilityId) : null;
+    const related = [truck.driverId, truck.trailerId, site ? site.id : null].filter(Boolean);
     const metadata = { summary: type.replace(/_/g, ' ').toLowerCase() };
     if (opts.shift) metadata.shift = opts.shift;
+    if (site) { metadata.facilityId = site.id; metadata.facilityName = site.name; metadata.facilityKind = site.kind; }
 
     if (type === 'DRIVER_CHANGED') {
       const drivers = FWEntityEngine.all(registry, 'driver');
@@ -143,7 +163,7 @@ const FWBehaviorEngine = (() => {
     // no history entry and therefore no signal. That gap is the model,
     // not a bug: it is why a quiet night shift is not a safe one.
     if (opts.observed === false) {
-      return { unrecorded: true, type, entityId: truck.id, timestamp, metadata };
+      return { unrecorded: true, type, entityId: truck.id, timestamp, metadata, facilityId: site ? site.id : null };
     }
 
     const ev = FWEventEngine.emit(eventEngine, {
@@ -151,6 +171,10 @@ const FWBehaviorEngine = (() => {
     }, timestamp);
     FWFalsePositiveEngine.annotate(ev, rng); // hidden ground truth for later case resolution
     FWEntityEngine.recordHistory(truck, ev);
+    // The site carries its own record of what was written down there. It
+    // is a record of observation, not of blame -- a site with a long
+    // history may simply be one that watches itself.
+    if (site) FWEntityEngine.recordHistory(site, ev);
     return ev;
   }
 
@@ -168,26 +192,36 @@ const FWBehaviorEngine = (() => {
 
     const trucks = FWEntityEngine.all(registry, 'truck');
     trucks.forEach(truck => {
-      if (!truck.behavior) attachBehavior(truck, rng);
+      if (!truck.behavior) attachBehavior(truck, rng, registry);
       truck.behavior.stageElapsed += dtSeconds;
       if (truck.behavior.stageElapsed >= truck.behavior.stageDuration) {
-        emitted.push(advanceStage(truck, rng, eventEngine, timestamp));
+        emitted.push(advanceStage(truck, rng, eventEngine, timestamp, registry));
       }
       if (DISRUPTION_ELIGIBLE_STAGES.has(truck.status) && rng.chance(chance)) {
         const type = hasShiftModel
           ? FWShiftEngine.pickDisruptionType(rng, DISRUPTION_TYPES, shift)
           : rng.pick(DISRUPTION_TYPES);
-        const observed = hasShiftModel
-          ? rng.chance(FWShiftEngine.observationProbability(shift))
-          : true;
+        // Oversight coverage is now a product of WHEN (shift, Phase 37)
+        // and WHERE (site archetype, Phase 5). A gatehouse at 03:00 can
+        // still be better observed than a remote depot at noon.
+        const siteEntity = truck.facilityId ? FWEntityEngine.get(registry, 'facility', truck.facilityId) : null;
+        let observed = true;
+        if (hasShiftModel && window.FWFacilityEngine) {
+          observed = rng.chance(FWFacilityEngine.coverage(siteEntity, shift).combined);
+        } else if (hasShiftModel) {
+          observed = rng.chance(FWShiftEngine.observationProbability(shift));
+        }
         const ev = applyDisruption(truck, type, registry, rng, eventEngine, timestamp, { shift, observed });
         if (!ev) return;
         if (hasShiftModel) FWShiftEngine.record(ctx.shiftTracker, shift, type, !ev.unrecorded);
+        if (window.FWFacilityEngine) {
+          FWFacilityEngine.record(ctx.facilityTracker, truck.facilityId || null, type, !ev.unrecorded, shift);
+        }
         if (!ev.unrecorded) emitted.push(ev);
       }
     });
     return emitted;
   }
 
-  return { step, attachBehavior, LIFECYCLE, DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK };
+  return { step, attachBehavior, relocate, LIFECYCLE, DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK };
 })();

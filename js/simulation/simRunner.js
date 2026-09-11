@@ -24,8 +24,9 @@ const FWSimRunner = (() => {
     const moEngine = FWMoEngine.createEngine();
     const outcomeEngine = FWOutcomeEngine.createEngine();
     const shiftTracker = window.FWShiftEngine ? FWShiftEngine.createTracker() : null;
+    const facilityTracker = window.FWFacilityEngine ? FWFacilityEngine.createTracker() : null;
     state = {
-      seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine, shiftTracker,
+      seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine, shiftTracker, facilityTracker,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;
@@ -35,13 +36,15 @@ const FWSimRunner = (() => {
   // the real-time loop and fast-forward so both paths behave identically.
   function stepOnce(dtSeconds) {
     if (!state || dtSeconds <= 0) return null;
-    const { clock, registry, rng, eventEngine, signalEngine, moEngine, shiftTracker } = state;
+    const { clock, registry, rng, eventEngine, signalEngine, moEngine, shiftTracker, facilityTracker } = state;
     const now = absoluteNow(clock);
     // Phase 37: the shift the port is actually in drives normal traffic
     // volume, which disruption types are plausible, and how much of what
     // happens gets observed at all.
     const shift = clock.shift();
-    const ctx = { shift, shiftTracker };
+    // Phase 5: where a movement is also drives whether what happens to
+    // it gets recorded, so the site tracker rides along with the shift one.
+    const ctx = { shift, shiftTracker, facilityTracker };
 
     const normalEvents = FWEventEngine.step(eventEngine, registry, now, dtSeconds, ctx);
     const disruptions = FWBehaviorEngine.step(registry, rng, eventEngine, now, dtSeconds, ctx).filter(Boolean);

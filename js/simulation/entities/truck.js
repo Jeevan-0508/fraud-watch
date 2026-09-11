@@ -15,6 +15,7 @@ const FWEntityTruck = (() => {
       trailerId: opts.trailerId || null,
       assignedShipmentId: opts.assignedShipmentId || null,
       location: opts.location || 'gate',
+      facilityId: opts.facilityId || null, // which site it is standing in, null on a public road
       route: opts.route || null,
       destination: opts.destination || null,
       status: opts.status || 'DISPATCHED',

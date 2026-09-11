@@ -3,11 +3,21 @@
    store the event/behavior/signal engines (next slices) will read and
    mutate; the Phaser render layer stays a separate downstream consumer. */
 const FWEntityEngine = (() => {
-  const KINDS = ['truck', 'driver', 'trailer', 'shipment', 'carrier'];
+  const KINDS = ['truck', 'driver', 'trailer', 'shipment', 'carrier', 'facility'];
+
+  // Registry keys and UI labels are just kind + 's' for every kind that
+  // pluralizes that way; 'facility' does not, and printing "9 facilitys"
+  // in an analyst panel is the kind of small sloppiness that makes the
+  // careful parts look less trustworthy than they are.
+  const PLURALS = { facility: 'facilities' };
+
+  function plural(kind) {
+    return PLURALS[kind] || kind + 's';
+  }
 
   function createRegistry() {
     const reg = { nextId: {} };
-    KINDS.forEach(k => { reg[k + 's'] = new Map(); reg.nextId[k] = 1; });
+    KINDS.forEach(k => { reg[plural(k)] = new Map(); reg.nextId[k] = 1; });
     return reg;
   }
 
@@ -17,16 +27,16 @@ const FWEntityEngine = (() => {
   }
 
   function add(reg, kind, entity) {
-    reg[kind + 's'].set(entity.id, entity);
+    reg[plural(kind)].set(entity.id, entity);
     return entity;
   }
 
   function get(reg, kind, id) {
-    return reg[kind + 's'].get(id);
+    return reg[plural(kind)].get(id);
   }
 
   function all(reg, kind) {
-    return Array.from(reg[kind + 's'].values());
+    return Array.from(reg[plural(kind)].values());
   }
 
   // record a bounded history entry on an entity (used by the event engine)
@@ -65,6 +75,24 @@ const FWEntityEngine = (() => {
       const id = nextId(reg, 'trailer');
       add(reg, 'trailer', FWEntityTrailer.createTrailer(id, { sealId: 'SEAL-' + rng.int(10000, 99999) }));
     }
+
+    // Facilities exist before trucks do, because a truck's very first
+    // lifecycle stage already has to be somewhere.
+    const facilitySpec = opts.facilities || [
+      { kind: 'GATEHOUSE', name: 'North Gate' },
+      { kind: 'GATEHOUSE', name: 'South Gate' },
+      { kind: 'CROSS_DOCK', name: 'Cross-dock A' },
+      { kind: 'CROSS_DOCK', name: 'Cross-dock B' },
+      { kind: 'YARD', name: 'Yard 1 (quayside)' },
+      { kind: 'YARD', name: 'Yard 2 (empties)' },
+      { kind: 'YARD', name: 'Yard 3 (overflow)' },
+      { kind: 'REMOTE_DEPOT', name: 'Inland Depot Ost' },
+      { kind: 'REMOTE_DEPOT', name: 'Inland Depot Sud' }
+    ];
+    facilitySpec.forEach(spec => {
+      const id = nextId(reg, 'facility');
+      add(reg, 'facility', FWEntityFacility.createFacility(id, { kind: spec.kind, name: spec.name }));
+    });
 
     const carriers = all(reg, 'carrier');
     const drivers = all(reg, 'driver');
@@ -106,5 +134,5 @@ const FWEntityEngine = (() => {
     return reg;
   }
 
-  return { createRegistry, nextId, add, get, all, recordHistory, seedPort, KINDS };
+  return { createRegistry, nextId, add, get, all, recordHistory, seedPort, plural, KINDS, PLURALS };
 })();
