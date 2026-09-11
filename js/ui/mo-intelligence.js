@@ -237,6 +237,44 @@ const FWMoIntelligence = (() => {
     return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Findings</div><ul class="text-[10px] text-slate-400 list-none">${rows}</ul></div>`;
   }
 
+  /* What is worth the hours (adviceEngine). This block is careful about
+     one thing above all: it orders the checks and it must not read as an
+     opinion about the case. So the wording is about effort throughout,
+     the inputs to the ordering are printed next to it, and the fact that
+     no expected confidence movement went into it is stated rather than
+     assumed to be obvious. When the coverage is exhausted this block says
+     so and puts nothing forward -- an advisory that always has a next
+     action to sell is selling. */
+  function renderAdvice(advice, investigable) {
+    if (!advice || !investigable) return '';
+    if (advice.nothingAvailable) return '';
+    const gap = advice.uncheckableNote
+      ? `<div class="text-[10px] text-amber-300/80 mt-1">${advice.uncheckableNote}</div>` : '';
+    const head = `<div class="text-[10px] font-semibold text-slate-400 uppercase mt-2 mb-1">Worth the hours</div>`;
+    const foot = `<div class="text-[9px] text-slate-500 italic mt-1">Ordered by coverage per hour: signal types not yet spoken to, times the stated chance the source returns anything, over the effort it costs. No expected confidence movement goes into this ordering in either direction &mdash; the deltas are asymmetric on purpose, so ranking by them would promote either the checks most likely to corroborate or the checks most likely to clear. Which check is worth running is not a claim about what it will find.</div>`;
+
+    if (advice.exhausted) {
+      return `${head}<div class="text-[10px] text-slate-400">${advice.exhaustedNote}</div>${gap}${foot}`;
+    }
+
+    const rows = advice.candidates.slice(0, 4).map(c => {
+      const lead = c === advice.leading;
+      return `<li class="mb-1">
+        <span class="font-mono text-[10px] ${lead ? 'text-sky-300' : 'text-slate-500'}">#${c.rank}${c.tied ? ' =' : ''}</span>
+        <span class="text-[10px] ${lead ? 'text-slate-200' : 'text-slate-400'}">${c.label}</span>
+        ${c.secondOpinionOnly ? '<span class="text-[9px] text-slate-500">second opinion only</span>' : ''}
+        <div class="text-[10px] text-slate-500">${c.basis}</div>
+      </li>`;
+    }).join('');
+
+    const tie = advice.leadingIsTied
+      ? `<div class="text-[10px] text-slate-500">The leading checks tie on these inputs, so no order is claimed between them.</div>` : '';
+
+    return `${head}
+      <ul class="list-none text-[10px]">${rows}</ul>
+      ${tie}${gap}${foot}`;
+  }
+
   /* Investigation panel (Phases 28-29). Two things are stated plainly here
      because they're true of the underlying engine: confidence is shown
      split into the engine-derived part and the investigation-derived part,
@@ -256,6 +294,7 @@ const FWMoIntelligence = (() => {
       ${sum.effortSeconds ? ` · ${fmtEffort(sum.effortSeconds)} of analyst effort spent` : ''}
     </div>`;
 
+    const advice = window.FWAdviceEngine ? FWAdviceEngine.advise(state, mo) : null;
     const actions = FWInvestigationEngine.availableActions(state, mo);
     let controls;
     if (!investigable) {
@@ -275,6 +314,7 @@ const FWMoIntelligence = (() => {
       ${meter}
       ${mo.autoFaded ? `<div class="text-[10px] text-slate-500 italic mb-1">This case faded on its own before any analyst reviewed it. The records can still be checked.</div>` : ''}
       ${controls}
+      ${renderAdvice(advice, investigable)}
       <div class="text-[9px] text-slate-500 italic mt-1">Each source can be checked once per case. A check may come back inconclusive and change nothing. Finding no explanation is an absence of evidence, not proof — it moves confidence far less than finding a documented one. A site record check can also come back with no record existing at all, which moves confidence by exactly nothing: a missing record where watching is thin is what thin watching produces.</div>
       ${sum.noRecordChecks ? `<div class="text-[10px] text-sky-300/80 mt-1">${sum.noRecordChecks} check${sum.noRecordChecks === 1 ? '' : 's'} found no record to examine. That is a gap in what this port observes, counted separately from checks that were run and came back empty.</div>` : ''}
       ${renderFindings(mo)}
