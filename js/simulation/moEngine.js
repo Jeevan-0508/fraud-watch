@@ -32,7 +32,13 @@ const FWMoEngine = (() => {
     TRAILER_SWAPPED: ['trailer', 'swap', 'cargo'],
     DRIVER_CHANGED: ['insider', 'collusion', 'driver', 'identity'],
     MANIFEST_CHANGED: ['manifest', 'document', 'phantom', 'broker'],
-    UNEXPECTED_STOP: []
+    UNEXPECTED_STOP: [],
+    FALSE_MILESTONE_STAMP: ['document', 'consignment', 'proof of delivery', 'forgery', 'falsif'],
+    CARRIER_UNRESPONSIVE: ['phantom', 'ghost', 'fictitious', 'carrier', 'non-existent'],
+    EQUIPMENT_CARRIER_MISMATCH: ['impersonation', 'identity', 'takeover', 'hijack', 'operator'],
+    DUPLICATE_ASSET_ID: ['spoof', 'telemat', 'position', 'gnss', 'tracker'],
+    HANDOVER_GAP: ['pickup', 'collection', 'load theft', 'deception'],
+    STAGED_BREAKDOWN: ['parking', 'roadside', 'curtain', 'truck stop']
   };
 
   function scoreSignals(signals) {

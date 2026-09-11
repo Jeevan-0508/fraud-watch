@@ -20,7 +20,13 @@ const FWSignalEngine = (() => {
     TRAILER_SWAPPED:      { signalType: 'TRAILER_SWAPPED',      weight: 1, reliability: 0.5, decaySeconds: 7200 },
     MANIFEST_CHANGED:     { signalType: 'MANIFEST_CHANGED',     weight: 2, reliability: 0.65, decaySeconds: 3600 },
     SEAL_MISMATCH:        { signalType: 'SEAL_MISMATCH',        weight: 3, reliability: 0.75, decaySeconds: 7200 },
-    GPS_SIGNAL_LOST:      { signalType: 'GPS_SIGNAL_LOST',      weight: 2, reliability: 0.6, decaySeconds: 1800 }
+    GPS_SIGNAL_LOST:      { signalType: 'GPS_SIGNAL_LOST',      weight: 2, reliability: 0.6, decaySeconds: 1800 },
+    FALSE_MILESTONE_STAMP:      { signalType: 'FALSE_MILESTONE_STAMP',      weight: 3, reliability: 0.55, decaySeconds: 5400 },
+    CARRIER_UNRESPONSIVE:       { signalType: 'CARRIER_UNRESPONSIVE',       weight: 2, reliability: 0.5,  decaySeconds: 10800 },
+    EQUIPMENT_CARRIER_MISMATCH: { signalType: 'EQUIPMENT_CARRIER_MISMATCH', weight: 3, reliability: 0.7,  decaySeconds: 3600 },
+    DUPLICATE_ASSET_ID:         { signalType: 'DUPLICATE_ASSET_ID',         weight: 3, reliability: 0.65, decaySeconds: 3600 },
+    HANDOVER_GAP:               { signalType: 'HANDOVER_GAP',               weight: 2, reliability: 0.55, decaySeconds: 7200 },
+    STAGED_BREAKDOWN:           { signalType: 'STAGED_BREAKDOWN',           weight: 2, reliability: 0.5,  decaySeconds: 5400 }
   };
 
   function createEngine() {

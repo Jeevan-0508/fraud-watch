@@ -6,7 +6,19 @@
    signal engine (next module) turns into weighted signals. Whether a
    disruption has an innocent explanation is undetermined at this
    layer on purpose: SIGNAL != PROOF is enforced by keeping this module
-   ignorant of "suspicious" as a concept. */
+   ignorant of "suspicious" as a concept.
+
+  Six disruption types (FALSE_MILESTONE_STAMP, CARRIER_UNRESPONSIVE,
+  EQUIPMENT_CARRIER_MISMATCH, DUPLICATE_ASSET_ID, HANDOVER_GAP,
+  STAGED_BREAKDOWN) are generalized from real ROC/TIO fraud-ticket
+  narratives: patterns like a system delivery stamp firing with no
+  confirmed physical arrival, a carrier going silent after pickup, a
+  pickup performed with equipment registered to a different carrier,
+  a trailer/tractor ID appearing active in two places, a load going
+  unconfirmed at a multi-leg handover, and a driver detaching a
+  trailer off-site after a claimed breakdown. Every real case, carrier
+  name, SCAC, VRID, ticket ID and person's name was discarded during
+  generalization -- only the abstract behavioral shape survived. */
 const FWBehaviorEngine = (() => {
   const LIFECYCLE = ['DISPATCHED', 'EN_ROUTE_TO_PORT', 'CHECKPOINT', 'LOADING',
     'DEPARTURE', 'TRANSIT', 'DEPOT', 'DELIVERY', 'COMPLETED'];
@@ -15,10 +27,12 @@ const FWBehaviorEngine = (() => {
 
   // Stages where a disruption is plausible at all (no point deviating
   // route while parked at LOADING, for example).
-  const DISRUPTION_ELIGIBLE_STAGES = new Set(['EN_ROUTE_TO_PORT', 'CHECKPOINT', 'DEPARTURE', 'TRANSIT', 'DEPOT']);
+  const DISRUPTION_ELIGIBLE_STAGES = new Set(['EN_ROUTE_TO_PORT', 'CHECKPOINT', 'DEPARTURE', 'TRANSIT', 'DEPOT', 'DELIVERY']);
 
   const DISRUPTION_TYPES = ['UNEXPECTED_STOP', 'ROUTE_DEVIATION', 'DRIVER_CHANGED',
-    'TRAILER_SWAPPED', 'MANIFEST_CHANGED', 'SEAL_MISMATCH', 'GPS_SIGNAL_LOST'];
+    'TRAILER_SWAPPED', 'MANIFEST_CHANGED', 'SEAL_MISMATCH', 'GPS_SIGNAL_LOST',
+    'FALSE_MILESTONE_STAMP', 'CARRIER_UNRESPONSIVE', 'EQUIPMENT_CARRIER_MISMATCH',
+    'DUPLICATE_ASSET_ID', 'HANDOVER_GAP', 'STAGED_BREAKDOWN'];
 
   // Kept low deliberately: normal lifecycle progression must vastly
   // outnumber disruptions, or every truck looks suspicious constantly.
@@ -94,6 +108,32 @@ const FWBehaviorEngine = (() => {
       metadata.stoppedMinutes = rng.int(5, 40);
     } else if (type === 'MANIFEST_CHANGED') {
       truck.assignedShipmentId && metadata; // shipment manifest bump handled by caller if present
+    } else if (type === 'FALSE_MILESTONE_STAMP') {
+      metadata.claimedStatus = 'delivered';
+      metadata.physicalArrivalConfirmed = false;
+    } else if (type === 'CARRIER_UNRESPONSIVE') {
+      metadata.contactAttempts = rng.int(2, 6);
+      metadata.lastResponseHoursAgo = rng.int(6, 72);
+    } else if (type === 'EQUIPMENT_CARRIER_MISMATCH') {
+      const carriers = FWEntityEngine.all(registry, 'carrier');
+      const candidates = carriers.filter(c => c.id !== truck.carrierId && c.status === 'ACTIVE');
+      if (candidates.length) {
+        const mismatchCarrier = rng.pick(candidates);
+        metadata.scheduledCarrierId = truck.carrierId;
+        metadata.actualEquipmentCarrierId = mismatchCarrier.id;
+      } else { return null; }
+    } else if (type === 'DUPLICATE_ASSET_ID') {
+      const others = FWEntityEngine.all(registry, 'truck').filter(t => t.id !== truck.id && t.trailerId);
+      if (others.length) {
+        metadata.duplicateSeenOnTruckId = rng.pick(others).id;
+      } else { return null; }
+    } else if (type === 'HANDOVER_GAP') {
+      metadata.handoverStage = rng.pick(['depot_transfer', 'rail_leg_handover', 'cross_dock']);
+      metadata.gapMinutes = rng.int(30, 180);
+    } else if (type === 'STAGED_BREAKDOWN') {
+      metadata.claimedReason = 'mechanical issue';
+      metadata.detachLocation = 'undocumented off-site stop';
+      truck.lastCheckpoint = null;
     }
 
     const ev = FWEventEngine.emit(eventEngine, {
