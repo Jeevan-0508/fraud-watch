@@ -157,6 +157,19 @@
   </div>
 </main>
 
+<!-- ============ WHILE YOU WERE AWAY (Phase 9) ============ -->
+<div id="away-report-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div id="away-report-backdrop" class="absolute inset-0 bg-black/70"></div>
+  <div class="relative bg-[#0d1420] border border-slate-700 rounded-2xl p-6 max-w-md w-full">
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-[10px] tracking-widest text-sky-400 uppercase">While you were away</span>
+      <button id="away-report-close" class="text-slate-400 hover:text-white text-2xl leading-none">×</button>
+    </div>
+    <div id="away-report-body"></div>
+    <button id="away-report-close-2" class="mt-2 w-full px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold">Continue</button>
+  </div>
+</div>
+
 <!-- ============ ENTITY INSPECTOR SLIDE-OVER (Phase 42) ============ -->
 <div id="entity-inspector-panel" class="hidden fixed inset-0 z-40">
   <div id="entity-inspector-backdrop" class="absolute inset-0 bg-black/60"></div>
@@ -258,6 +271,8 @@
 <script src="js/ui/sim-debug.js"></script>
 <script src="js/ui/mo-intelligence.js"></script>
 <script src="js/ui/entity-inspector.js"></script>
+<script src="js/simulation/awayReport.js"></script>
+<script src="js/ui/away-report.js"></script>
 <script src="js/game.js"></script>
 <script src="js/training.js"></script>
 <script src="js/charts.js"></script>

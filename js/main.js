@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   FWGame.init();
   FWTraining.init();
   FWSimDebug.init();
+  if (window.FWAwayReport) FWAwayReport.init();
 
   function wirePanel(openBtnId, panelId, closeBtnId, backdropId) {
     const panel = document.getElementById(panelId);
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const simRoot = document.getElementById('sim-root');
   const classicHud = document.getElementById('hud');
   let portBooted = false;
+  let previousWorld = 'classic';
 
   document.querySelectorAll('#world-tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -43,6 +45,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (world === 'sim') {
         FWSimDebug.show();
       }
+      if (window.FWAwayReport) {
+        if (previousWorld === 'sim' && world !== 'sim') FWAwayReport.onWorldTabLeftSim();
+        if (world === 'sim') FWAwayReport.onWorldTabEnteredSim();
+      }
+      previousWorld = world;
     });
   });
 
