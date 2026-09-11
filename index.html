@@ -23,7 +23,11 @@
       </a>
       <h1 class="font-orbitron text-lg tracking-wide text-white">FRAUD<span class="text-sky-400">WATCH</span></h1>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      <div class="flex gap-1 bg-slate-900 rounded-lg p-0.5" id="world-tabs">
+        <button data-world="classic" class="tab-btn active px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-800">Classic Watch</button>
+        <button data-world="port" class="tab-btn px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-800">Port Meridian <span class="text-[9px] text-amber-400 align-top">PREVIEW</span></button>
+      </div>
       <button id="btn-stats" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700">📊 Stats</button>
       <button id="btn-guide" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700">📖 Field Guide</button>
     </div>
@@ -43,6 +47,17 @@
 
 <!-- ============ GAME STAGE ============ -->
 <main class="relative max-w-[1400px] mx-auto px-4 pb-6 pt-3">
+
+  <!-- ============ PORT MERIDIAN (Phase 1 preview) ============ -->
+  <div id="port-root" class="hidden">
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-xs text-slate-500">Phase 1 preview: world geography + camera only. Drag to pan, scroll to zoom. Traffic, incidents and investigation land in later phases.</p>
+      <button id="btn-port-reset" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">Reset view</button>
+    </div>
+    <div id="port-canvas-mount" class="relative rounded-2xl overflow-hidden border border-slate-800" style="height:64vh;min-height:420px"></div>
+  </div>
+
+  <!-- ============ CLASSIC WATCH (working arcade game) ============ -->
   <div id="stage" class="relative rounded-2xl overflow-hidden border border-slate-800">
     <svg id="map" viewBox="0 0 1000 460" class="w-full h-auto block" style="min-height:52vh"></svg>
 
@@ -135,7 +150,11 @@
   (CC BY 4.0). Game code MIT licensed.
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 <script src="js/data.js"></script>
+<script src="js/world/port.js"></script>
+<script src="js/core/camera.js"></script>
+<script src="js/core/game.js"></script>
 <script src="js/game.js"></script>
 <script src="js/training.js"></script>
 <script src="js/charts.js"></script>

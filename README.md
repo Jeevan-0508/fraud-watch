@@ -7,6 +7,11 @@ straight from that taxonomy's `docs/data.json`.
 
 **[Play it →](https://jeevan-0508.github.io/fraud-watch/)**
 
+> **Status:** Two worlds live side by side right now. **Classic Watch** is the finished arcade
+> game described below — playable end to end. **Port Meridian** is a Phase 1 preview of a much
+> bigger cinematic rebuild (see [Roadmap](#roadmap)): world geography and camera only, no traffic
+> or investigation yet. Nothing in Classic Watch was removed or broken to build it.
+
 ## What it is
 
 Trucks roll out of the yard toward the depot gate, most clean, some running an actual fraud
@@ -60,15 +65,40 @@ to install.
 
 ```
 fraud-watch/
-  index.html          game shell + training shell, mode toggle
-  style.css            dark theme extras on top of Tailwind
+  index.html            world toggle (Classic Watch / Port Meridian), training shell
+  style.css             dark theme, arcade HUD, reveal-drama animations
   data/fraud-data.json  verbatim copy of freight-fraud-taxonomy's docs/data.json
-  js/data.js            loads the dataset, pure helpers (pick indicators, pick decoy, pick countermeasure)
-  js/game.js            spawn/animate/score loop, SVG map, alert feed, reveal modal
-  js/training.js        pattern stepper for onboarding
-  js/charts.js          Chart.js scoreboard
-  js/main.js            bootstraps everything, mode switching
+  js/data.js            taxonomy engine — loads the dataset, pure helpers (pick indicators,
+                         pick decoy, pick countermeasure). Shared by both worlds.
+  js/game.js            Classic Watch: spawn/animate/score loop, SVG map, radio feed, reveal
+  js/training.js        Field Guide — pattern stepper for onboarding
+  js/charts.js          Chart.js scoreboard (Classic Watch stats panel)
+  js/main.js            bootstraps everything, world toggle, panel wiring
+  js/core/game.js       Phaser 3 bootstrap for Port Meridian (Phase 1)
+  js/core/camera.js     pan/zoom camera controller
+  js/world/port.js      Port Meridian geography — terminal, depot, warehouse, dock, roads
 ```
+
+## Roadmap
+
+Port Meridian is a staged rebuild toward a cinematic investigation game (world → observe →
+investigate → incident → respond → chase → identify → reveal → learn), replacing the current
+truck-flagging loop as the primary experience once it's far enough along. Built in phases, each
+one played and checked before the next starts — nothing here claims to be more finished than it is.
+
+- [x] **Phase 1 — World.** Port Meridian geography in Phaser 3: container terminal, crane area,
+      cargo depot, warehouse + loading bays, truck parking, security checkpoint, restricted area,
+      ship dock, main + service roads, exit gate. Drag-to-pan, scroll-to-zoom camera. Dusk tint,
+      blinking security lights, scrolling water, gentle ship bob and crane sway for atmosphere.
+- [ ] Phase 2 — Ambient life: vehicles, ships, workers and cranes on lightweight autonomous routes.
+- [ ] Phase 3 — Scenario engine: taxonomy pattern → world event generator.
+- [ ] Phase 4 — Investigation UI (forensic-tool styling, not a dashboard).
+- [ ] Phase 5 — The incident: a witnessed theft, not a popup.
+- [ ] Phase 6 — Response choices with different outcomes.
+- [ ] Phase 7 — Chase/intercept mode.
+- [ ] Phase 8 — Case reveal + evidence-based scoring (speed, accuracy, false-positive avoidance).
+- [ ] Phase 9 — Mission system + free-roam watch mode.
+- [ ] Phase 10 — Day/night, audio, visual polish pass.
 
 ## License
 
