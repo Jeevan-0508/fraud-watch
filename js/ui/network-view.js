@@ -20,7 +20,12 @@ const FWNetworkView = (() => {
     truck: '#38bdf8',   // sky
     driver: '#fbbf24',  // amber
     trailer: '#a78bfa', // violet
-    carrier: '#34d399'  // emerald
+    carrier: '#34d399', // emerald
+    // Sites are deliberately drab. They are shown for orientation and
+    // excluded from every structural claim in this panel, so they must
+    // not read as the most connected and therefore most interesting
+    // things on the diagram, which by degree alone they always are.
+    facility: '#64748b'  // slate
   };
 
   function init() {
@@ -77,7 +82,7 @@ const FWNetworkView = (() => {
   function layout(nodes) {
     // group by kind, each kind gets its own ring so the diagram reads
     // left-to-right as "who's linked to whom" rather than a hairball
-    const kinds = ['truck', 'driver', 'trailer', 'carrier'];
+    const kinds = ['truck', 'driver', 'trailer', 'carrier', 'facility'];
     const groups = {};
     kinds.forEach(k => groups[k] = nodes.filter(n => n.kind === k));
     const cx = 300, cy = 220;
@@ -99,6 +104,9 @@ const FWNetworkView = (() => {
     place(groups.carrier, 170, Math.PI / 1.6, Math.PI * 1.3);
     place(groups.driver, 90, -Math.PI / 2, Math.PI * 0.9);
     place(groups.trailer, 55, Math.PI / 2.2, Math.PI * 0.9);
+    // Sites sit on the outermost ring, away from the entities, because
+    // they are context for the diagram rather than members of it.
+    place(groups.facility, 205, -Math.PI / 2 - 0.4, Math.PI * 0.8);
     return positions;
   }
 
@@ -113,9 +121,11 @@ const FWNetworkView = (() => {
         els.summary.textContent = 'No cases yet -- nothing to link.';
       } else {
         const st = FWNetworkEngine.structureSummary(graph);
+        const sites = st.structuralNodeCount;
         els.summary.textContent =
-          `${graph.nodes.length} case-linked entities, ${graph.edges.length} connections · ` +
-          `${st.total} separate group${st.total === 1 ? '' : 's'}, ${st.informative} spanning more than one case`;
+          `${graph.nodes.length - sites} case-linked entities, ${graph.edges.length} connections · ` +
+          `${st.total} separate group${st.total === 1 ? '' : 's'}, ${st.informative} spanning more than one case` +
+          (sites ? ` · ${sites} site${sites === 1 ? '' : 's'} shown, excluded from the analysis` : '');
       }
     }
 
@@ -229,6 +239,9 @@ const FWNetworkView = (() => {
       const kinds = Object.keys(st.kinds).map(k => `${st.kinds[k]} ${k}${st.kinds[k] > 1 ? 's' : ''}`).join(', ');
       const pairs = st.recurringPairs.map(pr =>
         `<div class="text-[10px] text-amber-300/80 ml-1">${shortLabel(graph, pr.a)} + ${shortLabel(graph, pr.b)} — together in ${pr.caseCount} separate cases</div>`).join('');
+      const sites = st.siteKeys.length
+        ? `<div class="text-[10px] text-slate-600 ml-1">recorded at ${st.siteKeys.map(k => shortLabel(graph, k)).join(', ')} — where the records exist, not where the group operates</div>`
+        : '';
       const bridges = st.bridgeKeys.length
         ? `<div class="text-[10px] text-slate-500 ml-1">everything in this group routes through ${st.bridgeKeys.map(k => shortLabel(graph, k)).join(', ')}</div>`
         : '';
@@ -238,14 +251,18 @@ const FWNetworkView = (() => {
           <span class="text-[10px] font-mono text-slate-500">${st.size} entities · ${st.caseCount} case${st.caseCount === 1 ? '' : 's'}</span>
         </div>
         <div class="text-[10px] text-slate-500">${kinds}${st.openCaseCount ? ` · ${st.openCaseCount} open` : ''}</div>
-        ${pairs}${bridges}
+        ${pairs}${bridges}${sites}
         <div class="text-[10px] text-slate-600 mt-0.5">${FWNetworkEngine.STRUCTURE_NOTE[st.classification]}</div>
         <button data-focus-key="${esc(st.memberKeys[0])}" class="mt-1 text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700">Focus this group</button>
       </div>`;
     }).join('');
+    const mergeNote = sum.structuralNodeCount
+      ? `<p class="text-[10px] text-slate-500 mb-1.5">${FWNetworkEngine.STRUCTURAL_NOTE}${sum.mergedByStructural ? ` Counted in: including the ${sum.structuralNodeCount} site${sum.structuralNodeCount === 1 ? '' : 's'} would merge ${sum.mergedByStructural} of these ${sum.total} groups into ${sum.groupsWithSitesIncluded}. That is a fact about where the port's gates are.` : ''}</p>`
+      : '';
     return `<div class="mt-2">
       <div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">Structure across cases</div>
       <p class="text-[10px] text-slate-500 mb-1.5">${sum.artefacts} of ${sum.total} group${sum.total === 1 ? '' : 's'} come from a single case. Those shapes are produced by how this graph is built -- every entity in a case is linked to every other -- so they are listed last and mean nothing on their own.</p>
+      ${mergeNote}
       ${rows}
     </div>`;
   }
@@ -270,6 +287,11 @@ const FWNetworkView = (() => {
       .filter(Boolean);
     const neighRows = neigh.map(n => `<li><span class="font-mono">${esc(n.id)}</span> <span class="text-slate-500">(${FWNetworkEngine.KIND_LABELS[n.kind]})</span></li>`).join('');
 
+    // A site's detail panel says what its case count is, and immediately
+    // says why that number is not a finding about the site.
+    const structuralNote = node.structural
+      ? `<p class="text-[10px] text-amber-300/80 mb-2">This is a site, not a participant. Its case count is a count of movements that passed through it, so it will be among the highest numbers here whatever is or is not happening. Sites are excluded from the repeat-entity and structure analysis for that reason, and the Sites panel explains why a site with more records may simply be one that watches itself.</p>`
+      : '';
     const viewBtn = node.kind === 'truck'
       ? `<button data-open-truck="${esc(node.id)}" id="network-open-truck-btn" class="mt-2 text-[11px] px-2 py-1 rounded bg-sky-700 hover:bg-sky-600 text-white">Open in Entity Inspector →</button>`
       : '';
@@ -277,6 +299,7 @@ const FWNetworkView = (() => {
     return trace + `
       <div class="text-xs text-white font-semibold mb-1">${esc(node.id)} <span class="text-slate-500 font-normal">(${FWNetworkEngine.KIND_LABELS[node.kind]})</span></div>
       <div class="text-[11px] text-slate-400 mb-2">${node.caseCount} case${node.caseCount === 1 ? '' : 's'}${node.openCaseCount ? `, ${node.openCaseCount} currently open` : ', none currently open'}</div>
+      ${structuralNote}
       <div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">Linked entities (${neigh.length})</div>
       <ul class="text-[11px] text-slate-300 space-y-0.5 list-disc list-inside mb-1">${neighRows || '<li class="text-slate-600 list-none">none</li>'}</ul>
       <button data-trace-from="${esc(node.key)}" class="mt-2 mr-1 text-[11px] px-2 py-1 rounded bg-fuchsia-800 hover:bg-fuchsia-700 text-white">Trace path from here</button>

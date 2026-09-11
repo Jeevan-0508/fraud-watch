@@ -293,6 +293,25 @@ const FWMoIntelligence = (() => {
     return `<div class="flex flex-wrap gap-1.5 mt-2">${buttons}</div>`;
   }
 
+  // WHERE the case's signals were observed (Phase 5). A case is a chain
+  // of signals over time and a truck moves, so a case often has no single
+  // location -- moEngine refuses to invent one, and this refuses to print
+  // one. The wording also has to keep the site out of the accusation: a
+  // site appears here because a record exists there.
+  function renderCaseSites(mo) {
+    if (!mo.siteSpread) return '';
+    const note = (FWMoEngine.SITE_SPREAD_NOTE && FWMoEngine.SITE_SPREAD_NOTE[mo.siteSpread]) || '';
+    if (mo.siteSpread === 'UNSITED') {
+      return `<div class="text-[10px] text-slate-500 mt-1">Observed on the open road, at no site. ${note}</div>`;
+    }
+    const list = (mo.sites || []).map(st =>
+      `${st.facilityName} (${st.signalCount} signal${st.signalCount === 1 ? '' : 's'})`).join(', ');
+    const road = mo.unsitedSignalCount
+      ? ` Plus ${mo.unsitedSignalCount} signal${mo.unsitedSignalCount === 1 ? '' : 's'} observed on the open road, at no site.`
+      : '';
+    return `<div class="text-[10px] text-slate-500 mt-1">Recorded at: ${list}.${road} ${note}</div>`;
+  }
+
   function renderExecutiveSummary(mo) {
     const sigTypes = (mo.signature || '').split('+').map(t => t.replace(/_/g, ' ')).join(', ');
     return `<div class="mb-2 text-[11px] text-slate-300 leading-snug">
@@ -302,6 +321,7 @@ const FWMoIntelligence = (() => {
       <b>${classificationLabel(mo.classification)}</b> (novelty ${mo.noveltyScore}/100).
       Confidence ${Math.round(mo.confidence)}%, severity ${mo.severity}.
       ${mo.resolutionReason ? `<br>Resolution note: ${mo.resolutionReason}` : ''}
+      ${renderCaseSites(mo)}
     </div>`;
   }
 

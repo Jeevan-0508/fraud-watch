@@ -11,7 +11,28 @@
    identical in shape to one linked by an open ESCALATED case -- the
    UI layer decides how to color that, this module just counts. */
 const FWNetworkEngine = (() => {
-  const KIND_LABELS = { truck: 'Truck', driver: 'Driver', trailer: 'Trailer', carrier: 'Carrier' };
+  const KIND_LABELS = { truck: 'Truck', driver: 'Driver', trailer: 'Trailer', carrier: 'Carrier', facility: 'Site' };
+
+  // STRUCTURAL KINDS (Phase 5). A site is not a participant in a case the
+  // way a driver is. Every movement in the port passes through one of a
+  // handful of gates, docks and yards, so a site node is connected to
+  // almost everything the moment there are more than a couple of cases.
+  // Its degree measures traffic, not involvement, and left unhandled it
+  // does something actively misleading: it merges every separate group in
+  // this graph into one component via a gatehouse, so the structure list
+  // would report a single sprawling cluster and call it informative.
+  //
+  // This is the same class of error as the single-case clique below -- a
+  // shape guaranteed by the construction being read as a finding -- so it
+  // gets the same treatment. Sites stay in the graph, drawn and
+  // clickable, and are excluded from: repeat-entity callouts, bridge
+  // findings, and structure classification. The number of groups they
+  // merge is reported instead, because that number describes the port's
+  // layout and not these cases.
+  const STRUCTURAL_KINDS = ['facility'];
+
+  const STRUCTURAL_NOTE =
+    'Sites are shown but excluded from the structure and repeat-entity analysis. Every movement passes through a handful of gates, docks and yards, so a site connects to nearly everything by construction: including them would merge unrelated groups into one cluster and make the port\'s layout look like a relationship.';
 
   function entitiesOf(mo) {
     const e = mo.entities || {};
@@ -20,10 +41,37 @@ const FWNetworkEngine = (() => {
     if (e.driverId) list.push({ kind: 'driver', id: e.driverId });
     if (e.trailerId) list.push({ kind: 'trailer', id: e.trailerId });
     if (e.carrierId) list.push({ kind: 'carrier', id: e.carrierId });
+    // Every site any of this case's signals was observed at, not one
+    // chosen site: moEngine deliberately refuses to collapse a case
+    // spread across three sites into a single location, so this graph
+    // must not do it either.
+    (mo.sites || []).forEach(st => {
+      if (st && st.facilityId) list.push({ kind: 'facility', id: st.facilityId });
+    });
     return list;
   }
 
   function nodeKey(kind, id) { return `${kind}:${id}`; }
+
+  function kindOfKey(key) { return String(key).split(':')[0]; }
+
+  function isStructuralKind(kind) { return STRUCTURAL_KINDS.indexOf(kind) >= 0; }
+
+  function isStructuralKey(key) { return isStructuralKind(kindOfKey(key)); }
+
+  // The graph with structural nodes and their edges removed -- the
+  // subgraph every structural claim below is actually computed on.
+  function coreGraph(graph) {
+    if (!graph) return { nodes: [], edges: [] };
+    return {
+      nodes: graph.nodes.filter(n => !isStructuralKind(n.kind)),
+      edges: graph.edges.filter(e => !isStructuralKey(e.a) && !isStructuralKey(e.b))
+    };
+  }
+
+  function structuralNodes(graph) {
+    return (graph && graph.nodes ? graph.nodes : []).filter(n => isStructuralKind(n.kind));
+  }
 
   function buildGraph(state) {
     const nodes = new Map(); // key -> {key, kind, id, label, caseCount, openCaseCount, moIds:Set}
@@ -39,7 +87,7 @@ const FWNetworkEngine = (() => {
       ents.forEach(({ kind, id }) => {
         const key = nodeKey(kind, id);
         if (!nodes.has(key)) {
-          nodes.set(key, { key, kind, id, label: id, caseCount: 0, openCaseCount: 0, moIds: new Set() });
+          nodes.set(key, { key, kind, id, label: id, caseCount: 0, openCaseCount: 0, moIds: new Set(), structural: isStructuralKind(kind) });
         }
         const n = nodes.get(key);
         if (!n.moIds.has(mo.id)) {
@@ -93,8 +141,12 @@ const FWNetworkEngine = (() => {
   // Repeat-entity flag: an entity appearing in >=2 cases is worth a
   // visual callout (Phase 43's "who keeps showing up") -- informational,
   // never a verdict; see entity-inspector.js's reputation framing.
+  // Structural nodes are excluded: "this gatehouse keeps showing up" is
+  // guaranteed by the port having two gatehouses, so surfacing it as a
+  // repeat entity beside a driver who appears in three cases would put a
+  // fact and an artefact on the same list.
   function repeatEntities(graph, minCases = 2) {
-    return graph.nodes.filter(n => n.caseCount >= minCases);
+    return graph.nodes.filter(n => !n.structural && n.caseCount >= minCases);
   }
 
   // ---- Phase 4 depth: paths, components, recurring structure ----
@@ -152,20 +204,32 @@ const FWNetworkEngine = (() => {
     let cur = toKey;
     while (prev.get(cur)) {
       const step = prev.get(cur);
-      hops.unshift({ from: step.from, to: cur, viaMoIds: step.edge.sharedMoIds.slice(), weight: step.edge.weight });
+      hops.unshift({
+        from: step.from, to: cur,
+        viaMoIds: step.edge.sharedMoIds.slice(),
+        weight: step.edge.weight,
+        // A hop that passes through a site means "both ends were recorded
+        // at the same gate", which nearly every movement in the port is.
+        // Flagged so the caveat can say so.
+        viaStructural: isStructuralKey(step.from) || isStructuralKey(cur)
+      });
       cur = step.from;
     }
     const nodes = [hops.length ? hops[0].from : fromKey].concat(hops.map(h => h.to));
-    return { nodes, hops, hopCount: hops.length };
+    const structuralHops = hops.filter(h => h.viaStructural).length;
+    return { nodes, hops, hopCount: hops.length, structuralHops };
   }
 
   function pathCaveat(path) {
     if (!path) return 'These two entities have never appeared in a case together, directly or through any chain of shared cases.';
     if (!path.hopCount) return 'Same entity.';
+    const structural = path.structuralHops
+      ? ` ${path.structuralHops} of these hops passes through a site, which means only that both ends were recorded at the same gate, dock or yard — nearly every movement in this port is, so those hops carry no information at all.`
+      : '';
     if (path.hopCount === 1) {
-      return 'One hop: these two appeared in the same case. That is a recorded co-occurrence and nothing more.';
+      return 'One hop: these two appeared in the same case. That is a recorded co-occurrence and nothing more.' + structural;
     }
-    return `${path.hopCount} hops. Each hop is one shared case, and the entities at either end of this chain may never have appeared in a case together at all. A path through a co-occurrence graph is not a relationship, not a chain of custody, and not evidence of coordination.`;
+    return `${path.hopCount} hops. Each hop is one shared case, and the entities at either end of this chain may never have appeared in a case together at all. A path through a co-occurrence graph is not a relationship, not a chain of custody, and not evidence of coordination.` + structural;
   }
 
   // Connected components of the co-occurrence graph.
@@ -196,20 +260,39 @@ const FWNetworkEngine = (() => {
   // Nodes whose removal breaks their component into more pieces. Useful
   // navigationally ("everything here routes through this trailer") and
   // explicitly not a finding about the entity.
+  // Computed on the core graph on purpose. In the full graph a gatehouse
+  // is the bridge for practically everything, which is a statement about
+  // where the port's gates are and would read as one about the cases.
   function bridgeNodes(graph) {
-    const base = componentCount(graph);
+    const core = coreGraph(graph);
+    const base = componentCount(core);
     const out = [];
-    graph.nodes.forEach(n => {
+    core.nodes.forEach(n => {
       const sub = {
-        nodes: graph.nodes.filter(x => x.key !== n.key),
-        edges: graph.edges.filter(e => e.a !== n.key && e.b !== n.key)
+        nodes: core.nodes.filter(x => x.key !== n.key),
+        edges: core.edges.filter(e => e.a !== n.key && e.b !== n.key)
       };
       // removing a node always removes it from its own component, so
       // compare against the count with that single node discounted
-      const expected = base - (neighbors(graph, n.key).length ? 0 : 1);
+      const expected = base - (neighbors(core, n.key).length ? 0 : 1);
       if (componentCount(sub) > expected) out.push(n.key);
     });
     return out;
+  }
+
+  // How much of the graph's apparent connectedness is just shared
+  // infrastructure. Reported as a number about the port, never as a
+  // structure finding.
+  function structuralMerge(graph) {
+    const core = coreGraph(graph);
+    const coreGroups = componentCount(core);
+    const withSites = componentCount(graph);
+    return {
+      coreGroups,
+      groupsWithSitesIncluded: withSites,
+      merged: Math.max(0, coreGroups - withSites),
+      structuralNodeCount: structuralNodes(graph).length
+    };
   }
 
   // Structural characterisation of each component. The classification
@@ -227,12 +310,17 @@ const FWNetworkEngine = (() => {
   //                         and it says "look again", not "collusion".
   function structures(graph) {
     if (!graph || !graph.nodes.length) return [];
-    const byKey = new Map(graph.nodes.map(n => [n.key, n]));
+    // Sites are excluded here (see STRUCTURAL_KINDS): with them included,
+    // one gatehouse collapses every group in the port into a single
+    // component and the classification below stops meaning anything.
+    const core = coreGraph(graph);
+    if (!core.nodes.length) return [];
+    const byKey = new Map(core.nodes.map(n => [n.key, n]));
     const bridges = new Set(bridgeNodes(graph));
 
-    return components(graph).map(memberKeys => {
+    return components(core).map(memberKeys => {
       const members = memberKeys.map(k => byKey.get(k)).filter(Boolean);
-      const inner = graph.edges.filter(e => memberKeys.includes(e.a) && memberKeys.includes(e.b));
+      const inner = core.edges.filter(e => memberKeys.includes(e.a) && memberKeys.includes(e.b));
       const moIds = new Set();
       members.forEach(m => m.moIds.forEach(id => moIds.add(id)));
       const recurringEdges = inner.filter(e => e.sharedMoIds.length >= 2);
@@ -247,6 +335,13 @@ const FWNetworkEngine = (() => {
       const kinds = {};
       members.forEach(m => { kinds[m.kind] = (kinds[m.kind] || 0) + 1; });
 
+      // Sites this group's cases were observed at -- carried for context,
+      // and deliberately not part of the classification above.
+      const siteKeys = new Set();
+      structuralNodes(graph).forEach(sn => {
+        if (sn.moIds.some(id => moIds.has(id))) siteKeys.add(sn.key);
+      });
+
       return {
         memberKeys, members, classification,
         size: members.length,
@@ -257,6 +352,7 @@ const FWNetworkEngine = (() => {
         openCaseCount: openCases,
         recurringPairs: recurringEdges.map(e => ({ a: e.a, b: e.b, caseCount: e.sharedMoIds.length, moIds: e.sharedMoIds.slice() })),
         bridgeKeys: memberKeys.filter(k => bridges.has(k)),
+        siteKeys: Array.from(siteKeys),
         kinds,
         informative: classification !== 'SINGLE_CASE_ARTEFACT'
       };
@@ -284,17 +380,23 @@ const FWNetworkEngine = (() => {
     const list = structures(graph);
     const byClass = { SINGLE_CASE_ARTEFACT: 0, MULTI_CASE_CLUSTER: 0, RECURRING_PAIR: 0 };
     list.forEach(s => { byClass[s.classification] = (byClass[s.classification] || 0) + 1; });
+    const merge = structuralMerge(graph);
     return {
       total: list.length,
       byClass,
       informative: list.filter(s => s.informative).length,
-      artefacts: byClass.SINGLE_CASE_ARTEFACT
+      artefacts: byClass.SINGLE_CASE_ARTEFACT,
+      structuralNodeCount: merge.structuralNodeCount,
+      mergedByStructural: merge.merged,
+      groupsWithSitesIncluded: merge.groupsWithSitesIncluded
     };
   }
 
   return {
-    buildGraph, neighbors, repeatEntities, nodeKey, KIND_LABELS,
+    buildGraph, neighbors, repeatEntities, nodeKey, kindOfKey, KIND_LABELS,
     shortestPath, pathCaveat, components, componentCount, bridgeNodes,
-    structures, structureSummary, STRUCTURE_LABEL, STRUCTURE_NOTE
+    structures, structureSummary, STRUCTURE_LABEL, STRUCTURE_NOTE,
+    STRUCTURAL_KINDS, STRUCTURAL_NOTE, isStructuralKind, isStructuralKey,
+    coreGraph, structuralNodes, structuralMerge
   };
 })();

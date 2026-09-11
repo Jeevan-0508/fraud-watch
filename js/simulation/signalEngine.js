@@ -45,6 +45,11 @@ const FWSignalEngine = (() => {
       createdAt: event.timestamp,
       expiresAt: event.timestamp + def.decaySeconds,
       sourceEventId: event.id,
+      // Where the disruption was observed (Phase 5). null is a real
+      // answer -- it means a public road, belonging to no site -- and is
+      // never backfilled with the last site the vehicle touched.
+      facilityId: (event.metadata && event.metadata.facilityId) || null,
+      facilityName: (event.metadata && event.metadata.facilityName) || null,
       // Hidden answer key carried over from falsePositiveEngine so a case
       // stays investigable after the source event has aged out of the
       // recent-event buffer. Never rendered: only investigationEngine

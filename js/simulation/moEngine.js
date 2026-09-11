@@ -133,9 +133,54 @@ const FWMoEngine = (() => {
 
   function buildEvidence(signals) {
     return signals
-      .map(s => ({ signalId: s.id, signalType: s.type, contribution: Math.round(s.weight * s.reliability * 10) / 10, reliability: s.reliability, at: s.createdAt }))
+      .map(s => ({ signalId: s.id, signalType: s.type, contribution: Math.round(s.weight * s.reliability * 10) / 10, reliability: s.reliability, at: s.createdAt,
+        facilityId: s.facilityId || null, facilityName: s.facilityName || null }))
       .sort((a, b) => a.at - b.at);
   }
+
+  // WHERE a case happened (Phase 5). A case is a chain of signals over
+  // time, and a truck moves, so those signals can easily have been
+  // observed at three different sites and on the open road in between.
+  // Collapsing that to one location would invent a fact, so the case
+  // carries the whole breakdown and says how spread out it is. A case
+  // gets a single site in mo.entities ONLY when every one of its signals
+  // was observed at that one site.
+  function siteBreakdown(evidence) {
+    const counts = new Map();
+    let unsited = 0;
+    const names = new Map();
+    (evidence || []).forEach(e => {
+      if (e.facilityId) {
+        counts.set(e.facilityId, (counts.get(e.facilityId) || 0) + 1);
+        if (e.facilityName) names.set(e.facilityId, e.facilityName);
+      } else {
+        unsited += 1;
+      }
+    });
+    const sites = Array.from(counts.entries())
+      .map(([facilityId, signalCount]) => ({ facilityId, facilityName: names.get(facilityId) || facilityId, signalCount }))
+      .sort((a, b) => b.signalCount - a.signalCount || a.facilityId.localeCompare(b.facilityId));
+
+    let siteSpread;
+    if (!sites.length) siteSpread = 'UNSITED';
+    else if (sites.length === 1) siteSpread = unsited ? 'PARTLY_UNSITED' : 'SINGLE_SITE';
+    else siteSpread = unsited ? 'MULTI_SITE_PARTLY_UNSITED' : 'MULTI_SITE';
+
+    return {
+      sites,
+      unsitedSignalCount: unsited,
+      siteSpread,
+      soleFacilityId: siteSpread === 'SINGLE_SITE' ? sites[0].facilityId : null
+    };
+  }
+
+  const SITE_SPREAD_NOTE = {
+    UNSITED: 'Every signal in this case was observed on the open road, so no site is attributable to it. That is an absence of location, not an unknown one.',
+    SINGLE_SITE: 'Every signal in this case was observed at one site. That makes the site a fact about the case and still says nothing about the site itself -- a well-watched site records more.',
+    PARTLY_UNSITED: 'Some signals here were observed at one site and the rest on the open road. The site is where the recording happened, not necessarily where the behaviour did.',
+    MULTI_SITE: 'The signals in this case were observed at more than one site. The case has no single location, and the sites listed are where records exist, not a route.',
+    MULTI_SITE_PARTLY_UNSITED: 'The signals here are spread across several sites and the open road. There is no single location for this case and the list below is not a route.'
+  };
 
   // An MO's evidence record only ever GROWS. A signal decaying means it
   // stops counting toward confidence, not that it never happened -- so
@@ -150,6 +195,19 @@ const FWMoEngine = (() => {
     mo.signals = mo.evidence.map(e => e.signalId);
     mo.timeline = mo.evidence.map(e => ({ t: e.at, type: e.signalType }));
     mo.activeSignals = signals.map(s => s.id);
+    applySites(mo);
+  }
+
+  // Recomputed whenever evidence grows: a case that started at one site
+  // and picked up a second signal elsewhere must stop claiming a single
+  // location the moment that happens.
+  function applySites(mo) {
+    const b = siteBreakdown(mo.evidence);
+    mo.sites = b.sites;
+    mo.unsitedSignalCount = b.unsitedSignalCount;
+    mo.siteSpread = b.siteSpread;
+    if (mo.entities) mo.entities.facilityId = b.soleFacilityId;
+    return b;
   }
 
   function recommendedActionsFor(pattern) {
@@ -174,6 +232,8 @@ const FWMoEngine = (() => {
     const classification = classifyDiscovery(ranked, priorCount);
     const noveltyScore = noveltyFromRecurrence(priorCount);
 
+    const siteInfo = siteBreakdown(buildEvidence(signals));
+
     return {
       id,
       title: pattern ? `Possible ${pattern.name}` : 'Unclassified correlated anomaly',
@@ -188,7 +248,10 @@ const FWMoEngine = (() => {
       noveltyScore,
       recurrenceCount: priorCount + 1,
       signature,
-      entities: { truckId: truck.id, driverId: truck.driverId, trailerId: truck.trailerId, carrierId: truck.carrierId },
+      entities: { truckId: truck.id, driverId: truck.driverId, trailerId: truck.trailerId, carrierId: truck.carrierId, facilityId: siteInfo.soleFacilityId },
+      sites: siteInfo.sites,
+      unsitedSignalCount: siteInfo.unsitedSignalCount,
+      siteSpread: siteInfo.siteSpread,
       signals: signals.map(s => s.id),
       activeSignals: signals.map(s => s.id),
       timeline: buildEvidence(signals).map(e => ({ t: e.at, type: e.signalType })),
@@ -288,6 +351,7 @@ const FWMoEngine = (() => {
 
   return {
     createEngine, process, setStatus, recomputeConfidence, scoreSignals, mergeEvidence, matchPattern, rankPatterns,
+    siteBreakdown, applySites, SITE_SPREAD_NOTE,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
     signalSignature, classifyDiscovery, noveltyFromRecurrence, discoverySummary,
     OPEN_STATUSES, CLOSED_STATUSES, CREATE_THRESHOLD, MIN_SIGNAL_TYPES
