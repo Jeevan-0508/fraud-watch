@@ -58,6 +58,10 @@ const FWSimDebug = (() => {
       FWMoIntelligence.init();
       FWSimRunner.onTick(FWMoIntelligence.render);
     }
+    if (window.FWEntityInspector) {
+      FWEntityInspector.init();
+      FWSimRunner.onTick((state) => { if (FWEntityInspector.isOpen()) FWEntityInspector.render(state); });
+    }
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
@@ -120,7 +124,7 @@ const FWSimDebug = (() => {
       const sigBadge = active.length
         ? `<span class="px-1.5 py-0.5 rounded bg-amber-900 text-amber-300 text-[10px]">${active.length} signal${active.length > 1 ? 's' : ''}</span>`
         : '<span class="text-slate-600 text-[10px]">—</span>';
-      return `<tr class="border-b border-slate-800/60">
+      return `<tr class="border-b border-slate-800/60 cursor-pointer hover:bg-slate-800/40" data-truck-id="${t.id}" title="Click to inspect ${t.id}">
         <td class="py-1 pr-2 font-mono text-[11px] text-slate-300">${t.id}</td>
         <td class="py-1 pr-2 text-[11px] text-slate-400">${t.status.replace(/_/g, ' ')}</td>
         <td class="py-1 pr-2 text-[11px] text-slate-500">${t.driverId || '—'}</td>

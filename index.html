@@ -157,6 +157,18 @@
   </div>
 </main>
 
+<!-- ============ ENTITY INSPECTOR SLIDE-OVER (Phase 42) ============ -->
+<div id="entity-inspector-panel" class="hidden fixed inset-0 z-40">
+  <div id="entity-inspector-backdrop" class="absolute inset-0 bg-black/60"></div>
+  <div class="absolute right-0 top-0 h-full w-full sm:w-[420px] bg-[#0d1420] border-l border-slate-800 p-5 overflow-y-auto scrollbar-thin">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-orbitron text-lg text-white" id="entity-inspector-title">Entity</h2>
+      <button id="entity-inspector-close" class="text-slate-400 hover:text-white text-2xl leading-none">×</button>
+    </div>
+    <div id="entity-inspector-body" class="text-xs text-slate-300 space-y-4"></div>
+  </div>
+</div>
+
 <!-- ============ STATS SLIDE-OVER ============ -->
 <div id="stats-panel" class="hidden fixed inset-0 z-40">
   <div id="stats-backdrop" class="absolute inset-0 bg-black/60"></div>
@@ -245,6 +257,7 @@
 <script src="js/simulation/simRunner.js"></script>
 <script src="js/ui/sim-debug.js"></script>
 <script src="js/ui/mo-intelligence.js"></script>
+<script src="js/ui/entity-inspector.js"></script>
 <script src="js/game.js"></script>
 <script src="js/training.js"></script>
 <script src="js/charts.js"></script>
