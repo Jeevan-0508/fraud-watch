@@ -16,9 +16,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   wirePanel('btn-stats', 'stats-panel', 'stats-close', 'stats-backdrop');
   wirePanel('btn-guide', 'guide-panel', 'guide-close', 'guide-backdrop');
 
-  // ---- world toggle: Classic Watch <-> Port Meridian (Phase 1 preview) ----
+  // ---- world toggle: Classic Watch <-> Port Meridian ----
   const stage = document.getElementById('stage');
   const portRoot = document.getElementById('port-root');
+  const classicHud = document.getElementById('hud');
   let portBooted = false;
 
   document.querySelectorAll('#world-tabs .tab-btn').forEach(btn => {
@@ -28,6 +29,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const world = btn.dataset.world;
       stage.classList.toggle('hidden', world !== 'classic');
       portRoot.classList.toggle('hidden', world !== 'port');
+      // Classic Watch's top HUD tracks its own separate score/streak —
+      // hide it in Port Meridian so its numbers don't sit next to
+      // Port Meridian's own port-hud-line and look like one HUD.
+      if (classicHud) classicHud.classList.toggle('hidden', world !== 'classic');
       if (world === 'port' && !portBooted) {
         FWCoreGame.boot('port-canvas-mount');
         portBooted = true;
