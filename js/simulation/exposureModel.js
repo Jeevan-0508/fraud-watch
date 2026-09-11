@@ -86,7 +86,7 @@ const FWExposureModel = (() => {
     },
     {
       figure: 'Cost of the oversight blind spot',
-      why: 'The shift model records how many disruptions went unobserved (Phase 37), but an unobserved disruption has no consignment attached in the record and no known outcome, so pricing it would mean inventing both.'
+      why: 'Coverage in this simulation depends on both the hour and the site (Phases 37 and 5), and the model records how many disruptions went unobserved under each. But an unobserved disruption has no consignment attached in the record and no known outcome, so pricing it would mean inventing both — and the same holds for a record that structurally never existed because nothing at that site produces it.'
     }
   ];
 

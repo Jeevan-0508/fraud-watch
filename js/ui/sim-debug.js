@@ -87,6 +87,10 @@ const FWSimDebug = (() => {
       FWExposureView.init();
       FWSimRunner.onTick(FWExposureView.render);
     }
+    if (window.FWAnalyticsView) {
+      FWAnalyticsView.init();
+      FWSimRunner.onTick(FWAnalyticsView.render);
+    }
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
@@ -95,6 +99,7 @@ const FWSimDebug = (() => {
     if (window.FWShiftView) FWShiftView.render(FWSimRunner.getState());
     if (window.FWFacilityView) FWFacilityView.render(FWSimRunner.getState());
     if (window.FWExposureView) FWExposureView.render(FWSimRunner.getState());
+    if (window.FWAnalyticsView) FWAnalyticsView.render(FWSimRunner.getState());
   }
 
   function fmtPct(x) { return Math.round(x * 100) + '%'; }

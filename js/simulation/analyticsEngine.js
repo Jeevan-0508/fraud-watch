@@ -1,0 +1,341 @@
+/* simulation/analyticsEngine.js — Phase 58: the portfolio view.
+   Nothing here models anything new. Every figure is an aggregation over
+   engines that already ran: outcomeEngine's ledger, investigationEngine's
+   per-case summaries, moEngine's discovery history, shiftEngine's and
+   facilityEngine's stated coverage. That is deliberate — a dashboard is
+   the wrong place to invent a quantity.
+
+   WHY THIS MODULE IS SHAPED AROUND DENOMINATORS. A dashboard renders a
+   column of percentages in one visual style, and the reader takes them
+   as commensurable. In this simulation they are not, and the differences
+   are not pedantic:
+
+     - the aligned-call share is over DECISIVE SCORED CLOSURES, which is
+       a subset of scored closures, which is a subset of closed cases;
+     - the blind-close share is over ALL SCORED CLOSURES, a strictly
+       larger denominator, and sits two rows away;
+     - a shift's "45% unrecorded" is not a rate over any sample at all.
+       It is 1 minus a number typed into shiftEngine.js. It cannot move
+       with the data because it is not made of data.
+
+   So a metric here cannot be constructed without stating what its
+   denominator counts, and the constructor THROWS if that string is
+   missing. Not a lint rule — a metric with an unstated denominator is
+   the failure mode this whole panel exists to prevent, so it is not
+   allowed to exist as an object.
+
+   THE REFUSAL THAT MATTERS MOST is the novelty discovery curve. See
+   NOT_MODELLED: novelty in moEngine is DEFINED as how few times a
+   signal signature has recurred in this run, so as the run continues
+   the same signatures repeat and the novel share falls. It falls
+   because of the definition, not because anything was learned. Drawn as
+   a line going down over sim-days it reads as a maturing taxonomy or a
+   calming port, and it is neither: it is the classifier describing its
+   own arithmetic back to the analyst. The chart is refused in the place
+   the chart would go. */
+const FWAnalyticsEngine = (() => {
+  // Kinds are structural, not cosmetic. They decide whether a figure is
+  // allowed to be withheld for small sample (only a RATE can be), and
+  // whether it can move at all as the simulation runs (a PARAMETER
+  // cannot).
+  const KIND = {
+    COUNT: 'COUNT',          // a population. No denominator beyond itself.
+    RATE: 'RATE',            // numerator over a stated sample of observations.
+    PARAMETER: 'PARAMETER'   // a stated modeling assumption rendered as a percentage.
+  };
+
+  // Reused from outcomeEngine rather than redeclared, so the threshold
+  // below which a percentage is withheld can never drift apart between
+  // the calibration mirror and this panel.
+  function minSample() {
+    return window.FWOutcomeEngine ? FWOutcomeEngine.MIN_SAMPLE_FOR_RATES : 5;
+  }
+
+  function pct(x) { return Math.round(x * 100) + '%'; }
+
+  // The enforcement described in the header. `of` is what the
+  // denominator counts, in words, and there is no default.
+  function metric(spec) {
+    if (!spec || typeof spec.of !== 'string' || !spec.of.trim()) {
+      throw new Error(
+        'analyticsEngine.metric: every metric must state what its denominator counts (spec.of). ' +
+        'A percentage whose base is unstated is the specific error this panel exists to prevent.'
+      );
+    }
+    const kind = spec.kind || KIND.RATE;
+    const num = spec.numerator;
+    const den = spec.denominator;
+
+    if (kind === KIND.COUNT) {
+      return {
+        id: spec.id, label: spec.label, kind,
+        count: num, of: spec.of, note: spec.note || null,
+        valueLabel: String(num),
+        basisLabel: spec.of,
+        withheld: false
+      };
+    }
+
+    if (kind === KIND.PARAMETER) {
+      return {
+        id: spec.id, label: spec.label, kind,
+        value: num, of: spec.of, note: spec.note || null,
+        valueLabel: pct(num),
+        // No n/N, because there is no n and no N. Saying so is the
+        // whole point of separating this kind out.
+        basisLabel: spec.of,
+        withheld: false,
+        isAssumption: true
+      };
+    }
+
+    const threshold = spec.minSample != null ? spec.minSample : minSample();
+    const enough = den >= threshold;
+    return {
+      id: spec.id, label: spec.label, kind,
+      numerator: num, denominator: den, of: spec.of, note: spec.note || null,
+      value: enough && den > 0 ? num / den : null,
+      // Rendered on every rate, withheld or not. The counts are the
+      // honest part; the percentage is the derived part.
+      ratioLabel: num + ' / ' + den,
+      basisLabel: 'of ' + den + ' ' + spec.of,
+      valueLabel: enough && den > 0 ? pct(num / den) : num + ' / ' + den,
+      withheld: !enough,
+      withheldReason: enough ? null
+        : 'Shown as a count, not a percentage: ' + den + ' ' + spec.of +
+          ' is below the minimum sample of ' + threshold + ' this project reports rates on.',
+      minSample: threshold
+    };
+  }
+
+  // Within one group, are the metrics computed over the same base? If
+  // not, the group has to say so out loud, because side-by-side
+  // percentages imply a shared base whether or not one exists.
+  function denominatorAudit(metrics) {
+    const bases = [];
+    metrics.forEach(m => {
+      if (m.kind !== KIND.RATE) return;
+      if (bases.indexOf(m.of) < 0) bases.push(m.of);
+    });
+    return {
+      bases,
+      shared: bases.length <= 1,
+      note: bases.length <= 1
+        ? null
+        : 'The percentages in this group are taken over ' + bases.length +
+          ' different bases (' + bases.join('; ') + '). They are not comparable with each other and do not sum to anything.'
+    };
+  }
+
+  function group(id, title, blurb, metrics) {
+    return { id, title, blurb, metrics, denominators: denominatorAudit(metrics) };
+  }
+
+  function caseloadGroup(state) {
+    const mos = state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
+    const ledger = (state.outcomeEngine && state.outcomeEngine.ledger) || [];
+    const open = mos.filter(m => m.status !== 'CLOSED' && !m.verdictOutcome);
+    const neverInvestigated = open.filter(m => {
+      const inv = FWInvestigationEngine.summary(m);
+      return inv.checksRun === 0;
+    });
+    return group('caseload', 'Caseload',
+      'Populations, not rates. These are the bases every percentage further down is taken over, so they are stated first.',
+      [
+        metric({ id: 'cases-total', label: 'Cases raised', kind: KIND.COUNT, numerator: mos.length, of: 'cases the correlation engine has raised in this run' }),
+        metric({ id: 'cases-open', label: 'Open', kind: KIND.COUNT, numerator: open.length, of: 'cases with no terminal status set' }),
+        metric({ id: 'cases-closed', label: 'Closed', kind: KIND.COUNT, numerator: ledger.length, of: 'closures on the outcome ledger, verdicts and process outcomes together' }),
+        metric({
+          id: 'cases-untouched', label: 'Open, no record checked', kind: KIND.COUNT,
+          numerator: neverInvestigated.length, of: 'open cases on which no record source has been pulled',
+          note: 'Not a backlog failure by itself. Some of these are minutes old, and some correctly do not merit hours.'
+        })
+      ]);
+  }
+
+  function calibrationGroup(state) {
+    const engine = state.outcomeEngine;
+    if (!engine) return null;
+    const cal = FWOutcomeEngine.calibration(engine);
+    const scored = cal.scoredCount;
+    const decisive = cal.decisiveCount;
+    const decisiveOf = 'scored closures the record came back decisive on';
+    return group('calibration', 'Calibration against the record',
+      'How closures compared with what this simulation had on record — never with the real world, and never as a score. Note the two bases: the first three rows are over decisive closures, the fourth is over all scored closures.',
+      [
+        metric({ id: 'cal-aligned', label: 'Aligned with the record', numerator: cal.counts.ALIGNED, denominator: decisive, of: decisiveOf }),
+        metric({ id: 'cal-over', label: 'Over-called against the record', numerator: cal.counts.OVERCALLED, denominator: decisive, of: decisiveOf }),
+        metric({ id: 'cal-under', label: 'Under-called against the record', numerator: cal.counts.UNDERCALLED, denominator: decisive, of: decisiveOf }),
+        metric({
+          id: 'cal-blind', label: 'Closed before pulling any record', numerator: cal.blindCount, denominator: scored,
+          of: 'scored closures, decisive or ambiguous',
+          note: 'A larger base than the three rows above it, because an ambiguous case can still have been closed blind.'
+        }),
+        metric({
+          id: 'cal-ambiguous', label: 'Record left it ambiguous', kind: KIND.COUNT, numerator: cal.counts.AMBIGUOUS,
+          of: 'closures where the record accounted for some signals and not others',
+          note: 'Excluded from the three rates above by construction: neither closing verdict is unreasonable on partial explanation, so scoring one would invent a right answer.'
+        }),
+        metric({
+          id: 'cal-unscorable', label: 'Nothing on record to check against', kind: KIND.COUNT,
+          numerator: cal.totalClosed - cal.scoredCount, of: 'closures carrying no answer key, or asserting nothing checkable',
+          note: 'Process outcomes assert nothing about what a case was, so they are logged and not scored.'
+        })
+      ]);
+  }
+
+  function investigationGroup(state) {
+    const mos = state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
+    let checks = 0, noRecord = 0, corroborating = 0, exculpatory = 0, inconclusive = 0, effort = 0;
+    mos.forEach(m => {
+      const inv = FWInvestigationEngine.summary(m);
+      checks += inv.checksRun;
+      effort += inv.effortSeconds;
+      noRecord += inv.byOutcome.NO_RECORD_EXISTS || 0;
+      corroborating += inv.byOutcome.CORROBORATING || 0;
+      exculpatory += inv.byOutcome.EXCULPATORY || 0;
+      inconclusive += inv.byOutcome.INCONCLUSIVE || 0;
+    });
+    const of = 'record checks actually run across all cases';
+    return group('investigation', 'Record checks',
+      'What the record sources returned when they were pulled. Corroborating and exculpatory are outcomes of looking; the last two rows are what happened when looking did not work, and they are kept apart from each other on purpose.',
+      [
+        metric({ id: 'inv-checks', label: 'Checks run', kind: KIND.COUNT, numerator: checks, of: of }),
+        metric({ id: 'inv-hours', label: 'Measured effort (hours)', kind: KIND.COUNT, numerator: Math.round(effort / 360) / 10, of: 'hours of analyst effort the simulation measured, priced only in the exposure panel' }),
+        metric({ id: 'inv-corrob', label: 'Came back corroborating', numerator: corroborating, denominator: checks, of: of }),
+        metric({ id: 'inv-excul', label: 'Came back exculpatory', numerator: exculpatory, denominator: checks, of: of }),
+        metric({
+          id: 'inv-inconclusive', label: 'Attempt failed, record may exist', numerator: inconclusive, denominator: checks, of: of,
+          note: 'A contingent failure. The record probably exists; this pull did not get it.'
+        }),
+        metric({
+          id: 'inv-norecord', label: 'Nothing there to look at', numerator: noRecord, denominator: checks, of: of,
+          note: 'Structural, not a failed attempt: that site does not produce that record at that hour. Counted apart from the row above so a coverage gap in the port never gets averaged in as evidence about a carrier.'
+        })
+      ]);
+  }
+
+  // Every figure in this group is a PARAMETER. None of them is a
+  // measurement, none of them can move as the run continues, and the
+  // recorded counts beside them are shown as counts precisely so the
+  // two are not read as one thing.
+  function coverageGroup(state) {
+    const metrics = [];
+    if (window.FWShiftEngine) {
+      FWShiftEngine.summary(state.shiftTracker).forEach(s => {
+        metrics.push(metric({
+          id: 'cov-shift-' + s.shift, label: s.label + ' (' + s.window + ') goes unrecorded',
+          kind: KIND.PARAMETER, numerator: 1 - s.oversight,
+          of: 'a stated oversight assumption in shiftEngine.js, not a rate over any observation',
+          note: s.oversightRationale + ' Recorded in this shift so far: ' + s.observed + '.'
+        }));
+      });
+    }
+    if (window.FWFacilityEngine && state.registry) {
+      const sites = FWFacilityEngine.siteSummary(state.registry, state.facilityTracker);
+      sites.byRaw.forEach(r => {
+        metrics.push(metric({
+          id: 'cov-site-' + r.facilityId, label: r.name + ' assumed coverage',
+          kind: KIND.PARAMETER, numerator: r.meanCoverage,
+          of: 'a stated site factor times the shift assumption, traffic-weighted across the 24h cycle',
+          note: r.kindLabel + ', site factor ' + r.oversightFactor.toFixed(2) + '×. Recorded here so far: ' + r.recorded +
+            '. Ranked by raw records this site is #' + r.rawRank + '; once grossed up by its own assumed coverage, #' + r.adjustedRank + '.'
+        }));
+      });
+      metrics.push(metric({
+        id: 'cov-unsited', label: 'Recorded on the public road', kind: KIND.COUNT,
+        numerator: sites.unsited.recorded, of: 'disruptions attributable to no site at all',
+        note: 'Reported separately rather than charged to whichever site the vehicle last touched.'
+      }));
+    }
+    return group('coverage', 'Observation coverage (assumptions, not measurements)',
+      'These percentages look like the ones above and are a different kind of thing. Each is a number stated in a model file, so it cannot respond to the data and will read the same on sim-day 1 and sim-day 300. Recorded counts sit beside them as counts.',
+      metrics);
+  }
+
+  function discoveryGroup(state) {
+    if (!state.moEngine) return null;
+    const d = FWMoEngine.discoverySummary(state.moEngine);
+    const labels = {
+      KNOWN_MO: 'Matches a documented pattern that has recurred',
+      MO_VARIANT: 'Resembles a documented pattern, combination not seen before',
+      POTENTIAL_NEW_MO: 'Combination seen once or twice, unclassified',
+      EMERGING_BEHAVIOR: 'No confident resemblance to anything documented'
+    };
+    const metrics = Object.keys(labels).map(k => metric({
+      id: 'disc-' + k, label: labels[k], kind: KIND.COUNT,
+      numerator: d.byClassification[k] || 0,
+      of: 'cases carrying this classification'
+    }));
+    metrics.push(metric({
+      id: 'disc-signatures', label: 'Distinct signal combinations seen', kind: KIND.COUNT,
+      numerator: d.totalSignatures, of: 'distinct sorted signal-type fingerprints this run has produced',
+      note: 'This is the counter the novelty classification reads from, which is why the trend on it is refused rather than plotted.'
+    }));
+    return group('discovery', 'Discovery mix',
+      'Counts only, and no curve. Novelty here is defined as how few times a signal combination has recurred in this run, so the novel share is guaranteed to fall as the run continues — see the refusal below, which sits where a discovery-rate chart would otherwise go.',
+      metrics);
+  }
+
+  const NOT_MODELLED = [
+    {
+      figure: 'Novelty / discovery rate over sim-time',
+      why: 'It would decline in every run, on any seed, whatever the port does. Novelty is defined in moEngine as how few times a signal signature has recurred, so each repeat of a combination mechanically reduces the novel share — the curve is the definition restated, not a finding. Drawn as a falling line it reads as a maturing taxonomy or a quieting port, and it is evidence of neither.'
+    },
+    {
+      figure: 'An overall performance, health or maturity score',
+      why: 'It would have to combine ratios taken over different and overlapping bases — decisive closures, all scored closures, checks run, and stated coverage assumptions that are not rates at all. Averaging those produces a number with no referent, and its movements would come mostly from which base grew.'
+    },
+    {
+      figure: 'Trend or direction of travel on any rate here',
+      why: 'One run of one seed. Each new closure changes the denominator of the rate it lands in, so consecutive readings are not independent samples and a rising or falling sequence is not a trend. Nothing here is plotted against time for that reason.'
+    },
+    {
+      figure: 'A true incident rate, per shift or per site',
+      why: 'Refused in the coverage model already, for the reason restated here: dividing records by an assumed coverage returns the assumption. This panel aggregates those figures and inherits that limit rather than diluting it.'
+    },
+    {
+      figure: 'Any money not already measured in the exposure panel',
+      why: 'Money in this project comes from one place, where the measured hours, the stated rate and the refused figures live together. Effort appears above as hours, which the simulation measures; converting it here would put a currency total outside that discipline.'
+    },
+    {
+      figure: 'A benchmark for any of these figures',
+      why: 'There is no external base rate to compare against. What an aligned-call share should be in a real investigations function is not knowable from inside a simulation, so no target, no colour-coded good or bad, and no comparison.'
+    }
+  ];
+
+  const ASSUMPTIONS = [
+    'Nothing on this panel is measured here. Every figure is an aggregation of quantities produced elsewhere, and each one is reported against the base it was actually computed over.',
+    'A rate is shown as a percentage only once its base reaches the minimum sample this project reports rates on. Below that it stays a count, because a percentage of four things reads as a measurement and is not one.',
+    'Percentages come in two kinds that look identical. A rate is a numerator over observations. A parameter is a number stated in a model file. The coverage group is entirely the second kind and is separated for that reason.',
+    'Populations are stated before rates, because the bases are the part of a dashboard that is normally left implicit and is where the misreading happens.',
+    'No figure here is compared with a target, a benchmark or its own past value.'
+  ];
+
+  function dashboard(state) {
+    if (!state) return null;
+    const groups = [
+      caseloadGroup(state),
+      calibrationGroup(state),
+      investigationGroup(state),
+      coverageGroup(state),
+      discoveryGroup(state)
+    ].filter(Boolean);
+    const rates = [];
+    groups.forEach(g => g.metrics.forEach(m => { if (m.kind === KIND.RATE) rates.push(m); }));
+    return {
+      groups,
+      totalMetrics: groups.reduce((n, g) => n + g.metrics.length, 0),
+      rateCount: rates.length,
+      withheldCount: rates.filter(m => m.withheld).length,
+      // How many different bases the panel's percentages are taken over.
+      // Reported as a fact about the panel, not a warning to dismiss.
+      distinctBases: rates.reduce((acc, m) => (acc.indexOf(m.of) < 0 ? acc.concat([m.of]) : acc), []).length,
+      minSample: minSample(),
+      assumptions: ASSUMPTIONS,
+      notModelled: NOT_MODELLED
+    };
+  }
+
+  return { KIND, NOT_MODELLED, ASSUMPTIONS, metric, denominatorAudit, group, dashboard, minSample, pct };
+})();
