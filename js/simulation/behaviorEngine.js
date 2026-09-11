@@ -99,6 +99,7 @@ const FWBehaviorEngine = (() => {
     const ev = FWEventEngine.emit(eventEngine, {
       type, entityId: truck.id, relatedEntities: related, severity: 'warn', metadata
     }, timestamp);
+    FWFalsePositiveEngine.annotate(ev, rng); // hidden ground truth for later case resolution
     FWEntityEngine.recordHistory(truck, ev);
     return ev;
   }
