@@ -54,8 +54,13 @@ const FWSimDebug = (() => {
     booted = true;
     FWSimRunner.boot();
     FWSimRunner.onTick(render);
+    if (window.FWMoIntelligence) {
+      FWMoIntelligence.init();
+      FWSimRunner.onTick(FWMoIntelligence.render);
+    }
     FWSimRunner.start();
     render(FWSimRunner.getState());
+    if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
   }
 
   function fmtPct(x) { return Math.round(x * 100) + '%'; }
