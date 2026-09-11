@@ -7,10 +7,12 @@ straight from that taxonomy's `docs/data.json`.
 
 **[Play it →](https://jeevan-0508.github.io/fraud-watch/)**
 
-> **Status:** Two worlds live side by side right now. **Classic Watch** is the finished arcade
-> game described below — playable end to end. **Port Meridian** is a Phase 1 preview of a much
-> bigger cinematic rebuild (see [Roadmap](#roadmap)): world geography and camera only, no traffic
-> or investigation yet. Nothing in Classic Watch was removed or broken to build it.
+> **Status:** Two worlds live side by side. **Classic Watch** is the finished arcade game
+> described below — playable end to end. **Port Meridian** is a working vertical slice of a
+> bigger cinematic rebuild (see [Roadmap](#roadmap)): drag/zoom into the port, click a tagged
+> truck to investigate it across 6 forensic actions, flag or clear it, and — if a real fraud case
+> gets wrongly cleared — chase it down before it reaches the exit gate. Missions/free-roam and
+> day-night/audio polish are not built yet. Nothing in Classic Watch was removed or broken to build it.
 
 ## What it is
 
@@ -74,9 +76,14 @@ fraud-watch/
   js/training.js        Field Guide — pattern stepper for onboarding
   js/charts.js          Chart.js scoreboard (Classic Watch stats panel)
   js/main.js            bootstraps everything, world toggle, panel wiring
-  js/core/game.js       Phaser 3 bootstrap for Port Meridian (Phase 1)
+  js/core/game.js       Port Meridian orchestration — spawns traffic, runs the case loop
+                         (observe -> investigate -> flag/clear -> chase if needed -> reveal)
   js/core/camera.js     pan/zoom camera controller
   js/world/port.js      Port Meridian geography — terminal, depot, warehouse, dock, roads
+  js/entities/vehicle.js  waypoint-following truck entity (ambient loops + escape route)
+  js/systems/scenario.js  taxonomy-driven case generator, shared data.js helpers, no DOM/Phaser
+  js/systems/scoring.js   score/streak/level calc + localStorage persistence, no DOM/Phaser
+  js/ui/port-ui.js        DOM chrome for Port Meridian — investigation panel, chase HUD, reveal
 ```
 
 ## Roadmap
@@ -90,15 +97,27 @@ one played and checked before the next starts — nothing here claims to be more
       cargo depot, warehouse + loading bays, truck parking, security checkpoint, restricted area,
       ship dock, main + service roads, exit gate. Drag-to-pan, scroll-to-zoom camera. Dusk tint,
       blinking security lights, scrolling water, gentle ship bob and crane sway for atmosphere.
-- [ ] Phase 2 — Ambient life: vehicles, ships, workers and cranes on lightweight autonomous routes.
-- [ ] Phase 3 — Scenario engine: taxonomy pattern → world event generator.
-- [ ] Phase 4 — Investigation UI (forensic-tool styling, not a dashboard).
-- [ ] Phase 5 — The incident: a witnessed theft, not a popup.
-- [ ] Phase 6 — Response choices with different outcomes.
-- [ ] Phase 7 — Chase/intercept mode.
-- [ ] Phase 8 — Case reveal + evidence-based scoring (speed, accuracy, false-positive avoidance).
-- [ ] Phase 9 — Mission system + free-roam watch mode.
-- [ ] Phase 10 — Day/night, audio, visual polish pass.
+- [x] **Phase 2 — Ambient life (trucks only).** Six trucks loop the main/service roads to the
+      depot, parking lot, warehouse and checkpoint on waypoint routes. Ships/cranes still use the
+      Phase 1 tweens, not autonomous routes — worker pedestrian AI isn't built.
+- [x] **Phase 3 — Scenario engine.** `systems/scenario.js` generates each case straight from the
+      taxonomy: a real pattern + indicators for fraud cases, a borrowed false-positive for clean
+      ones, mapped onto 6 investigation actions so checking one thing doesn't guarantee a hit.
+- [x] **Phase 4 — Investigation UI.** Forensic-style fixed panel: MANIFEST / GPS / SEAL / NEARBY /
+      ROUTE / DRIVER checks, each either surfaces a real clue or comes back clean — same
+      "signal isn't proof" logic as Classic Watch's radio feed.
+- [~] **Phase 5 — The incident.** Simplified: wrongly clearing a real fraud case triggers it to
+      bolt for the exit gate. No scripted witnessed-theft/accomplice cutscene yet.
+- [x] **Phase 6 — Response choices.** FLAG vs CLEAR each lead somewhere different: an immediate
+      verdict, or — if you clear a guilty truck — a chase.
+- [x] **Phase 7 — Chase/intercept mode.** Camera follows the fleeing truck; INTERCEPT it before
+      it reaches the exit gate or it gets away clean.
+- [x] **Phase 8 — Case reveal + scoring.** Same dramatic reveal-card language as Classic Watch
+      (pattern, real countermeasure, or decoy explanation), score/streak/level persisted to
+      localStorage across sessions.
+- [ ] Phase 9 — Mission system + free-roam watch mode. Not started.
+- [ ] Phase 10 — Day/night cycle, audio, visual polish pass. Not started (Phase 1's dusk tint is
+      static, not a cycle; there's no sound in Port Meridian at all).
 
 ## License
 

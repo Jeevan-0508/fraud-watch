@@ -48,13 +48,34 @@
 <!-- ============ GAME STAGE ============ -->
 <main class="relative max-w-[1400px] mx-auto px-4 pb-6 pt-3">
 
-  <!-- ============ PORT MERIDIAN (Phase 1 preview) ============ -->
+  <!-- ============ PORT MERIDIAN (vertical slice: observe -> investigate -> incident -> chase -> reveal) ============ -->
   <div id="port-root" class="hidden">
-    <div class="flex items-center justify-between mb-2">
-      <p class="text-xs text-slate-500">Phase 1 preview: world geography + camera only. Drag to pan, scroll to zoom. Traffic, incidents and investigation land in later phases.</p>
+    <div class="flex items-center justify-between mb-2 gap-3 flex-wrap">
+      <p class="text-xs text-slate-500 flex-1 min-w-[240px]">Drag to pan, scroll to zoom. Click the tagged truck to investigate it — most cases are clean, one carrier per case is running a real fraud pattern. Missions / free-roam and day-night-audio polish are not built yet.</p>
+      <div id="port-hud-line" class="font-orbitron text-[11px] whitespace-nowrap">SCORE <b class="text-white">0</b></div>
       <button id="btn-port-reset" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">Reset view</button>
     </div>
-    <div id="port-canvas-mount" class="relative rounded-2xl overflow-hidden border border-slate-800" style="height:64vh;min-height:420px"></div>
+    <div id="port-canvas-mount" class="relative rounded-2xl overflow-hidden border border-slate-800" style="height:64vh;min-height:420px">
+      <!-- investigation panel, fixed dock (camera pan/zoom makes floating-over-truck unreliable) -->
+      <div id="port-investigate" class="hidden absolute left-2 top-2 z-20"></div>
+
+      <!-- chase HUD, appears when a suspect makes a run for the exit gate -->
+      <div id="port-chase-hud" class="hidden absolute top-2 right-2 z-20 w-64"></div>
+
+      <!-- port control radio feed -->
+      <div class="absolute left-2 right-2 bottom-2 sm:left-3 sm:right-auto sm:w-[320px] max-h-[30%] overflow-y-auto scrollbar-thin rounded-xl bg-[#05070a]/90 border border-slate-800 px-3 py-2 z-10">
+        <div class="flex items-center gap-1.5 mb-1.5 text-[10px] text-slate-500 tracking-wider">
+          <span class="radio-dot"></span> PORT CONTROL
+        </div>
+        <div id="port-alert-feed" class="space-y-1"></div>
+      </div>
+
+      <!-- full-screen reveal flash + case-closed card -->
+      <div id="port-reveal-flash" class="hidden absolute inset-0 z-40"></div>
+      <div id="port-reveal-backdrop" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4">
+        <div id="port-reveal-card" class="w-full max-w-md"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ============ CLASSIC WATCH (working arcade game) ============ -->
@@ -154,6 +175,10 @@
 <script src="js/data.js"></script>
 <script src="js/world/port.js"></script>
 <script src="js/core/camera.js"></script>
+<script src="js/entities/vehicle.js"></script>
+<script src="js/systems/scenario.js"></script>
+<script src="js/systems/scoring.js"></script>
+<script src="js/ui/port-ui.js"></script>
 <script src="js/core/game.js"></script>
 <script src="js/game.js"></script>
 <script src="js/training.js"></script>
