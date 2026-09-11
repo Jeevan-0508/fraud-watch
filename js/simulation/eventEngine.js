@@ -31,10 +31,15 @@ const FWEventEngine = (() => {
   // volume is independent of frame rate: a large dt (fast-forward /
   // background catch-up) proportionally rolls for more events instead
   // of needing to be called once per rendered frame.
-  function step(engine, registry, timestamp, dtSeconds) {
+  // ctx (optional): { shift } — normal traffic volume follows the shift's
+  // throughput multiplier (Phase 37), so 03:00 is genuinely quieter than
+  // 14:00 instead of the port running flat around the clock.
+  function step(engine, registry, timestamp, dtSeconds, ctx = {}) {
     const emitted = [];
+    const throughput = (ctx.shift && window.FWShiftEngine)
+      ? FWShiftEngine.throughputMultiplier(ctx.shift) : 1;
     const rollBudget = Math.max(1, Math.round(dtSeconds / 30)); // ~1 roll per 30 sim-seconds
-    const chance = Math.min(0.9, dtSeconds > 0 ? 0.35 : 0);
+    const chance = Math.min(0.9, dtSeconds > 0 ? 0.35 * throughput : 0);
 
     for (let i = 0; i < rollBudget; i++) {
       if (!engine.rng.chance(chance)) continue;
@@ -42,11 +47,12 @@ const FWEventEngine = (() => {
       if (!trucks.length) continue;
       const truck = engine.rng.pick(trucks);
       const type = engine.rng.pick(NORMAL_EVENT_TYPES);
+      const metadata = { summary: type.replace(/_/g, ' ').toLowerCase() };
+      if (ctx.shift) metadata.shift = ctx.shift;
       const ev = emit(engine, {
         type, entityId: truck.id,
         relatedEntities: [truck.driverId, truck.trailerId].filter(Boolean),
-        severity: 'info',
-        metadata: { summary: type.replace(/_/g, ' ').toLowerCase() }
+        severity: 'info', metadata
       }, timestamp);
       FWEntityEngine.recordHistory(truck, ev);
       emitted.push(ev);

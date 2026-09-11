@@ -23,8 +23,9 @@ const FWSimRunner = (() => {
     const signalEngine = FWSignalEngine.createEngine();
     const moEngine = FWMoEngine.createEngine();
     const outcomeEngine = FWOutcomeEngine.createEngine();
+    const shiftTracker = window.FWShiftEngine ? FWShiftEngine.createTracker() : null;
     state = {
-      seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine,
+      seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine, shiftTracker,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;
@@ -34,11 +35,16 @@ const FWSimRunner = (() => {
   // the real-time loop and fast-forward so both paths behave identically.
   function stepOnce(dtSeconds) {
     if (!state || dtSeconds <= 0) return null;
-    const { clock, registry, rng, eventEngine, signalEngine, moEngine } = state;
+    const { clock, registry, rng, eventEngine, signalEngine, moEngine, shiftTracker } = state;
     const now = absoluteNow(clock);
+    // Phase 37: the shift the port is actually in drives normal traffic
+    // volume, which disruption types are plausible, and how much of what
+    // happens gets observed at all.
+    const shift = clock.shift();
+    const ctx = { shift, shiftTracker };
 
-    const normalEvents = FWEventEngine.step(eventEngine, registry, now, dtSeconds);
-    const disruptions = FWBehaviorEngine.step(registry, rng, eventEngine, now, dtSeconds).filter(Boolean);
+    const normalEvents = FWEventEngine.step(eventEngine, registry, now, dtSeconds, ctx);
+    const disruptions = FWBehaviorEngine.step(registry, rng, eventEngine, now, dtSeconds, ctx).filter(Boolean);
     FWSignalEngine.process(signalEngine, registry, disruptions);
     FWSignalEngine.pruneExpired(registry, now);
     const moResult = FWMoEngine.process(moEngine, registry, now);
@@ -46,7 +52,7 @@ const FWSimRunner = (() => {
     const combined = normalEvents.concat(disruptions);
     state.recentEvents = combined.concat(state.recentEvents).slice(0, 40);
     state.totalEvents += combined.length;
-    state.lastResult = { now, normalEvents, disruptions, moResult };
+    state.lastResult = { now, shift, normalEvents, disruptions, moResult };
     return state.lastResult;
   }
 

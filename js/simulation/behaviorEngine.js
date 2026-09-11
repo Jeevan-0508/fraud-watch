@@ -68,9 +68,10 @@ const FWBehaviorEngine = (() => {
   // A disruption is a plain fact recorded against the truck (and,
   // where relevant, mutates who/what is actually attached to it —
   // a real driver swap changes truck.driverId, it doesn't just log text).
-  function applyDisruption(truck, type, registry, rng, eventEngine, timestamp) {
+  function applyDisruption(truck, type, registry, rng, eventEngine, timestamp, opts = {}) {
     const related = [truck.driverId, truck.trailerId].filter(Boolean);
     const metadata = { summary: type.replace(/_/g, ' ').toLowerCase() };
+    if (opts.shift) metadata.shift = opts.shift;
 
     if (type === 'DRIVER_CHANGED') {
       const drivers = FWEntityEngine.all(registry, 'driver');
@@ -136,6 +137,15 @@ const FWBehaviorEngine = (() => {
       truck.lastCheckpoint = null;
     }
 
+    // Oversight coverage (Phase 37): a disruption that occurs outside
+    // observation still changed the world -- the mutations above already
+    // happened -- but nothing was written down, so it produces no event,
+    // no history entry and therefore no signal. That gap is the model,
+    // not a bug: it is why a quiet night shift is not a safe one.
+    if (opts.observed === false) {
+      return { unrecorded: true, type, entityId: truck.id, timestamp, metadata };
+    }
+
     const ev = FWEventEngine.emit(eventEngine, {
       type, entityId: truck.id, relatedEntities: related, severity: 'warn', metadata
     }, timestamp);
@@ -144,8 +154,18 @@ const FWBehaviorEngine = (() => {
     return ev;
   }
 
-  function step(registry, rng, eventEngine, timestamp, dtSeconds) {
+  // ctx (optional): { shift, shiftTracker } from the sim clock. Absent,
+  // behaviour is exactly as before Phase 37 -- flat chance, uniform type
+  // pick, everything observed -- so tests and callers without a clock
+  // still work.
+  function step(registry, rng, eventEngine, timestamp, dtSeconds, ctx = {}) {
     const emitted = [];
+    const shift = ctx.shift || null;
+    const hasShiftModel = !!(shift && window.FWShiftEngine);
+    const chance = hasShiftModel
+      ? DISRUPTION_CHANCE_PER_TICK * FWShiftEngine.opportunityScale(shift)
+      : DISRUPTION_CHANCE_PER_TICK;
+
     const trucks = FWEntityEngine.all(registry, 'truck');
     trucks.forEach(truck => {
       if (!truck.behavior) attachBehavior(truck, rng);
@@ -153,10 +173,17 @@ const FWBehaviorEngine = (() => {
       if (truck.behavior.stageElapsed >= truck.behavior.stageDuration) {
         emitted.push(advanceStage(truck, rng, eventEngine, timestamp));
       }
-      if (DISRUPTION_ELIGIBLE_STAGES.has(truck.status) && rng.chance(DISRUPTION_CHANCE_PER_TICK)) {
-        const type = rng.pick(DISRUPTION_TYPES);
-        const ev = applyDisruption(truck, type, registry, rng, eventEngine, timestamp);
-        if (ev) emitted.push(ev);
+      if (DISRUPTION_ELIGIBLE_STAGES.has(truck.status) && rng.chance(chance)) {
+        const type = hasShiftModel
+          ? FWShiftEngine.pickDisruptionType(rng, DISRUPTION_TYPES, shift)
+          : rng.pick(DISRUPTION_TYPES);
+        const observed = hasShiftModel
+          ? rng.chance(FWShiftEngine.observationProbability(shift))
+          : true;
+        const ev = applyDisruption(truck, type, registry, rng, eventEngine, timestamp, { shift, observed });
+        if (!ev) return;
+        if (hasShiftModel) FWShiftEngine.record(ctx.shiftTracker, shift, type, !ev.unrecorded);
+        if (!ev.unrecorded) emitted.push(ev);
       }
     });
     return emitted;

@@ -74,3 +74,20 @@ body { background: #05070a; font-family: 'Inter', system-ui, sans-serif; }
 
 .badge { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 600; letter-spacing: .02em; }
 .tab-btn.active { background: #38bdf8; color: #0b0f14; }
+
+/* ---- Phase 37: shift tint on the Live Sim view ---- */
+#sim-root{position:relative;transition:background 1.2s linear;border-radius:1rem}
+#sim-root::before{content:"";position:absolute;inset:-8px -8px auto -8px;height:3px;border-radius:3px;transition:background 1.2s linear;background:#334155}
+#sim-root.fw-shift-night::before{background:linear-gradient(90deg,#312e81,#4338ca,#1e1b4b)}
+#sim-root.fw-shift-morning::before{background:linear-gradient(90deg,#0369a1,#38bdf8,#7dd3fc)}
+#sim-root.fw-shift-peak::before{background:linear-gradient(90deg,#b45309,#f59e0b,#fcd34d)}
+#sim-root.fw-shift-evening::before{background:linear-gradient(90deg,#7c2d12,#ea580c,#c2410c)}
+#sim-root.fw-shift-night{background:radial-gradient(120% 60% at 50% 0%,rgba(49,46,129,.16),transparent 70%)}
+#sim-root.fw-shift-morning{background:radial-gradient(120% 60% at 50% 0%,rgba(56,189,248,.10),transparent 70%)}
+#sim-root.fw-shift-peak{background:radial-gradient(120% 60% at 50% 0%,rgba(245,158,11,.10),transparent 70%)}
+#sim-root.fw-shift-evening{background:radial-gradient(120% 60% at 50% 0%,rgba(234,88,12,.12),transparent 70%)}
+.shift-chip{padding:1px 6px;border-radius:9999px;font-size:10px;letter-spacing:.06em}
+.shift-chip-night{background:rgba(67,56,202,.25);color:#a5b4fc}
+.shift-chip-morning{background:rgba(56,189,248,.18);color:#7dd3fc}
+.shift-chip-peak{background:rgba(245,158,11,.18);color:#fcd34d}
+.shift-chip-evening{background:rgba(234,88,12,.18);color:#fdba74}

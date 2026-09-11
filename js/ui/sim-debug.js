@@ -4,6 +4,11 @@
    stream and MOs actually running so pacing/feel can be judged before
    any of it gets a real game UI on top. Reuses Classic Watch/Port
    Meridian's dark-panel DOM conventions so it doesn't look bolted on. */
+const FWSimDebugShiftClasses = {
+  night: 'fw-shift-night', morning: 'fw-shift-morning',
+  peak: 'fw-shift-peak', evening: 'fw-shift-evening'
+};
+
 const FWSimDebug = (() => {
   let els = {};
   let booted = false;
@@ -70,11 +75,16 @@ const FWSimDebug = (() => {
       FWCalibrationView.init();
       FWSimRunner.onTick(FWCalibrationView.render);
     }
+    if (window.FWShiftView) {
+      FWShiftView.init();
+      FWSimRunner.onTick(FWShiftView.render);
+    }
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
     if (window.FWNetworkView) FWNetworkView.render(FWSimRunner.getState());
     if (window.FWCalibrationView) FWCalibrationView.render(FWSimRunner.getState());
+    if (window.FWShiftView) FWShiftView.render(FWSimRunner.getState());
   }
 
   function fmtPct(x) { return Math.round(x * 100) + '%'; }
@@ -110,12 +120,24 @@ const FWSimDebug = (() => {
     return map[cls] || cls;
   }
 
+  // The sim root carries a fw-shift-* class so the whole view visibly
+  // changes with the port's time of day (Phase 37) rather than the shift
+  // being a word in the clock line nobody reads.
+  function applyShiftTint(shift) {
+    if (!els.root) return;
+    Object.keys(FWSimDebugShiftClasses).forEach(s => els.root.classList.remove(FWSimDebugShiftClasses[s]));
+    const cls = FWSimDebugShiftClasses[shift];
+    if (cls) els.root.classList.add(cls);
+  }
+
   function renderClock(state) {
     if (!els.clock) return;
     const c = state.clock;
+    const shift = c.shift();
+    applyShiftTint(shift);
     els.clock.innerHTML =
       `<b class="text-white">Day ${c.day}</b> · ${c.timeOfDay()} · ` +
-      `<span class="uppercase text-slate-400">${c.shift()}</span> · ` +
+      `<span class="uppercase shift-chip shift-chip-${shift}">${shift}</span> · ` +
       `<span class="text-sky-400">${c.running ? c.speed + 'x' : 'PAUSED'}</span>`;
   }
 
