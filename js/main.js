@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await FW.load();
   FWGame.init();
   FWTraining.init();
+  FWSimDebug.init();
 
   function wirePanel(openBtnId, panelId, closeBtnId, backdropId) {
     const panel = document.getElementById(panelId);
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- world toggle: Classic Watch <-> Port Meridian ----
   const stage = document.getElementById('stage');
   const portRoot = document.getElementById('port-root');
+  const simRoot = document.getElementById('sim-root');
   const classicHud = document.getElementById('hud');
   let portBooted = false;
 
@@ -29,13 +31,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const world = btn.dataset.world;
       stage.classList.toggle('hidden', world !== 'classic');
       portRoot.classList.toggle('hidden', world !== 'port');
+      if (simRoot) simRoot.classList.toggle('hidden', world !== 'sim');
       // Classic Watch's top HUD tracks its own separate score/streak —
-      // hide it in Port Meridian so its numbers don't sit next to
-      // Port Meridian's own port-hud-line and look like one HUD.
+      // hide it outside Classic Watch so its numbers don't sit next to
+      // the other worlds' own HUDs and look like one HUD.
       if (classicHud) classicHud.classList.toggle('hidden', world !== 'classic');
       if (world === 'port' && !portBooted) {
         FWCoreGame.boot('port-canvas-mount');
         portBooted = true;
+      }
+      if (world === 'sim') {
+        FWSimDebug.show();
       }
     });
   });
