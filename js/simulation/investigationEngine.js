@@ -456,6 +456,21 @@ const FWInvestigationEngine = (() => {
       } else if (f.outcome === 'NO_RECORD_EXISTS') noRecord++;
       else inconclusive++;
     });
+    /* The three ways a completed check can have come back sum to the
+       checks run, and as of Slice 36 that is asserted here rather than
+       assumed by every caller. The calibration ledger renders these three
+       counts on one row beside checksRun, and a row where they do not
+       reconcile invites the reader to assign the remainder to whichever
+       kind they expect -- which for a check is nearly always "it answered
+       something". Cheap to check, and it is the base every examination
+       class is decided from. */
+    if (answered + noRecord + inconclusive !== findings.length) {
+      throw new Error(
+        'investigationEngine: examination counts do not reconcile (' +
+        (answered + noRecord + inconclusive) + ' sorted vs ' + findings.length +
+        ' checks run). Every completed check answered, found nothing to fetch, or could not be reached.'
+      );
+    }
     const cls = classifyCounts({ answered, noRecord, inconclusive });
     return {
       checksRun: findings.length,

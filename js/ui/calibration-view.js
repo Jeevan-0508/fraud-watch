@@ -35,7 +35,28 @@
    so it is labelled, and the same sort over the rate base is given beside
    it rather than left to be assumed identical. What this panel will not do
    with those classes is compare alignment between them; the reason is in
-   outcomeEngine.NOT_MODELLED and is rendered on screen. */
+   outcomeEngine.NOT_MODELLED and is rendered on screen.
+
+   SLICE 36, TWO CATCH-UPS ON THIS PANEL'S OWN NUMBERS.
+
+   The three headline bars printed a count and a percentage and never the
+   base the percentage was over. The base is named once, in a sentence
+   above them, and it is not the base of the examination rows a few lines
+   below -- which is exactly why the base note under those rows exists.
+   Every other rate in this project carries its denominator on the row that
+   states it; these three, the ones a reader looks at first, did not. They
+   do now, and bar() refuses to print a percentage over a base of nothing
+   rather than rendering 0%.
+
+   The ledger row said how many checks were run and then named exactly one
+   of the three things a check can come back as -- the ones with no record
+   to fetch. On a closure with one such check and two the source could not
+   be reached, the row read "3 record checks run · 1 with no such record to
+   fetch", leaving two unaccounted for on a row whose own subject is how
+   far the case was taken. The ledger has recorded all three counts since
+   Slice 28 and this panel rendered one of them. All three now, summed and
+   asserted against the checks run, which is the same discipline the
+   examination rows above already hold themselves to. */
 const FWCalibrationView = (() => {
   let els = {};
 
@@ -96,10 +117,18 @@ const FWCalibrationView = (() => {
     return `<div class="text-[10px] text-slate-400 mb-2">${map[cal.tendency] || ''}</div>`;
   }
 
+  /* A rate on this panel carries its own denominator, like every other
+     rate in this project. Without it the reader has one base in a sentence
+     above and a different base under the rows below, and no way to tell
+     which of the two each percentage was taken over. A bar with no base is
+     drawn with no percentage rather than with 0%: a share of nothing is not
+     zero, and the counts beside it are the honest figure. */
   function bar(label, count, total, colorClass) {
-    const pct = total ? Math.round((count / total) * 100) : 0;
+    const hasBase = total > 0;
+    const pct = hasBase ? Math.round((count / total) * 100) : 0;
+    const value = hasBase ? `${count} / ${total} · ${pct}%` : `${count}`;
     return `<div class="mb-1">
-      <div class="flex justify-between text-[10px] text-slate-400"><span>${label}</span><span>${count}${total ? ` · ${pct}%` : ''}</span></div>
+      <div class="flex justify-between text-[10px] text-slate-400"><span>${label}</span><span class="font-mono">${value}</span></div>
       <div class="h-1.5 bg-slate-800 rounded"><div class="h-1.5 rounded ${colorClass}" style="width:${pct}%"></div></div>
     </div>`;
   }
@@ -111,11 +140,16 @@ const FWCalibrationView = (() => {
     NEVER_LOOKED: 'No record source was checked at all'
   };
 
+  /* No tone carries a judgement on a row (Slice 36). NEVER_LOOKED was
+     drawn in the same orange this panel gives OVERCALLED, on a block whose
+     own closing sentence says it is not a scoring of the closures. A case
+     nobody looked at is a fact about where the hours went; it is not a
+     worse closure than one the records answered. */
   const CLASS_TONE = {
     ANSWERED: 'text-slate-300',
     NOTHING_TO_FETCH: 'text-slate-400',
     UNREACHABLE: 'text-slate-400',
-    NEVER_LOOKED: 'text-orange-300'
+    NEVER_LOOKED: 'text-slate-300'
   };
 
   /* HOW FAR EACH CLOSED CASE WAS TAKEN BEFORE IT WAS CLOSED. Four disjoint
@@ -127,6 +161,17 @@ const FWCalibrationView = (() => {
   function examinationBlock(cal) {
     const ex = cal.examination;
     if (!ex || !ex.base) return '';
+    // The classes come from investigationEngine; the row prose is this
+    // panel's. A class the engine adds and this panel has no words for
+    // would render as a blank row rather than as a missing one.
+    ex.classes.forEach(k => {
+      if (!CLASS_LABEL[k] || !CLASS_TONE[k]) {
+        throw new Error(
+          'calibration-view: examination class ' + k + ' has no row on this panel. A class with ' +
+          'no row still sits in the base of every percentage here and in none of the numerators.'
+        );
+      }
+    });
     const rows = ex.classes.map(k => {
       const n = ex.byClass[k];
       const pctText = cal.examinationRateEligible ? ` · ${Math.round((n / ex.base) * 100)}%` : '';
@@ -190,6 +235,32 @@ const FWCalibrationView = (() => {
       examinationBlock(cal) + refusalsBlock();
   }
 
+  /* What the checks behind one closure came back with, all three kinds,
+     summing to the checks run. The ledger has recorded the answered and
+     unreachable counts alongside the no-record one since Slice 28; this row
+     named only the last of them, so on a closure whose sources could not be
+     reached the arithmetic on the row did not close and the missing checks
+     were left to be guessed at. Zero counts are dropped from the sentence
+     but never from the sum. */
+  function checksLine(e) {
+    const run = e.checksRun || 0;
+    if (!run) return 'no record check was run';
+    const parts = [
+      { n: e.answeredChecks || 0, text: 'answered' },
+      { n: e.noRecordChecks || 0, text: 'found no such record to fetch' },
+      { n: e.inconclusiveChecks || 0, text: 'could not be reached' }
+    ];
+    const sum = parts.reduce((a, p) => a + p.n, 0);
+    if (sum !== run) {
+      throw new Error(
+        'calibration-view: the checks on ' + e.moId + ' do not reconcile (' + sum + ' accounted ' +
+        'for vs ' + run + ' run). A check left off this row is read as having answered something.'
+      );
+    }
+    const named = parts.filter(p => p.n > 0).map(p => `${p.n} ${p.text}`).join(', ');
+    return `${run} record check${run === 1 ? '' : 's'} run — ${named}`;
+  }
+
   function renderLedger(engine) {
     const rows = engine.ledger.slice().sort((a, b) => b.at - a.at).slice(0, 15).map(e => `
       <div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2">
@@ -201,7 +272,7 @@ const FWCalibrationView = (() => {
           </div>
         </div>
         <div class="text-[10px] text-slate-400">${e.narrative}</div>
-        <div class="text-[10px] text-slate-500 mt-1">Confidence at close ${Math.round(e.confidenceAtClose)}% · ${e.checksRun} record check${e.checksRun === 1 ? '' : 's'} run${e.noRecordChecks ? ` · ${e.noRecordChecks} with no such record to fetch` : ''}${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}${e.checksRun && !e.everAnswered ? ' · none of them answered' : ''}</div>
+        <div class="text-[10px] text-slate-500 mt-1">Confidence at close ${Math.round(e.confidenceAtClose)}% · ${checksLine(e)}${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}${e.checksRun && !e.everAnswered ? ' · none of them answered' : ''}</div>
       </div>`).join('');
     return rows || '';
   }
