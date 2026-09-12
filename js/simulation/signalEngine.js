@@ -207,6 +207,15 @@ const FWSignalEngine = (() => {
       throw new Error('signalEngine.formatDecay: lifetime is ' + seconds + '; a signal with no declared lifetime must not be rendered as if it had one');
     }
     const h = Math.round((seconds / 3600) * 100) / 100;
+    /* A positive lifetime under 18 seconds rounds to 0h, so this function used
+       to print as absent the very lifetime it had just accepted as present --
+       the same 0 the guard above refuses. Two decimals of an hour is the
+       display precision; a lifetime shorter than that is stated as shorter than
+       the display can carry rather than rendered as none. */
+    if (h === 0) {
+      return 'counts for under 0.01h after it is observed (' + seconds +
+        's, shorter than this display rounds to)';
+    }
     return 'counts for ' + h + 'h after it is observed';
   }
 
@@ -215,11 +224,74 @@ const FWSignalEngine = (() => {
     return def ? def.decaySeconds : null;
   }
 
+  /* One owner for the whole lifetime clause, including the case where there is
+     no lifetime to state. Two panels used to hold two different policies for
+     that absence: mo-intelligence dropped the clause silently, and the entity
+     inspector computed a lifetime from the signal expiry window it happened to
+     carry and rendered it with the declared-lifetime sentence -- which is
+     exactly the fault formatDecay refuses, performed by its caller so that
+     formatDecay was never asked. Neither panel said which policy it held.
+
+     The observed window is not a declared lifetime: it is what some code chose
+     when it created that signal, and a type with no catalog row has no lifetime
+     this engine will stand behind. So it is named, not substituted. */
+  function decayClause(signalType, observedSeconds) {
+    const secs = decaySecondsFor(signalType);
+    if (secs != null) return { declared: true, text: formatDecay(secs) };
+    return {
+      declared: false,
+      text: 'no declared lifetime for this signal type' +
+        (typeof observedSeconds === 'number' && isFinite(observedSeconds) && observedSeconds > 0
+          ? ' (the ' + Math.round((observedSeconds / 3600) * 100) / 100 + 'h window on this signal is what created ' +
+            'it, not a lifetime the catalog declares)'
+          : '')
+    };
+  }
+
+  /* SIGNAL_CATALOG is keyed by EVENT type, and deriveSignal writes
+     signal.type from def.signalType -- a different field of the same row.
+     decaySecondsFor then indexes the event-keyed table with a SIGNAL type. The
+     two vocabularies are identical entry for entry and nothing checked it, so
+     one renamed signalType would make decaySecondsFor return null for every
+     signal of that type: no declared lifetime, for a type the catalog declares
+     in full. Measured by planting one divergence, the run continued for 195
+     sim-hours and then died in moEngine.rankPatterns with a message about a gap
+     in the taxonomy -- a true sentence about the wrong module. This is the
+     module that owns both vocabularies, so this is where the identity is
+     asserted. No cross-module dependency, so it is safe at load. */
+  (function assertCatalogVocabularySingle() {
+    Object.keys(SIGNAL_CATALOG).forEach(k => {
+      const def = SIGNAL_CATALOG[k];
+      if (!def.signalType) {
+        throw new Error('signalEngine: catalog row ' + k + ' declares no signalType, so a signal derived from it ' +
+          'would carry no type and nothing could look its lifetime up');
+      }
+      if (def.signalType !== k) {
+        throw new Error('signalEngine: catalog row ' + k + ' carries signalType ' + def.signalType +
+          '. This table is keyed by event type and decaySecondsFor indexes it with a signal type, so the two ' +
+          'must be one vocabulary: otherwise every signal of this type reports no declared lifetime while the ' +
+          'catalog declares one, and the fault surfaces later as a gap in the taxonomy');
+      }
+    });
+  })();
+
   /* One owner for the display string, so the two panels that print this number
      cannot drift into two units again. No % anywhere, by construction. */
   function formatReliability(r) {
     if (typeof r !== 'number' || !isFinite(r)) {
       throw new Error('signalEngine.formatReliability: reliability is ' + r + '; a missing multiplier must not be rendered as one');
+    }
+    /* The sentence this function returns states the scale: "a multiplier on
+       0-1". Checking only that the value exists let it print "type reliability
+       5 (a multiplier on 0-1)", where the number and the sentence beside it
+       contradict each other and the sentence is the one a reader trusts. The
+       0-1 scale is checked, not the catalog span: the span is a fact about the
+       entries this build happens to carry and a value outside it is not
+       necessarily wrong, whereas a value outside 0-1 is not a multiplier of the
+       declared kind at all. */
+    if (r < 0 || r > 1) {
+      throw new Error('signalEngine.formatReliability: reliability is ' + r + ', off the 0-1 multiplier scale this ' +
+        'rendering states in its own words; the number and the sentence beside it would contradict each other');
     }
     /* NOT "of " + RELIABILITY_SCALE.max: 0.55 of 0.75 is a construction that
        invites dividing one by the other, which would be a share, which is the
@@ -385,5 +457,5 @@ const FWSignalEngine = (() => {
 
   return { createEngine, deriveSignal, process, pruneExpired, getActiveSignals, SIGNAL_CATALOG, WEIGHT_SCALE,
     RELIABILITY_SCALE, effectiveSpan, formatReliability, reliabilityNote,
-    DECAY_SCALE, decayInfluence, formatDecay, decaySecondsFor };
+    DECAY_SCALE, decayInfluence, formatDecay, decaySecondsFor, decayClause };
 })();

@@ -207,7 +207,13 @@ const FWMoEngine = (() => {
     // of the clamp is reached. Past these the index is no longer a function of
     // its own source.
     saturatesAtRaw: INDEX_MAX / INDEX_MULTIPLIER,
-    floorsAtRaw: INDEX_MIN / INDEX_MULTIPLIER
+    floorsAtRaw: INDEX_MIN / INDEX_MULTIPLIER,
+    /* The bounds were named in three sentences above and declared as fields
+       nowhere, so a reader of the declaration could not check a value against
+       the scale it describes, and neither could formatIndex. Read from the
+       constants, never typed in. */
+    min: INDEX_MIN,
+    max: INDEX_MAX
   };
 
   function confidenceFromScore(rawScore) {
@@ -252,6 +258,17 @@ const FWMoEngine = (() => {
   function formatIndex(value) {
     if (typeof value !== 'number' || !isFinite(value)) {
       throw new Error('moEngine.formatIndex: nothing to format');
+    }
+    /* The output is "x / 100", and that slash is a claim: it says 100 is the
+       scale x sits on. Checking only that x exists let formatIndex(250) print
+       250 / 100, a figure over a denominator it had just violated, in the one
+       function that exists so three panels cannot drift into three units. The
+       clamp lives in confidenceFromScore, so no app caller could reach this --
+       which is the reason it went unnoticed, not a reason to leave it. */
+    if (value < INDEX_MIN || value > INDEX_MAX) {
+      throw new Error('moEngine.formatIndex: ' + value + ' is off the declared ' + INDEX_MIN + '-' + INDEX_MAX +
+        ' index scale, and this rendering prints ' + INDEX_MAX + ' as its denominator; a figure over a scale it ' +
+        'is not on states a reading nobody derived');
     }
     return Math.round(value) + ' / ' + INDEX_MAX;
   }
@@ -403,6 +420,17 @@ const FWMoEngine = (() => {
     if (typeof score !== 'number' || !isFinite(score)) {
       throw new Error('moEngine.confidenceLabel: no numeric confidence to band; a band would state support nobody derived');
     }
+    /* The bands are an ordered chain of absolute thresholds over the declared
+       index scale, so anything above the last threshold used to receive STRONG
+       and anything below the first used to receive MINIMAL -- by falling off
+       the end of the chain, not by being on the scale. A band is read as a
+       statement about a case; a band assigned to a figure that is not on the
+       scale the bands partition is that statement made about nothing. */
+    if (score < INDEX_MIN || score > INDEX_MAX) {
+      throw new Error('moEngine.confidenceLabel: ' + score + ' is off the declared ' + INDEX_MIN + '-' + INDEX_MAX +
+        ' index scale these bands partition; the chain of thresholds would band it anyway, which would state ' +
+        'support nobody derived');
+    }
     if (score <= 20) return 'MINIMAL';
     if (score <= 40) return 'WATCH';
     if (score <= 60) return 'ELEVATED';
@@ -410,6 +438,13 @@ const FWMoEngine = (() => {
     return 'STRONG';
   }
 
+  /* Measured in Slice 62: every band confidenceLabel can return has a declared
+     tone, and both call sites pass mo.confidenceBand, which only confidenceLabel
+     ever writes. So no value existing at run time can reach this throw. It is
+     not a run-time guard and must not be counted as one -- it is a detector for
+     a future edit that adds a sixth band and forgets its colour, which is a real
+     thing to catch and a different claim. Registered as CHANGE_DETECTOR in
+     FWRenderGuards. */
   function bandTone(band) {
     const tone = CONFIDENCE_BAND.tone[band];
     if (!tone) {

@@ -307,6 +307,15 @@ const FWSimDebug = (() => {
     const reconSpan = recon
       ? `<span class="basis-full text-slate-600 italic">${recon.note}</span>`
       : '';
+    /* The same disclosure for the other half of the app that refuses things: the
+       formatters that will not render a value nobody derived. None of them can
+       be reached with a bad value by any path this app takes, which is worth
+       printing beside the figures they render, because a guarded number reads as
+       a checked number. */
+    const guards = window.FWRenderGuards ? FWRenderGuards.capability() : null;
+    const guardSpan = guards
+      ? `<span class="basis-full text-slate-600 italic">${guards.note}</span>`
+      : '';
     const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
       <span>${summary.totalSignatures} distinct behavior patterns seen</span>
       ${classSpans}
@@ -314,6 +323,7 @@ const FWSimDebug = (() => {
       ${reasonSpans}
       ${floorSpan}
       ${reconSpan}
+      ${guardSpan}
     </div>`;
 
     if (!mos.length) {

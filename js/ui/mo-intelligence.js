@@ -223,10 +223,15 @@ const FWMoIntelligence = (() => {
 
   /* The lifetime that decided whether this row still counts, stated on the row.
      It was a hand-set constant in the catalog that nothing printed, while the
-     word "decayed" beside it carried the whole consequence. */
+     word "decayed" beside it carried the whole consequence.
+
+     Where there is no declared lifetime this used to return nothing at all, so
+     the row read as though the question had not come up -- while the entity
+     inspector, for the same absence, invented a lifetime from the signal expiry
+     window and printed it as a declared one. One absence, two panels, two
+     policies, neither stated. Both now call the one owner in signalEngine. */
   function decayClause(e) {
-    const secs = FWSignalEngine.decaySecondsFor(e.signalType);
-    return secs == null ? '' : ` · ${FWSignalEngine.formatDecay(secs)}`;
+    return ` · ${FWSignalEngine.decayClause(e.signalType, null).text}`;
   }
 
   function renderEvidenceList(mo) {

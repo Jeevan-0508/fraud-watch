@@ -41,7 +41,7 @@ const FWGlobals = (() => {
   const MODULE_NAMES = [
     'FW', 'FWWorld', 'FWCamera', 'FWVehicle',
     'FWScenario', 'FWScoring', 'FWPortUI', 'FWCoreGame',
-    'FWRng', 'FWSimClock', 'FWReconcile', 'FWCopyRules', 'FWEntityTruck', 'FWEntityDriver',
+    'FWRng', 'FWSimClock', 'FWReconcile', 'FWCopyRules', 'FWRenderGuards', 'FWEntityTruck', 'FWEntityDriver',
     'FWEntityTrailer', 'FWEntityShipment', 'FWEntityCarrier', 'FWEntityFacility',
     'FWShiftEngine', 'FWFacilityEngine', 'FWEntityEngine', 'FWEventEngine',
     'FWFalsePositiveEngine', 'FWBehaviorEngine', 'FWSignalEngine', 'FWMoEngine',
@@ -76,6 +76,7 @@ const FWGlobals = (() => {
     FWSimClock: () => FWSimClock,
     FWReconcile: () => FWReconcile,
     FWCopyRules: () => FWCopyRules,
+    FWRenderGuards: () => FWRenderGuards,
     FWEntityTruck: () => FWEntityTruck,
     FWEntityDriver: () => FWEntityDriver,
     FWEntityTrailer: () => FWEntityTrailer,
