@@ -1033,6 +1033,56 @@ const FWFreightMap = (() => {
       'threshold for any of those, so this panel has none to draw.'
   };
 
+  /* THE ONE LINK OFF THIS PANEL, and it is a link and nothing else.
+
+     The port this map draws as a square is the same facility the Port Meridian
+     mode plays inside, and until now a reader could see the square, watch trucks
+     arrive at it, and have no idea the other tab existed. So the square carries a
+     press that switches tab.
+
+     What it is NOT is the important half. It hands nothing over. No truck, no
+     selection, no clock and no case crosses between the two modes; Port Meridian
+     goes on deriving everything it shows from its own modules exactly as it did
+     before this existed, and this map goes on deriving everything from
+     journeyEngine. The press calls the SAME world switch the tab strip calls --
+     main.js publishes it for that reason rather than this file re-implementing the
+     show/hide arithmetic, which would make a second writer of which world is on
+     screen and is precisely what Slice 77a removed. */
+  const PORT_DRILL = {
+    is: 'a navigation link from the port place on this map to the Port Meridian tab.',
+    doesNotMean: 'that the two modes share state. Nothing is handed over, nothing is merged, and neither mode ' +
+      'reads the other. The reader is moved to a different tab and that is the whole effect.',
+    via: 'window.FWWorlds.select, which is the same function the tab strip calls -- there is one writer of ' +
+      'which world is on screen and this is not it.',
+    targetNodeType: 'PORT',
+    targetWorld: 'port'
+  };
+
+  /* The node the link belongs to, found by the graph's own node TYPE rather than
+     by an id written down here. A build with no port, or with two, is reported
+     instead of guessed at: drawing a "go to the port" press on one of two ports
+     would be this file choosing which port the other mode is about. */
+  function portDrillTarget(layout) {
+    const lay = layout || defaultLayout();
+    const ports = lay.nodes.filter(n => n.type === PORT_DRILL.targetNodeType);
+    if (ports.length !== 1) {
+      return { node: null, drawn: false,
+        why: ports.length === 0 ? 'NO_PORT_IN_GRAPH' : 'MORE_THAN_ONE_PORT', found: ports.length };
+    }
+    return { node: ports[0], drawn: true, why: null, found: 1 };
+  }
+
+  /* Asks main.js's published switch for a world. Returns what it did rather than
+     nothing, so the wiring is checkable without a tab strip, and reports an
+     absent switch instead of failing silently. */
+  function openWorld(world) {
+    if (world !== PORT_DRILL.targetWorld) return { navigated: false, why: 'UNKNOWN_WORLD', world: world };
+    const W = window.FWWorlds;
+    if (!W || typeof W.select !== 'function') return { navigated: false, why: 'NAVIGATION_ABSENT', world: world };
+    W.select(world);
+    return { navigated: true, world: world, via: 'FWWorlds.select' };
+  }
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   let els = {};
@@ -1260,6 +1310,24 @@ const FWFreightMap = (() => {
       '<g transform="translate(' + (14 + i * 118) + ',' + (layout.height - 14) + ')">' +
       nodeShape({ x: 6, y: -4, style: Object.assign({}, NODE_STYLE[t], { size: 6 }) }) +
       '<text x="18" y="-1" font-size="8.5" fill="#64748b">' + esc(NODE_STYLE[t].label) + '</text></g>').join('');
+    /* The press, drawn with the static geometry because the port does not move.
+       It is a sibling of the place it belongs to and not part of the marker layer,
+       so a truck can never end up on top of it or under it depending on a tick. */
+    const drill = portDrillTarget(layout);
+    const drillSvg = drill.drawn
+      ? '<g id="fm-port-drill" data-world-link="' + PORT_DRILL.targetWorld + '" style="cursor:pointer">' +
+        '<title>Open the Port Meridian mode. This switches tab and hands nothing over: the two modes share ' +
+        'no state.</title>' +
+        /* Sat 15 units higher than the obvious spot. renderActivity draws this
+           node's occupancy count at (x + size + 9, y - size - 4) with r=7.5, which
+           reaches to y - size - 11.5; a badge ending at y - size - 24 clipped it.
+           Both are derived from the same size, so the clearance holds for a port
+           of any drawn size rather than only for this one. */
+        '<rect x="' + (drill.node.x - 34) + '" y="' + (drill.node.y - drill.node.style.size - 39) + '" ' +
+        'width="68" height="15" rx="7.5" fill="#082f49" stroke="#38bdf8" stroke-width="1"/>' +
+        '<text x="' + drill.node.x + '" y="' + (drill.node.y - drill.node.style.size - 28) + '" ' +
+        'text-anchor="middle" font-size="8" fill="#7dd3fc">INSIDE THIS PORT \u203a</text></g>'
+      : '';
     return '<rect x="0" y="0" width="' + layout.width + '" height="' + layout.height + '" fill="#05070a"/>' +
       '<g id="fm-roads">' + roads + '</g>' +
       '<g id="fm-road-labels">' + roadLabels + '</g>' +
@@ -1268,7 +1336,8 @@ const FWFreightMap = (() => {
       '<g id="fm-place-labels">' + placeLabels + '</g>' +
       '<g id="fm-activity"></g>' +
       '<g id="fm-trucks"></g>' +
-      '<g id="fm-legend">' + legend + '</g>';
+      '<g id="fm-legend">' + legend + '</g>' +
+      drillSvg;
   }
 
   function init() {
@@ -1294,6 +1363,21 @@ const FWFreightMap = (() => {
         // also have selected or deselected whatever happened to be under the
         // pointer when they let go.
         if (suppressNextClick) { suppressNextClick = false; return; }
+        /* The tab link is checked first and returns: a press on it must not also
+           select or deselect whatever the pointer happened to be over, and it
+           must not leave this panel mid-render of a world it is leaving. */
+        const link = e.target && e.target.closest ? e.target.closest('[data-world-link]') : null;
+        /* Read the same defensive way the truck branch below has always read its
+           id: dataset first, getAttribute if there is one, and fall through if the
+           thing closest() handed back carries neither. Only a press that actually
+           names a world navigates -- otherwise a click is still a selection. */
+        const linkWorld = !link ? null
+          : (link.dataset && link.dataset.worldLink) ||
+            (link.getAttribute ? link.getAttribute('data-world-link') : null);
+        if (linkWorld) {
+          openWorld(linkWorld);
+          return;
+        }
         const target = e.target && e.target.closest ? e.target.closest('[data-truck-id]') : null;
         if (!target) { select(null); if (window.FWSimRunner) render(FWSimRunner.getState()); return; }
         const id = target.dataset ? target.dataset.truckId : target.getAttribute('data-truck-id');
@@ -1824,6 +1908,8 @@ const FWFreightMap = (() => {
       cameraChangesPosition: false,
       occupancyAxes: Object.keys(HEALTH_SCOPES),
       occupancyIsAScore: false,
+      linksOffThisPanel: [PORT_DRILL.targetWorld],
+      linkSharesState: false,
       interpolatesBetweenTicks: false,
       interpolationNote: 'A truck moves only when the simulation advances. There is no tween between two ticks, ' +
         'because a position between two simulation states is one the simulation never held.'
@@ -1844,6 +1930,7 @@ const FWFreightMap = (() => {
     CAMERA, viewBoxFor, inView, zoomIn, zoomOut, zoomBy, panBy, resetCamera, follow, following,
     cameraState,
     HEALTH_SCOPES, OCCUPANCY, roadOccupancy, healthOf,
+    PORT_DRILL, portDrillTarget, openWorld,
     hopDepths, buildLayout, defaultLayout, placementFor, stackAtNodes, selectedRoute, frame,
     entityCardFor, timelineOf, clockLabel, expandSelected,
     staticSvg, init, render, select, selected, summary

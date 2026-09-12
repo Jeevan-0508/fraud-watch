@@ -61,6 +61,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.addEventListener('click', () => selectWorld(btn.dataset.world));
   });
 
+  /* Published so a panel INSIDE a world can send a reader to another one without
+     a second copy of the show/hide arithmetic. It is the same function the tab
+     strip calls -- there is still exactly one writer of which world is showing,
+     which is the whole reason Slice 77a collapsed the duplication in the first
+     place. It carries no state and returns none: a caller asks for a world and
+     the tab strip, the panels and previousWorld all move together as they
+     already did.
+
+     The function and two sentences, and nothing else. A worlds list here would be
+     a second declaration of which worlds exist (the tab strip already is one), and
+     a copy of DEFAULT_WORLD would make that name readable from two places --
+     slice77 section 1 pins it to its declaration and its one call for exactly that
+     reason, and it caught the first draft of this doing it. Nothing consumed
+     either field. */
+  window.FWWorlds = {
+    select: selectWorld,
+    is: 'the one writer of which world is on screen, published for in-panel navigation.',
+    doesNotMean: 'a shared state between the worlds. Nothing is handed over and no data is merged; a reader ' +
+      'is moved to a different tab and each world goes on deriving everything it shows from its own modules.'
+  };
+
   document.getElementById('btn-port-reset').addEventListener('click', () => FWCoreGame.resetView());
 
   /* The page opens on the live network simulation. Classic Watch and Port
