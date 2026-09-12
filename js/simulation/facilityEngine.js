@@ -32,6 +32,23 @@
        and reported, never dropped and never silently reassigned to the
        last site the vehicle touched. */
 const FWFacilityEngine = (() => {
+  /* worldGraph owns the topology and loads before this file. Resolved once,
+     through a try, because a `const` declared later in the same realm is in
+     its temporal dead zone and reading it THROWS rather than returning
+     undefined -- so `typeof` cannot be used to test for it. A null here is
+     reported by the two consumers below with the reason, not worked around:
+     this module deliberately keeps no private copy of the topology's stage
+     table, so there is nothing to fall back to. */
+  const WG = (() => { try { return FWWorldGraph; } catch (e) { return null; } })();
+  function requireWorldGraph(what) {
+    if (!WG) {
+      throw new Error('facilityEngine: ' + what + ' needs js/simulation/worldGraph.js, which is not loaded. ' +
+        'This module declares no second copy of the topology\'s stage table on purpose -- one facility ' +
+        'vocabulary, not two -- so there is nothing to fall back to. Load worldGraph.js before this file.');
+    }
+    return WG;
+  }
+
   // Stated modeling assumptions. oversightFactor MULTIPLIES the shift's
   // own oversight probability (shiftEngine.SHIFTS[*].oversight).
   const ARCHETYPES = {
@@ -59,25 +76,46 @@ const FWFacilityEngine = (() => {
 
   const KIND_ORDER = ['GATEHOUSE', 'CROSS_DOCK', 'YARD', 'REMOTE_DEPOT'];
 
+  /* The archetype vocabulary is declared here and consumed by worldGraph,
+     which maps every node type onto one of these names. The join is checked
+     at load, in both directions, by the module that owns the mapping: an
+     archetype name worldGraph invented would fall through archetype()'s
+     `|| ARCHETYPES.YARD` default and silently reclassify a node type, and an
+     archetype declared here that no node type claims would be a facility
+     kind no place in the world can be. Our own vocabulary is handed in
+     rather than read from there, so the check runs against what this file
+     actually declares. */
+  const ARCHETYPE_JOIN = requireWorldGraph('the archetype join')
+    .assertArchetypeJoin(ARCHETYPES, KIND_ORDER);
+
   // Nothing is ever perfectly observed, and nothing is ever completely
   // dark either -- both extremes would make the coverage model tell
   // comfortable lies at the edges.
   const COVERAGE_MIN = 0.05;
   const COVERAGE_MAX = 0.97;
 
-  // Which site archetypes a lifecycle stage can occur at. `null` means
-  // the stage happens on a public road and belongs to no site.
-  const STAGE_SITES = {
-    DISPATCHED: ['YARD', 'CROSS_DOCK'],
-    EN_ROUTE_TO_PORT: null,
-    CHECKPOINT: ['GATEHOUSE'],
-    LOADING: ['CROSS_DOCK', 'YARD'],
-    DEPARTURE: ['GATEHOUSE'],
-    TRANSIT: null,
-    DEPOT: ['YARD', 'REMOTE_DEPOT'],
-    DELIVERY: ['CROSS_DOCK', 'REMOTE_DEPOT'],
-    COMPLETED: null
-  };
+  /* Which site archetypes a lifecycle stage can occur at. `null` means the
+     stage happens on a public road and belongs to no site.
+
+     THIS TABLE USED TO BE WRITTEN OUT HERE, and that made it the second
+     facility vocabulary in the codebase: worldGraph declares which typed
+     NODES a stage can occur at, this file declared which ARCHETYPES it can
+     occur at, and nothing held the two equal. Two tables of the same fact
+     drift, and the drift would show up as a truck being eligible for a site
+     the topology says is not on its stage's kind of place -- silently, since
+     both tables would still be internally consistent.
+
+     So it is now the projection of worldGraph.STAGE_NODE_TYPES through
+     worldGraph.ARCHETYPE_OF_NODE_TYPE, de-duplicated. There is one
+     declaration of stage eligibility, in the module that owns the structure,
+     and one declaration of what an archetype IS, here. The projection throws
+     rather than falling back if worldGraph is absent: a private literal
+     restored as a fallback would be the two tables again, and the fallback
+     is the branch that would ship.
+
+     The archetype names worldGraph produces are checked against ARCHETYPES
+     above, in both directions, at this module's load time (ARCHETYPE_JOIN). */
+  const STAGE_SITES = requireWorldGraph('stage site eligibility').stageSites();
 
   const UNSITED_LABEL = 'Public road (no site)';
 
@@ -486,7 +524,7 @@ const FWFacilityEngine = (() => {
   }
 
   return {
-    ARCHETYPES, KIND_ORDER, STAGE_SITES, ASSUMPTIONS, NOT_MODELLED, RECORDED_SCOPE,
+    ARCHETYPES, KIND_ORDER, STAGE_SITES, ARCHETYPE_JOIN, ASSUMPTIONS, NOT_MODELLED, RECORDED_SCOPE,
     UNSITED_LABEL, COVERAGE_MIN, COVERAGE_MAX,
     SITE_INELIGIBLE_STATUSES, siteEligible, siteEligibility, assertSiteStatusLiterals,
     archetype, clampCoverage, coverage, meanCoverage, unweightedMeanCoverage,
