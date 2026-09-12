@@ -355,9 +355,13 @@ const FWExposureModel = (() => {
     // Open cases: exposure currently attached, as a summed band. Summing
     // bands widens them, which is correct -- the uncertainty compounds
     // rather than averaging away.
-    const openMos = state && state.moEngine
-      ? Array.from(state.moEngine.mos.values()).filter(m => m.status !== 'CLOSED' && !m.verdictOutcome)
-      : [];
+    // Was `m.status !== 'CLOSED' && !m.verdictOutcome`. No status named 'CLOSED'
+    // exists, so that clause was true of every case and every terminal-status
+    // case with no verdict was counted as open -- and given a summed exposure
+    // band. moEngine owns the standing rule; this calls it.
+    const standing = FWMoEngine.standingPartition(
+      state && state.moEngine ? Array.from(state.moEngine.mos.values()) : []);
+    const openMos = standing.open;
     let openLow = 0, openHigh = 0, openWithConsignment = 0, openWithout = 0;
     openMos.forEach(m => {
       const ex = exposureForMo(state, m);
@@ -368,6 +372,13 @@ const FWExposureModel = (() => {
     const closedCases = ledger.length;
     return {
       closedCases,
+      // The ledger is a different population from the case register, so the two
+      // are reported side by side under their own names rather than as one
+      // partition of one base.
+      standing: standing.counts,
+      standingTotal: standing.total,
+      standingNote: standing.note,
+      closedWithoutVerdict: standing.closedNoVerdict,
       totalHours: closedCost.hours,
       totalHoursLabel: closedCost.hoursLabel,
       totalCost: closedCost.cost,

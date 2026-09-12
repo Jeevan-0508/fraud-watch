@@ -997,6 +997,101 @@ const FWMoEngine = (() => {
     return { hand: hand, note: CLOSURE_HAND_NOTE[hand] };
   }
 
+  /* WHETHER IT IS STILL LIVE, and the filter that never asked.
+     Three modules -- exposureModel.portfolio, analyticsEngine's caseload group
+     and exposure-view's own duplicate -- selected open cases with
+     `m.status !== 'CLOSED' && !m.verdictOutcome`. There is no status named
+     'CLOSED'. This module owns the vocabulary and it is
+     CLOSED_STATUSES = CONFIRMED / DISMISSED / FALSE_POSITIVE / RESOLVED, so that
+     first clause was true of every case ever raised and the filter reduced to
+     "has no verdict recorded". On the seeded run all five cases carry status
+     DISMISSED, and all five were reported as OPEN -- with a summed exposure BAND
+     attached to them, which is a money figure over cases nobody considers live.
+     analyticsEngine even stated the denominator it was not computing: "cases
+     with no terminal status set".
+     A terminal status reached without a verdict is a real and separate thing
+     (Slices 28/35/39), so it gets its own buckets rather than being folded into
+     either side, and whose hand closed it comes from closureHand, not a second
+     reading of autoFaded. */
+  const STANDING = ['OPEN', 'CLOSED_WITH_VERDICT', 'CLOSED_NO_VERDICT_ANALYST', 'CLOSED_NO_VERDICT_ENGINE_FADE'];
+
+  const STANDING_NOTE = {
+    OPEN: 'no terminal status has been set, so the case is still live',
+    CLOSED_WITH_VERDICT: 'closed with a recorded claim about what the case was',
+    CLOSED_NO_VERDICT_ANALYST: 'an analyst set a terminal status without recording a verdict, so the case is not live and nothing was claimed about it',
+    CLOSED_NO_VERDICT_ENGINE_FADE: 'the engine faded it out when its signals stopped; no analyst review and no verdict were recorded, so nobody decided anything'
+  };
+
+  function caseStanding(mo) {
+    if (!mo || !CLOSED_STATUSES.has(mo.status)) {
+      return { standing: 'OPEN', note: STANDING_NOTE.OPEN };
+    }
+    if (mo.verdictOutcome) {
+      return { standing: 'CLOSED_WITH_VERDICT', note: STANDING_NOTE.CLOSED_WITH_VERDICT };
+    }
+    const hand = closureHand(mo).hand;
+    const standing = hand === 'ENGINE_FADE' ? 'CLOSED_NO_VERDICT_ENGINE_FADE' : 'CLOSED_NO_VERDICT_ANALYST';
+    return { standing: standing, note: STANDING_NOTE[standing] };
+  }
+
+  /* Disjoint, exhaustive, and the sum is asserted rather than trusted. Returns
+     the case lists as well as the counts so a caller never has to re-derive the
+     membership with a filter of its own. */
+  function standingPartition(mos) {
+    const list = Array.isArray(mos) ? mos : Array.from((mos && mos.values && mos.values()) || []);
+    const buckets = {};
+    STANDING.forEach(k => { buckets[k] = []; });
+    list.forEach(m => { buckets[caseStanding(m).standing].push(m); });
+    const counts = {};
+    let sum = 0;
+    STANDING.forEach(k => { counts[k] = buckets[k].length; sum += counts[k]; });
+    if (sum !== list.length) {
+      throw new Error('moEngine.standingPartition: the ' + STANDING.length + ' buckets hold ' + sum +
+        ' of ' + list.length + ' cases; a standing partition that does not cover the population is not one');
+    }
+    const closedNoVerdict = counts.CLOSED_NO_VERDICT_ANALYST + counts.CLOSED_NO_VERDICT_ENGINE_FADE;
+    const out = {
+      total: list.length,
+      counts: counts,
+      cases: buckets,
+      open: buckets.OPEN,
+      closedNoVerdict: closedNoVerdict
+    };
+    out.note = list.length === 0
+      ? 'No cases have been raised in this run, so there is no standing to report.'
+      : counts.OPEN + ' of ' + list.length + ' case' + (list.length === 1 ? '' : 's') + ' still live, ' +
+        counts.CLOSED_WITH_VERDICT + ' closed with a verdict recorded and ' + closedNoVerdict +
+        ' closed with none' +
+        (closedNoVerdict
+          ? ' (' + counts.CLOSED_NO_VERDICT_ENGINE_FADE + ' faded out by the engine with no analyst review, ' +
+            counts.CLOSED_NO_VERDICT_ANALYST + ' closed by an analyst who recorded no verdict). ' +
+            'A case in that third group is not live and nothing was claimed about it, so counting it as either open or decided would be wrong in both directions.'
+          : '.');
+    return out;
+  }
+
+  /* Both directions. A status token compared against but never issued is the
+     bug this slice exists to remove, so the phantom is named and refused, and
+     the two sets have to stay disjoint and cover what setStatus can produce. */
+  (function assertStatusVocabulary() {
+    if (CLOSED_STATUSES.has('CLOSED') || OPEN_STATUSES.has('CLOSED')) {
+      throw new Error('moEngine: "CLOSED" is not a status this engine issues; it is the phantom token three filters compared against');
+    }
+    OPEN_STATUSES.forEach(k => {
+      if (CLOSED_STATUSES.has(k)) throw new Error('moEngine: status ' + k + ' is declared both open and closed');
+    });
+    STANDING.forEach(k => {
+      if (!STANDING_NOTE[k]) throw new Error('moEngine: standing ' + k + ' has no note, so a panel would print an empty explanation');
+    });
+    const sample = { status: 'DISMISSED', autoFaded: true };
+    if (caseStanding(sample).standing === 'OPEN') {
+      throw new Error('moEngine: a terminal status is being classified as open, which is the exact fault Slice 48 removed');
+    }
+    if (caseStanding({ status: 'NEW' }).standing !== 'OPEN') {
+      throw new Error('moEngine: a live case is not being classified as open');
+    }
+  })();
+
   function setStatus(mo, status, reason) {
     mo.status = status;
     mo.autoFaded = false; // an analyst has now touched it, whatever it was before
@@ -1017,6 +1112,7 @@ const FWMoEngine = (() => {
     CLASSIFICATION, CLASSIFICATIONS, classificationLabel, classificationTone, classificationTally,
     RECURRENCE_NOVELTY, noveltyIsFloored, noveltyNote,
     closureHand, CLOSURE_HAND, CLOSURE_HAND_NOTE,
+    STANDING, STANDING_NOTE, caseStanding, standingPartition,
     OPEN_STATUSES, CLOSED_STATUSES, CREATE_THRESHOLD, MIN_SIGNAL_TYPES
   };
 })();

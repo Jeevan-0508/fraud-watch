@@ -180,7 +180,11 @@ const FWAnalyticsEngine = (() => {
   function caseloadGroup(state) {
     const mos = state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
     const ledger = (state.outcomeEngine && state.outcomeEngine.ledger) || [];
-    const open = mos.filter(m => m.status !== 'CLOSED' && !m.verdictOutcome);
+    // The old filter -- `m.status !== 'CLOSED' && !m.verdictOutcome` -- compared
+    // against a status this app never issues, so the `of` text below ("cases with
+    // no terminal status set") described a denominator it was not computing.
+    const standing = FWMoEngine.standingPartition(mos);
+    const open = standing.open;
     const neverInvestigated = open.filter(m => {
       const inv = FWInvestigationEngine.summary(m);
       return inv.checksRun === 0;
@@ -191,6 +195,13 @@ const FWAnalyticsEngine = (() => {
         metric({ id: 'cases-total', label: 'Cases raised', kind: KIND.COUNT, numerator: mos.length, of: 'cases the correlation engine has raised in this run' }),
         metric({ id: 'cases-open', label: 'Open', kind: KIND.COUNT, numerator: open.length, of: 'cases with no terminal status set' }),
         metric({ id: 'cases-closed', label: 'Closed', kind: KIND.COUNT, numerator: ledger.length, of: 'closures on the outcome ledger, verdicts and process outcomes together' }),
+        metric({
+          id: 'cases-closed-no-verdict', label: 'Closed, no verdict recorded', kind: KIND.COUNT,
+          numerator: standing.closedNoVerdict,
+          of: 'cases holding a terminal status with no claim recorded about what they were -- ' +
+            standing.counts.CLOSED_NO_VERDICT_ENGINE_FADE + ' faded out by the engine with no analyst review. ' +
+            'These used to be counted as open.'
+        }),
         metric({
           id: 'cases-untouched', label: 'Open, no record checked', kind: KIND.COUNT,
           numerator: neverInvestigated.length, of: 'open cases on which no record source has been pulled',

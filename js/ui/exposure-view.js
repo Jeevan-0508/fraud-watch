@@ -180,9 +180,9 @@ const FWExposureView = (() => {
   function renderExposure(state) {
     if (!els.exposure) return;
     const p = FWExposureModel.portfolio(state);
-    const openMos = state.moEngine
-      ? Array.from(state.moEngine.mos.values()).filter(m => m.status !== 'CLOSED' && !m.verdictOutcome)
-      : [];
+    // A second copy of a filter that was wrong in the engine too. One owner now.
+    const openMos = FWMoEngine.standingPartition(
+      state.moEngine ? Array.from(state.moEngine.mos.values()) : []).open;
     const sheets = openMos
       .map(m => FWExposureModel.caseSheet(state, m))
       .sort((a, b) => (b.exposure.high || 0) - (a.exposure.high || 0))
@@ -205,6 +205,7 @@ const FWExposureView = (() => {
       <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Exposure attached to open cases</div>
       <div class="font-orbitron text-lg ${p.openExposure.attached ? 'text-sky-300' : 'text-slate-500'} leading-tight">${p.openExposure.label}</div>
       <div class="text-[10px] text-slate-500 mb-1">${p.openWithConsignment} of ${p.openCases} open case${p.openCases === 1 ? '' : 's'} has a consignment on record${p.openWithoutConsignment ? ` · ${p.openWithoutConsignment} with none, reported as absent rather than as zero` : ''}</div>
+      <div class="text-[9px] text-slate-500 italic mb-1">${p.standingNote}${p.closedWithoutVerdict ? ` The band above covers live cases only: it does not include the ${p.closedWithoutVerdict} closed with no verdict, which were counted as open until Slice 48 and carried exposure with them.` : ''}</div>
       <p class="text-[10px] text-amber-300/80 mb-2">This is what is at stake, not a loss and not an expected loss. A case carrying the largest band in the port may be entirely benign; a confirmed one may carry the smallest. The range is wide on purpose and the model will not narrow it.</p>
       ${list}`;
   }
@@ -215,7 +216,12 @@ const FWExposureView = (() => {
     renderExposure(state);
     if (els.summary) {
       const p = FWExposureModel.portfolio(state);
-      els.summary.textContent = `${p.totalHoursLabel} booked · ${p.closedCases} case${p.closedCases === 1 ? '' : 's'} closed · ${p.openCases} open`;
+      // "N closed - M open" read as a partition of the case register and was not
+      // one: closed came from the outcome ledger, open from a filter that matched
+      // everything. Both scopes are named, and the third group is stated.
+      els.summary.textContent = `${p.totalHoursLabel} booked · ${p.closedCases} on the outcome ledger · ` +
+        `of ${p.standingTotal} case${p.standingTotal === 1 ? '' : 's'} raised: ${p.openCases} live, ` +
+        `${p.standing.CLOSED_WITH_VERDICT} closed with a verdict, ${p.closedWithoutVerdict} closed with none`;
     }
   }
 
