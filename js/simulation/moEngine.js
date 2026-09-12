@@ -180,6 +180,55 @@ const FWMoEngine = (() => {
     return Array.from(new Set(signals.map(s => s.type))).sort().join('+');
   }
 
+  /* One table, owned here, for the four discovery classes. Both panels kept
+     their own copy of the label map AND the colour map, each falling back
+     silently on an unknown class -- the Slice 33/35/39 shape twice over.
+
+     EMERGING_BEHAVIOR was rose (this app's alarm family) because the case
+     resembles nothing documented. Resembling nothing is a gap in the
+     taxonomy's coverage, not a worse case, so it is coloured like the other
+     structural facts and says so. */
+  const CLASSIFICATION = {
+    KNOWN_MO: {
+      label: 'Known MO',
+      tally: 'resembling a documented pattern that has recurred',
+      tone: 'bg-slate-700 text-slate-300',
+      means: 'this signal combination has recurred enough times to be familiar in this simulation.'
+    },
+    MO_VARIANT: {
+      label: 'New Variant',
+      tally: 'resembling a documented pattern, first sighting of this combination',
+      tone: 'bg-indigo-900 text-indigo-300',
+      means: 'first sighting of this combination, but it shares several keywords with a documented pattern.'
+    },
+    POTENTIAL_NEW_MO: {
+      label: 'Potential New MO',
+      tally: 'seen too few times for the count to say either way',
+      tone: 'bg-fuchsia-900 text-fuchsia-300',
+      means: 'seen too few times for the recurrence count to say anything either way.'
+    },
+    EMERGING_BEHAVIOR: {
+      label: 'Unmatched by the taxonomy',
+      tally: 'matching no documented pattern',
+      tone: 'bg-slate-700 text-slate-300',
+      means: 'no documented pattern shares a keyword with this combination. That is the extent of the taxonomy here, not a finding that this is worse.'
+    }
+  };
+  const CLASSIFICATIONS = Object.keys(CLASSIFICATION);
+
+  function classificationEntry(cls) {
+    const e = CLASSIFICATION[cls];
+    if (!e) {
+      throw new Error('moEngine: no declared discovery class "' + cls + '"; a label and a colour would have to be invented for it');
+    }
+    return e;
+  }
+  function classificationLabel(cls) { return classificationEntry(cls).label; }
+  function classificationTone(cls) { return classificationEntry(cls).tone; }
+  /* Wording used when COUNTING cases, kept separate from the badge label so a
+     tally can never assert that a case is the pattern it resembles. */
+  function classificationTally(cls) { return classificationEntry(cls).tally; }
+
   function classifyDiscovery(ranked, priorCount) {
     const topVotes = ranked.length ? ranked[0].votes : 0;
     if (!ranked.length) return 'EMERGING_BEHAVIOR';       // no resemblance to anything known
@@ -188,8 +237,55 @@ const FWMoEngine = (() => {
     return 'KNOWN_MO';                                     // recurring combination, well understood by now
   }
 
+  /* This is `recurrenceCount` restated on a 0-100 axis and nothing else -- the
+     same collapse Slice 41 found in `severity`. Two panels printed it beside
+     the count as a second fact, one of them as "novelty 100/100", which is
+     share-shaped: nothing was divided, there is no base, and the 18-per-
+     sighting step and the floor are calibration, not measurement.
+
+     The floor matters most. From FLOOR_FROM prior sightings on, the number is
+     pinned and a combination seen 6 times reads identically to one seen 40.
+     Past that point the number has stopped tracking what it is derived from,
+     so `noveltyNote` REFUSES it rather than letting a stale 5 keep being
+     displayed as if it still distinguished anything. */
+  const RECURRENCE_NOVELTY = {
+    kind: 'PARAMETER',
+    scope: 'restatement of recurrenceCount, within moEngine',
+    derivedFrom: 'recurrenceCount',
+    means: 'the prior-sighting count, mapped onto a 0-100 axis; it carries no information the count does not.',
+    doesNotMean: 'a share of anything, a probability, and not a second measurement alongside the count.',
+    step: 18,
+    floor: 5,
+    max: 100
+  };
+  RECURRENCE_NOVELTY.FLOOR_FROM = Math.ceil((RECURRENCE_NOVELTY.max - RECURRENCE_NOVELTY.floor) / RECURRENCE_NOVELTY.step);
+
   function noveltyFromRecurrence(priorCount) {
-    return Math.max(5, 100 - priorCount * 18);
+    if (typeof priorCount !== 'number' || !isFinite(priorCount) || priorCount < 0) {
+      throw new Error('moEngine.noveltyFromRecurrence: no prior-sighting count to restate');
+    }
+    return Math.max(RECURRENCE_NOVELTY.floor, RECURRENCE_NOVELTY.max - priorCount * RECURRENCE_NOVELTY.step);
+  }
+
+  function noveltyIsFloored(priorCount) {
+    return priorCount >= RECURRENCE_NOVELTY.FLOOR_FROM;
+  }
+
+  /* What a panel prints instead of a bare number. `value` is null once the
+     figure has stopped distinguishing sightings -- a refusal, not a gap. */
+  function noveltyNote(priorCount) {
+    if (noveltyIsFloored(priorCount)) {
+      return {
+        value: null,
+        note: 'Novelty is not reported: at ' + RECURRENCE_NOVELTY.FLOOR_FROM + ' or more prior sightings this figure is ' +
+          'pinned at its floor and no longer distinguishes ' + RECURRENCE_NOVELTY.FLOOR_FROM + ' from any larger count. ' +
+          'The sighting count itself is the figure that still means something.'
+      };
+    }
+    return {
+      value: noveltyFromRecurrence(priorCount),
+      note: 'the sighting count restated on a 0-' + RECURRENCE_NOVELTY.max + ' axis, not a second measurement'
+    };
   }
 
   function differencesFromKnown(ranked, classification) {
@@ -375,11 +471,28 @@ const FWMoEngine = (() => {
   // Snapshot of the discovery engine's own history -- how many
   // distinct signal-combinations it has ever seen, and which are
   // still rare/novel. Useful for a "what's new" summary view.
+  /* The old tally read `if (byClass[mo.classification] != null) byClass[...]++`
+     -- a case whose class was not one of the four was counted nowhere, and the
+     result was returned alongside `totalMos`, which it did not have to equal.
+     Both panels then printed the four buckets with no base at all. Declared
+     partition, summed at the write, throws on either failure. */
   function discoverySummary(engine) {
     const all = Array.from(engine.mos.values());
-    const byClass = { KNOWN_MO: 0, MO_VARIANT: 0, POTENTIAL_NEW_MO: 0, EMERGING_BEHAVIOR: 0 };
-    all.forEach(mo => { if (byClass[mo.classification] != null) byClass[mo.classification]++; });
-    return { totalSignatures: engine.signatures.size, totalMos: all.length, byClassification: byClass };
+    const byClass = {};
+    CLASSIFICATIONS.forEach(k => { byClass[k] = 0; });
+    all.forEach(mo => {
+      if (byClass[mo.classification] === undefined) {
+        throw new Error('moEngine.discoverySummary: case ' + (mo.id || '(no id)') + ' carries discovery class "' +
+          mo.classification + '", which is not one of ' + CLASSIFICATIONS.join('/') + '; it would be counted in no bucket');
+      }
+      byClass[mo.classification]++;
+    });
+    const summed = CLASSIFICATIONS.reduce((n, k) => n + byClass[k], 0);
+    if (summed !== all.length) {
+      throw new Error('moEngine.discoverySummary: discovery classes sum to ' + summed + ' over ' + all.length +
+        ' cases; sharing a base is not adding up to it');
+    }
+    return { totalSignatures: engine.signatures.size, totalMos: all.length, byClassification: byClass, classifiedTotal: summed };
   }
 
   // Call once per simulation step (or batched) after behaviorEngine +
@@ -460,6 +573,8 @@ const FWMoEngine = (() => {
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
     CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
     signalSignature, classifyDiscovery, noveltyFromRecurrence, discoverySummary,
+    CLASSIFICATION, CLASSIFICATIONS, classificationLabel, classificationTone, classificationTally,
+    RECURRENCE_NOVELTY, noveltyIsFloored, noveltyNote,
     closureHand, CLOSURE_HAND, CLOSURE_HAND_NOTE,
     OPEN_STATUSES, CLOSED_STATUSES, CREATE_THRESHOLD, MIN_SIGNAL_TYPES
   };

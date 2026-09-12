@@ -108,20 +108,11 @@ const FWMoIntelligence = (() => {
     return open[status] || closed[status] || 'bg-slate-700 text-slate-200';
   }
 
-  function classificationBadgeClass(cls) {
-    const map = {
-      KNOWN_MO: 'bg-slate-700 text-slate-300',
-      MO_VARIANT: 'bg-indigo-900 text-indigo-300',
-      POTENTIAL_NEW_MO: 'bg-fuchsia-900 text-fuchsia-300',
-      EMERGING_BEHAVIOR: 'bg-rose-900 text-rose-300'
-    };
-    return map[cls] || map.KNOWN_MO;
-  }
+  // Labels and tones for the discovery classes are moEngine's, not a second
+  // copy here that could disagree with sim-debug's third one.
+  function classificationBadgeClass(cls) { return FWMoEngine.classificationTone(cls); }
+  function classificationLabel(cls) { return FWMoEngine.classificationLabel(cls); }
 
-  function classificationLabel(cls) {
-    const map = { KNOWN_MO: 'Known MO', MO_VARIANT: 'New Variant', POTENTIAL_NEW_MO: 'Potential New MO', EMERGING_BEHAVIOR: 'Emerging Behavior' };
-    return map[cls] || cls;
-  }
 
   /* Was a local copy of the band-to-colour map, duplicated again in
      sim-debug.js. moEngine owns the band, so it owns its tone; a second copy
@@ -172,7 +163,20 @@ const FWMoIntelligence = (() => {
   function renderSummary(state, mos) {
     if (!els.summary) return;
     const summary = FWMoEngine.discoverySummary(state.moEngine);
-    els.summary.textContent = `${mos.length} total cases · ${summary.totalSignatures} distinct behavior signatures seen`;
+    const byClass = FWMoEngine.CLASSIFICATIONS
+      .map(k => `${summary.byClassification[k]} ${FWMoEngine.classificationTally(k)}`).join(' · ');
+    els.summary.textContent = `${mos.length} total cases · ${summary.totalSignatures} distinct behavior signatures seen · ` +
+      `by discovery class over ${summary.classifiedTotal} cases: ${byClass}`;
+  }
+
+  /* Never "novelty 100/100": that reads as a share and there is no base. The
+     figure is the sighting count restated, and past the floor it is refused
+     outright rather than printed stale. */
+  function noveltyLine(mo) {
+    const n = FWMoEngine.noveltyNote(mo.recurrenceCount - 1);
+    return n.value == null
+      ? `<br><span class="text-slate-400">${n.note}</span>`
+      : `<br><span class="text-slate-400">Novelty ${n.value} on a 0-${FWMoEngine.RECURRENCE_NOVELTY.max} axis — ${n.note}.</span>`;
   }
 
   function renderEvidenceList(mo) {
@@ -420,7 +424,8 @@ const FWMoIntelligence = (() => {
       Involves <b>${mo.entities.truckId}</b>${mo.entities.driverId ? ` (driver ${mo.entities.driverId})` : ''}.
       Detected from: ${sigTypes || 'a correlated signal combination'}.
       This exact combination has been observed ${mo.recurrenceCount} time${mo.recurrenceCount === 1 ? '' : 's'} in this simulation, currently classified
-      <b>${classificationLabel(mo.classification)}</b> (novelty ${mo.noveltyScore}/100).
+      <b>${classificationLabel(mo.classification)}</b> — ${FWMoEngine.CLASSIFICATION[mo.classification].means}
+      ${noveltyLine(mo)}
       Confidence ${Math.round(mo.confidence)}% (band <b>${mo.confidenceBand}</b> — the same number, banded, not a second measurement).
       ${patternHarmNote(mo)}
       ${mo.resolutionReason ? `<br>Resolution note: ${mo.resolutionReason}` : ''}

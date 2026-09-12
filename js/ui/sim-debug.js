@@ -135,25 +135,11 @@ const FWSimDebug = (() => {
   // The band and its tone are moEngine's, not this panel's second opinion.
   function bandBadgeClass(band) { return FWMoEngine.bandTone(band); }
 
-  function classificationBadgeClass(cls) {
-    const map = {
-      KNOWN_MO: 'bg-slate-700 text-slate-300',
-      MO_VARIANT: 'bg-indigo-900 text-indigo-300',
-      POTENTIAL_NEW_MO: 'bg-fuchsia-900 text-fuchsia-300',
-      EMERGING_BEHAVIOR: 'bg-rose-900 text-rose-300'
-    };
-    return map[cls] || map.KNOWN_MO;
-  }
+  // Discovery-class labels and tones come from moEngine, the module that
+  // assigns the class. This panel held the third copy of both maps.
+  function classificationBadgeClass(cls) { return FWMoEngine.classificationTone(cls); }
+  function classificationLabel(cls) { return FWMoEngine.classificationLabel(cls); }
 
-  function classificationLabel(cls) {
-    const map = {
-      KNOWN_MO: 'Known MO',
-      MO_VARIANT: 'New Variant',
-      POTENTIAL_NEW_MO: 'Potential New MO',
-      EMERGING_BEHAVIOR: 'Emerging Behavior'
-    };
-    return map[cls] || cls;
-  }
 
   // The sim root carries a fw-shift-* class so the whole view visibly
   // changes with the port's time of day (Phase 37) rather than the shift
@@ -266,18 +252,27 @@ const FWSimDebug = (() => {
     return ` <span class="text-slate-500">(${h.note})</span>`;
   }
 
+  // The sighting count is the figure; novelty is that count restated, and is
+  // withheld once it stops distinguishing counts.
+  function noveltyChip(mo) {
+    const n = FWMoEngine.noveltyNote(mo.recurrenceCount - 1);
+    return n.value == null ? 'novelty withheld (floor reached)' : 'novelty ' + n.value + ' (the count restated)';
+  }
+
   function renderMOs(state) {
     if (!els.moList) return;
     const mos = Array.from(state.moEngine.mos.values())
       .sort((a, b) => b.lastObserved - a.lastObserved);
 
     const summary = FWMoEngine.discoverySummary(state.moEngine);
+    // Four buckets used to be printed with no base. They are a declared
+    // partition of the open cases, so they are printed over it.
+    const classSpans = FWMoEngine.CLASSIFICATIONS.map(k =>
+      `<span>${summary.byClassification[k]} / ${summary.classifiedTotal} ${FWMoEngine.classificationTally(k)}</span>`
+    ).join('');
     const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
       <span>${summary.totalSignatures} distinct behavior patterns seen</span>
-      <span class="text-fuchsia-400">${summary.byClassification.POTENTIAL_NEW_MO} potential new MOs</span>
-      <span class="text-indigo-400">${summary.byClassification.MO_VARIANT} new variants</span>
-      <span class="text-rose-400">${summary.byClassification.EMERGING_BEHAVIOR} unmatched behavior</span>
-      <span>${summary.byClassification.KNOWN_MO} resembling a documented pattern that has recurred</span>
+      ${classSpans}
     </div>`;
 
     if (!mos.length) {
@@ -298,7 +293,7 @@ const FWSimDebug = (() => {
         <div class="text-xs text-white mb-1">${mo.title || mo.matchedPatternName || 'Unclassified pattern'}</div>
         <div class="flex items-center gap-2 mb-1">
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${classificationBadgeClass(mo.classification)}">${classificationLabel(mo.classification)}</span>
-          <span class="text-[10px] text-slate-500">novelty ${mo.noveltyScore} · seen ${mo.recurrenceCount}×</span>
+          <span class="text-[10px] text-slate-500">${noveltyChip(mo)} · seen ${mo.recurrenceCount}×</span>
         </div>
         <div class="text-[10px] text-slate-500 mb-1">status: ${mo.status}${closureHand(mo)}</div>
         <div class="text-[10px] text-slate-500 mb-1">${examinationLine(mo)}</div>
