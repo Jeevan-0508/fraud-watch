@@ -177,6 +177,11 @@ const FWAnalyticsEngine = (() => {
           note: 'Excluded from the three rates above by construction: neither closing verdict is unreasonable on partial explanation, so scoring one would invent a right answer.'
         }),
         metric({
+          id: 'cal-unseeable', label: 'Decided after checks that found nothing to fetch', kind: KIND.COUNT,
+          numerator: cal.unseeableCount, of: 'decisive closures whose every record check came back structurally empty',
+          note: 'Deliberately a count and not a share of the three rates above it: the analyst looked, and this port keeps no record covering the case, so what it measures is coverage rather than judgement. It is left inside the rate denominators all the same — removing it would grade calibration only over the cases the port could see.'
+        }),
+        metric({
           id: 'cal-unscorable', label: 'Nothing on record to check against', kind: KIND.COUNT,
           numerator: cal.totalClosed - cal.scoredCount, of: 'closures carrying no answer key, or asserting nothing checkable',
           note: 'Process outcomes assert nothing about what a case was, so they are logged and not scored.'
@@ -220,10 +225,12 @@ const FWAnalyticsEngine = (() => {
       ]);
   }
 
-  // Every figure in this group is a PARAMETER. None of them is a
-  // measurement, none of them can move as the run continues, and the
-  // recorded counts beside them are shown as counts precisely so the
-  // two are not read as one thing.
+  // Almost every figure in this group is a PARAMETER: not a measurement,
+  // unable to move as the run continues, and shown beside recorded counts
+  // precisely so the two are not read as one thing. The exception is the
+  // pair of site-source rates at the end, which are counted over the
+  // caseload; they are separated from the parameters by kind, and the
+  // group's denominator audit reports the mixed bases out loud.
   function coverageGroup(state) {
     const metrics = [];
     if (window.FWShiftEngine) {
@@ -253,8 +260,30 @@ const FWAnalyticsEngine = (() => {
         note: 'Reported separately rather than charged to whichever site the vehicle last touched.'
       }));
     }
+    // The portfolio-level version of the per-case blind spot: for how many
+    // cases does a site record exist to pull AT ALL. Computed by
+    // awayReportEngine.siteSources rather than reimplemented, so the two
+    // panels cannot drift apart on what "no source" means.
+    if (window.FWAwayReportEngine && state.moEngine) {
+      const mos = Array.from(state.moEngine.mos.values());
+      const src = FWAwayReportEngine.siteSources(state, mos);
+      if (src) {
+        metrics.push(metric({
+          id: 'cov-sourceless', label: 'Cases with no site record to pull at all',
+          numerator: src.sourceless, denominator: src.cases,
+          of: 'cases raised in this run',
+          note: 'Every signal on these was observed on the open road, which belongs to no site. That is an absent source, not an unchecked one, and it is a fact about where the vehicles went rather than about how well anywhere is watched.'
+        }));
+        metrics.push(metric({
+          id: 'cov-thin', label: 'Sited cases whose sites are thinly watched',
+          numerator: src.thin, denominator: src.sited,
+          of: 'cases with at least one site that keeps records',
+          note: 'Assumed coverage under ' + src.thinThresholdPct + '%, weighted by how many of the case\'s signals each site accounts for. A check on these is likelier to return "no such record" than an answer, which costs the hours and moves confidence by exactly zero.'
+        }));
+      }
+    }
     return group('coverage', 'Observation coverage (assumptions, not measurements)',
-      'These percentages look like the ones above and are a different kind of thing. Each is a number stated in a model file, so it cannot respond to the data and will read the same on sim-day 1 and sim-day 300. Recorded counts sit beside them as counts.',
+      'Most percentages here look like the ones above and are a different kind of thing: a number stated in a model file, which cannot respond to the data and will read the same on sim-day 1 and sim-day 300. Recorded counts sit beside them as counts. The two site-source rows at the end are the exception — those are real rates over the caseload, marked as such, and they are what the assumptions above them mean for cases that actually exist.',
       metrics);
   }
 
@@ -302,6 +331,10 @@ const FWAnalyticsEngine = (() => {
     {
       figure: 'Any money not already measured in the exposure panel',
       why: 'Money in this project comes from one place, where the measured hours, the stated rate and the refused figures live together. Effort appears above as hours, which the simulation measures; converting it here would put a currency total outside that discipline.'
+    },
+    {
+      figure: 'An investigability or coverage score for the caseload',
+      why: 'The two site-source rows in the coverage group are counts over a stated base and they stop there. Combined into one figure they would become a target — and the number moves mostly with where vehicles happened to travel in this run, so managing it would mean managing the route mix rather than the watching.'
     },
     {
       figure: 'A benchmark for any of these figures',
