@@ -517,6 +517,113 @@ const FWEntityEngine = (() => {
     return human + ' — one of ' + v.declared.length + ' declared ' + kind + ' stages, all reachable';
   }
 
+  /* CONVENTION 44 AGAINST THE FORMATTER, AND CONVENTION 43 AGAINST ITS
+     CALLERS. formatStatus above is the declared owner of a status appearing on
+     screen, and it had never said which surfaces it owns. Measured over the
+     rendered panels:
+
+       facility / driver / trailer -- rendered through formatStatus.
+       truck -- rendered RAW in two places, status.replace(/_/g, ' '), in the
+         entity inspector title and the sim-debug movement table. Neither
+         passed the value to the owner and neither checked it.
+       carrier / shipment -- no panel renders their status at all, so the
+         formatter's coverage of them is untested by anything on screen.
+
+     What that cost, measured by planting truck.status = 'NOT_A_STAGE' on a
+     seeded run: the entity inspector threw out of heldStatuses two lines after
+     writing the raw value into the title, so the panel rendered NOTHING and the
+     message named this module -- true, and about neither the panel nor whatever
+     wrote the value. sim-debug printed NOT A STAGE in the stage column beside
+     eight real stages, no complaint, visually a stage like any other. One
+     undeclared value, two panels, two opposite outcomes, neither stated
+     anywhere. That is the Slice 62 shape again with a status instead of a
+     lifetime.
+
+     statusLabel() is the short form and the single owner of that policy: it
+     refuses, in the same words and the same way, wherever it is called. It is
+     deliberately NOT a second policy beside formatStatus -- both refuse an
+     undeclared value, so there is one answer to the question and two lengths of
+     sentence, and the choice of length can no longer decide whether the value
+     is checked.
+
+     Convention 42, measured rather than assumed: nothing this program does can
+     produce the fault. Slice 64's reconciliation shows every truck stage
+     written comes out of FWEntityTruck.STATUSES via behaviorEngine, and
+     heldStatuses refuses an undeclared value at the registry level. So this
+     refusal has no live runtime kind either; it is a boundary check on a
+     function two panels call with a value they do not own. */
+  const STATUS_RENDER_SURFACES = {
+    facility: { renderedBy: ['ui/entity-inspector.js facility card'], through: 'formatStatus' },
+    driver: { renderedBy: ['ui/entity-inspector.js links block'], through: 'formatStatus' },
+    trailer: { renderedBy: ['ui/entity-inspector.js links block'], through: 'formatStatus' },
+    truck: { renderedBy: ['ui/entity-inspector.js panel title', 'ui/sim-debug.js movement table'], through: 'statusLabel',
+      wasRenderedRaw: 'the separators were taken out inline at both sites until Slice 65, checked by neither' },
+    carrier: { renderedBy: [], through: null,
+      notRendered: 'the carrier row shows name and identifier. formatStatus handles the kind and no surface exercises it.' },
+    shipment: { renderedBy: [], through: null,
+      notRendered: 'no panel shows a consignment status. Slice 64 measured why it would say little: one of seven declared values is reachable.' }
+  };
+
+  /* The short form. Same refusals as formatStatus, no basis clause -- a title
+     and a table cell have no room for one, and that was the whole reason two
+     sites went around the owner. */
+  function statusLabel(kind, status, table) {
+    const v = statusVocabulary(kind, table);
+    if (typeof status !== 'string' || !status) {
+      throw new Error('entityEngine.statusLabel: no status given for ' + kind);
+    }
+    if (v.declared.indexOf(status) < 0) {
+      throw new Error('entityEngine.statusLabel: ' + status + ' is not a declared ' + kind + ' status (' +
+        v.declared.join('|') + '). Rendering it with the separators taken out prints an undeclared value in the ' +
+        'same shape as a declared one');
+    }
+    return status.replace(/_/g, ' ').toLowerCase();
+  }
+
+  // Coverage over the named base: the six kinds, not the surfaces that
+  // happened to be rendered by whichever suite was looking.
+  function statusRenderCoverage() {
+    const kinds = KINDS.slice();
+    const rendered = kinds.filter(k => STATUS_RENDER_SURFACES[k].renderedBy.length);
+    const surfaces = rendered.reduce((a, k) => a + STATUS_RENDER_SURFACES[k].renderedBy.length, 0);
+    const through = {};
+    rendered.forEach(k => { through[STATUS_RENDER_SURFACES[k].through] = (through[STATUS_RENDER_SURFACES[k].through] || 0) + 1; });
+    return {
+      kinds: kinds.length,
+      renderedKinds: rendered.length,
+      surfaces,
+      through,
+      notRenderedKinds: kinds.filter(k => !STATUS_RENDER_SURFACES[k].renderedBy.length),
+      runtimeKind: 'NONE',
+      note: rendered.length + ' of ' + kinds.length + ' entity kinds have their status on screen, over ' + surfaces +
+        ' surfaces, and every one goes through the module that owns the vocabulary. The other ' +
+        (kinds.length - rendered.length) + ' are not rendered anywhere, so nothing on screen exercises the formatter ' +
+        'for them. No path this program takes can hand either formatter an undeclared value; the refusal is a ' +
+        'boundary check, not a caught fault.'
+    };
+  }
+
+  function assertRenderSurfacesDeclared() {
+    KINDS.forEach(k => {
+      const r = STATUS_RENDER_SURFACES[k];
+      if (!r) throw new Error('entityEngine: kind ' + k + ' has no declared status render surface');
+      if (!Array.isArray(r.renderedBy)) throw new Error('entityEngine: ' + k + ' render surfaces must be a list');
+      if (r.renderedBy.length && !r.through) {
+        throw new Error('entityEngine: ' + k + ' is rendered on ' + r.renderedBy.length + ' surface(s) and does not ' +
+          'say which formatter it goes through; a surface with no named owner is a surface nobody checked');
+      }
+      if (!r.renderedBy.length && !r.notRendered) {
+        throw new Error('entityEngine: ' + k + ' is rendered nowhere and does not say so; an empty list and an ' +
+          'unexamined kind look identical');
+      }
+      if (r.through && ['formatStatus', 'statusLabel'].indexOf(r.through) < 0) {
+        throw new Error('entityEngine: ' + k + ' claims to render through ' + r.through + ', which is not one of ' +
+          'this module\'s two status formatters');
+      }
+    });
+    return { state: 'CHECKED', kinds: KINDS.length };
+  }
+
   function statusNote(kind, table) {
     const v = statusVocabulary(kind, table);
     /* Both absences are enumerated, and they are not the same absence: a value
@@ -763,11 +870,13 @@ const FWEntityEngine = (() => {
   }
 
   assertLifecycleVocabulary();
+  assertRenderSurfacesDeclared();
 
   return { createRegistry, nextId, add, get, all, recordHistory, seedPort, plural, KINDS, PLURALS,
     LIFECYCLE_VOCABULARY, declaredStatuses, writableStatuses, neverWritten, statusVocabulary,
     heldStatuses, vocabularyCoverage, formatStatus, statusNote, assertStatusLiteral,
     assertLifecycleVocabulary,
     ABSENCE_KINDS, STATUS_ABSENCE, absenceKind, WRITE_CHANNELS, WRITABLE_AGREEMENT,
-    scanStatusWrites, reconcileWritable, writableCheckState };
+    scanStatusWrites, reconcileWritable, writableCheckState,
+    STATUS_RENDER_SURFACES, statusLabel, statusRenderCoverage, assertRenderSurfacesDeclared };
 })();

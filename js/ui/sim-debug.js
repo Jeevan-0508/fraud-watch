@@ -191,7 +191,7 @@ const FWSimDebug = (() => {
         : '<span class="text-slate-600 text-[10px]">—</span>';
       return `<tr class="border-b border-slate-800/60 cursor-pointer hover:bg-slate-800/40" data-truck-id="${t.id}" title="Click to inspect ${t.id}">
         <td class="py-1 pr-2 font-mono text-[11px] text-slate-300">${t.id}</td>
-        <td class="py-1 pr-2 text-[11px] text-slate-400">${t.status.replace(/_/g, ' ')}</td>
+        <td class="py-1 pr-2 text-[11px] text-slate-400">${FWEntityEngine.statusLabel('truck', t.status)}</td>
         <td class="py-1 pr-2 text-[11px] text-slate-500">${t.driverId || '—'}</td>
         <td class="py-1">${sigBadge}</td>
       </tr>`;

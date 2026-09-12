@@ -279,7 +279,11 @@ const FWEntityInspector = (() => {
     const allCases = Array.from(state.moEngine.mos.values()).filter(m => m.entities.truckId === truck.id);
     const outcomeCounts = allCases.reduce((acc, m) => { acc[m.status] = (acc[m.status] || 0) + 1; return acc; }, {});
 
-    if (els.title) els.title.textContent = `${truck.id} — ${truck.status.replace(/_/g, ' ')}`;
+    // Not the raw value with its separators taken out. That printed an
+    // undeclared stage in the same shape as a declared one, two lines before
+    // heldStatuses threw and took the whole panel with it. statusLabel owns
+    // the refusal now, and sim-debug's stage column takes the same path.
+    if (els.title) els.title.textContent = `${truck.id} — ${FWEntityEngine.statusLabel('truck', truck.status)}`;
 
     const vocab = FWEntityEngine.vocabularyCoverage(state.registry);
 
