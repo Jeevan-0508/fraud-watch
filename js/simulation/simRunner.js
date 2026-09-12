@@ -28,9 +28,19 @@ const FWSimRunner = (() => {
     // Phase C: how far the trucks actually travelled, and how often the place
     // they were standing at disagreed with what their lifecycle stage said.
     const journeyTracker = window.FWJourneyEngine ? FWJourneyEngine.createTracker() : null;
+    /* Phase F: SOME ACTORS HAVE A PLAN. Drawn once, here, from a stream offset
+       from this seed (intentEngine.PLAN_SEED_OFFSET) so choosing the actors
+       spends none of the randomness the run itself uses. The book is GROUND
+       TRUTH -- intentEngine.GROUND_TRUTH names this module and behaviorEngine as
+       its only readers, no view may render it, and it is reachable from state on
+       exactly the terms a signal's answer key already is. */
+    const intentBook = window.FWIntentEngine
+      ? FWIntentEngine.createBook(registry, seed, FWBehaviorEngine.LIFECYCLE,
+        [...FWBehaviorEngine.DISRUPTION_ELIGIBLE_STAGES], { sampleSeconds: FF_CHUNK })
+      : null;
     state = {
       seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine,
-      shiftTracker, facilityTracker, journeyTracker,
+      shiftTracker, facilityTracker, journeyTracker, intentBook,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;
@@ -41,7 +51,7 @@ const FWSimRunner = (() => {
   function stepOnce(dtSeconds) {
     if (!state || dtSeconds <= 0) return null;
     const { clock, registry, rng, eventEngine, signalEngine, moEngine,
-      shiftTracker, facilityTracker, journeyTracker } = state;
+      shiftTracker, facilityTracker, journeyTracker, intentBook } = state;
     const now = absoluteNow(clock);
     // Phase 37: the shift the port is actually in drives normal traffic
     // volume, which disruption types are plausible, and how much of what
@@ -49,7 +59,10 @@ const FWSimRunner = (() => {
     const shift = clock.shift();
     // Phase 5: where a movement is also drives whether what happens to
     // it gets recorded, so the site tracker rides along with the shift one.
-    const ctx = { shift, shiftTracker, facilityTracker, journeyTracker };
+    // Phase F: the plan book rides along with the trackers, because a plan is
+    // a fact about who is driving that behaviorEngine has to consult when it
+    // decides what a granted disruption opportunity is spent on.
+    const ctx = { shift, shiftTracker, facilityTracker, journeyTracker, intentBook };
 
     const normalEvents = FWEventEngine.step(eventEngine, registry, now, dtSeconds, ctx);
     const disruptions = FWBehaviorEngine.step(registry, rng, eventEngine, now, dtSeconds, ctx).filter(Boolean);
@@ -103,5 +116,10 @@ const FWSimRunner = (() => {
   function onTick(fn) { listeners.push(fn); }
   function getState() { return state; }
 
-  return { boot, start, stop, tick, fastForward, onTick, getState, absoluteNow };
+  /* FF_CHUNK is exported because it is the interval the world is SAMPLED at,
+     and Slice 73 made that a fact another module depends on: a plan step waiting
+     for a position a truck passes through in less than one chunk may never be
+     observed in it. intentEngine quotes the figure and the suite reconciles the
+     quote against this one. */
+  return { boot, start, stop, tick, fastForward, onTick, getState, absoluteNow, TICK_MS, FF_CHUNK };
 })();

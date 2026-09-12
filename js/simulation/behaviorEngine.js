@@ -384,9 +384,31 @@ const FWBehaviorEngine = (() => {
           'same fault as one advanced to the wrong place.');
       }
       if (DISRUPTION_ELIGIBLE_STAGES.has(truck.status) && rng.chance(chance)) {
-        const type = hasShiftModel
+        /* THE UNPLANNED DRAW IS MADE FIRST, AND IT IS MADE EVEN WHEN IT IS NOT
+           USED (Slice 73). An opportunity is granted by the roll above at
+           DISRUPTION_CHANCE_PER_TICK, which this slice did not touch and must
+           not: raising it until cases stick is the forbidden shortcut this
+           project named in its first audit. What intent changes is which of the
+           thirteen types a granted opportunity spends itself on, so the draw
+           still happens and is discarded when a plan step takes the slot. One
+           line of waste buys a claim worth having -- the number of disruption
+           opportunities in a run is a property of the rate alone, and a
+           redistribution cannot be mistaken for an addition. */
+        const drawn = hasShiftModel
           ? FWShiftEngine.pickDisruptionType(rng, DISRUPTION_TYPES, shift)
           : rng.pick(DISRUPTION_TYPES);
+        /* SOME ACTORS HAVE A PLAN (Slice 73, Phase F). The plan belongs to the
+           DRIVER, is chosen once at boot from a seeded stream, and fires a step
+           only when this truck's live journey is in the position that step
+           names -- intentEngine reads journeyEngine.positionOf, not a counter.
+           `pending` is null for a driver with no plan, which is six of eight
+           trucks here, so the unplanned path below is exactly the code it was.
+           The book is ground truth: intentEngine.GROUND_TRUTH names this module
+           and simRunner as its only readers, and no view may render it. */
+        const pending = (ctx.intentBook && window.FWIntentEngine)
+          ? FWIntentEngine.nextStepFor(ctx.intentBook, truck, DISRUPTION_ELIGIBLE_STAGES)
+          : null;
+        const type = (pending && pending.fires) ? pending.type : drawn;
         // Oversight coverage is now a product of WHEN (shift, Phase 37)
         // and WHERE (site archetype, Phase 5). A gatehouse at 03:00 can
         // still be better observed than a remote depot at noon.
@@ -399,6 +421,12 @@ const FWBehaviorEngine = (() => {
         }
         const ev = applyDisruption(truck, type, registry, rng, eventEngine, timestamp, { shift, observed });
         if (!ev) return;
+        /* The plan advances only once the act has actually been applied. A step
+           applyDisruption refused -- TRAILER_SWAPPED with no spare trailer in
+           storage is the live case -- did not happen, so the actor is still
+           waiting to do it and the plan must not move past it. That is why the
+           commit is here, after the null check, and not inside nextStepFor. */
+        if (pending && pending.fires) FWIntentEngine.commitStep(ctx.intentBook, pending, timestamp, drawn);
         if (hasShiftModel) FWShiftEngine.record(ctx.shiftTracker, shift, type, !ev.unrecorded);
         if (window.FWFacilityEngine) {
           FWFacilityEngine.record(ctx.facilityTracker, truck.facilityId || null, type, !ev.unrecorded, shift);
@@ -426,8 +454,19 @@ const FWBehaviorEngine = (() => {
      only be reconciled here. An uncatalogued type would make every event of that
      type fraudulent by construction, so this is a load-time failure by design. */
   FWFalsePositiveEngine.assertCausesCoverTypes(DISRUPTION_TYPES);
+  /* Slice 73, and the same arrangement for the same reason: intentEngine owns
+     the plan vocabulary and loads before this module, so it cannot read either
+     the type list or the eligible-stage set. Both are handed to it here, which
+     is also what lets a planted list make each guard fire. INTENT_TYPES throws
+     if a plan step names a type this module cannot apply; INTENT_STAGING throws
+     if a declared plan kind can be staged at no node in the graph. Neither is a
+     measurement -- both are reconciliations between two vocabularies that would
+     otherwise fail silently, hours into a run, for one seed and not another. */
+  const INTENT_TYPES = FWIntentEngine.assertStepTypesDeclared(DISRUPTION_TYPES);
+  const INTENT_STAGING = FWIntentEngine.assertKindsStageable(LIFECYCLE, [...DISRUPTION_ELIGIBLE_STAGES]);
 
   return { step, attachBehavior, advanceStage, adoptStage, relocate, LIFECYCLE, STAGE_DURATION_RANGE, STAGE_DRIVE, DISRUPTION_REACH,
+    INTENT_TYPES, INTENT_STAGING,
     DISRUPTION_ELIGIBLE_STAGES,
     DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK,
     SPARE_TRAILER_STATUS, SELECTABLE_CARRIER_STATUS, assertSelectionLiterals };
