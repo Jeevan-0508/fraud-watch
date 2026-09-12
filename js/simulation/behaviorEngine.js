@@ -25,8 +25,21 @@ const FWBehaviorEngine = (() => {
 
   const STAGE_DURATION_RANGE = { min: 300, max: 900 }; // 5-15 sim-minutes per stage
 
-  // Stages where a disruption is plausible at all (no point deviating
-  // route while parked at LOADING, for example).
+  /* Stages where a disruption is plausible at all (no point deviating route
+     while parked at LOADING, for example).
+
+     Slice 72 gave this set a consequence it did not have before. While the
+     stage was a counter, every site saw every stage eventually and so every
+     site eventually recorded something. Now the stage is a function of where
+     the truck is, so a node type whose stages are all outside this set can
+     never have anything written down about a truck standing there.
+     DISRUPTION_REACH below computes exactly which, from an enumeration of the
+     drive over every route in both directions rather than from a sample: in
+     this build it is 3 of the 9 seeded facilities -- both port cross-docks and
+     Yard 3 (overflow) -- because no route passes THROUGH those nodes, so a
+     truck is only ever there at the start of a trip. That is a property of this
+     set meeting the topology, and it is reported with its numbers rather than
+     left to be noticed. */
   const DISRUPTION_ELIGIBLE_STAGES = new Set(['EN_ROUTE_TO_PORT', 'CHECKPOINT', 'DEPARTURE', 'TRANSIT', 'DEPOT', 'DELIVERY']);
 
   const DISRUPTION_TYPES = ['UNEXPECTED_STOP', 'ROUTE_DEVIATION', 'DRIVER_CHANGED',
@@ -77,17 +90,39 @@ const FWBehaviorEngine = (() => {
       stageElapsed: 0,
       stageDuration: rng.int(STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max)
     };
-    truck.status = LIFECYCLE[0];
-    /* Slice 71: a truck starts its life ON a route, at that route's first
-       node, instead of at a site drawn from the stage table. The start is not
-       chosen to agree with DISPATCHED -- see journeyEngine.stageAgreement,
-       which counts how often it does not. */
-    if (window.FWJourneyEngine) {
-      const journey = FWJourneyEngine.assign(truck, rng);
-      if (ctx) FWJourneyEngine.recordAssignment(ctx.journeyTracker, journey);
-    }
+    /* Slice 71 gave the truck a journey here and then wrote LIFECYCLE[0]
+       regardless of where that journey started, so a truck could begin life
+       DISPATCHED while standing at an inland depot -- a node worldGraph does
+       not declare DISPATCHED eligible at. Slice 72: the route is drawn, and
+       the FIRST STAGE is then the first stage in lifecycle order that the node
+       it starts at allows. The stage follows the position, never the reverse. */
+    const journey = requireJourneyEngine('attaching behaviour to truck ' + truck.id).assign(truck, rng);
+    if (ctx) FWJourneyEngine.recordAssignment(ctx.journeyTracker, journey);
+    adoptStage(truck, FWJourneyEngine.stageTransition(LIFECYCLE, null, journey, 'JOURNEY_STARTED'), rng);
     if (registry && window.FWFacilityEngine) relocate(truck, registry, rng, ctx);
     return truck.behavior;
+  }
+
+  /* One place writes truck.status and the behaviour block, and it writes both
+     from the same transition, because the stage and its index are one fact and
+     two writers of one fact are two chances to disagree (the modulo cycle was
+     exactly that: an index advanced independently of everything else). */
+  function adoptStage(truck, transition, rng) {
+    truck.behavior.stageIndex = transition.index;
+    truck.behavior.stageElapsed = 0;
+    truck.behavior.stageDuration = rng.int(STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max);
+    truck.status = transition.to;
+    return transition;
+  }
+
+  function requireJourneyEngine(what) {
+    if (!window.FWJourneyEngine) {
+      throw new Error('behaviorEngine: ' + what + ' needs FWJourneyEngine, which is not loaded. Since Slice 72 a ' +
+        'truck\'s stage is a function of where its journey says it is; walking LIFECYCLE with a counter instead ' +
+        'would be the independent second clock that slice removed, and a fallback is the branch that ships when ' +
+        'the load order is wrong.');
+    }
+    return FWJourneyEngine;
   }
 
   /* WHERE THE TRUCK PHYSICALLY IS (Phase 5, rewritten by Slice 71).
@@ -124,34 +159,52 @@ const FWBehaviorEngine = (() => {
     return resolved.site;
   }
 
-  function advanceStage(truck, rng, eventEngine, timestamp, registry, ctx) {
-    const b = truck.behavior;
-    b.stageIndex = (b.stageIndex + 1) % LIFECYCLE.length; // loops: COMPLETED -> DISPATCHED (new trip)
-    b.stageElapsed = 0;
-    b.stageDuration = rng.int(STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max);
-    const to = LIFECYCLE[b.stageIndex];
+  /* A STAGE ADVANCE, DRIVEN BY THE JOURNEY (Slice 72).
+
+     This used to be `b.stageIndex = (b.stageIndex + 1) % LIFECYCLE.length`: a
+     counter that shared a length with the stage list and had no other
+     relationship to the world. Slice 71 measured what that cost once a truck
+     had a real position -- 10,104 of 18,449 advances (54.8%) left the truck at
+     a place its new stage did not declare itself eligible at -- and that
+     number is the whole reason this function now asks the journey.
+
+     journeyEngine.stageTransition walks LIFECYCLE forward from the stage the
+     truck holds and returns the first one its position allows. The list is
+     still walked in order and still loops (COMPLETED -> DISPATCHED is a new
+     trip); what it no longer does is adopt a stage the truck could not be in
+     where it stands.
+
+     `trigger` says which fact changed, because they are not the same fact:
+     JOURNEY_STARTED (a new trip, so the lifecycle starts its pass again),
+     ARRIVED (the position changed within a trip, so the stage must) and
+     DWELL_ELAPSED (the dwell timer expired at a node -- the only trigger that
+     can dispatch a truck). There is no mid-leg trigger: a stage changes only at a node, for
+     a reason journeyEngine states with the measurement behind it. A stage
+     advance is still the only dispatch decision this build has. */
+  function advanceStage(truck, rng, eventEngine, timestamp, registry, ctx, trigger) {
+    const J = requireJourneyEngine('advancing the stage of truck ' + truck.id);
+    if (!truck.journey) {
+      throw new Error('behaviorEngine.advanceStage: truck ' + truck.id + ' has no journey, so which stage it can ' +
+        'be in is not a fact this module can produce. Advancing a counter instead would invent one.');
+    }
     const from = truck.status;
-    truck.status = to;
-    /* Slice 71: a stage advance is the only dispatch decision this build has,
-       so entering a stage worldGraph declares happens on a public road is what
-       makes a standing truck leave the node it is standing at. Without this a
-       node would be an instant rather than a place: a leg is 90-5920
-       sim-seconds and a stage is 300-900, so a truck would be mid-leg for
-       essentially its whole life (measured: 338 of 350 recorded disruptions
-       unsited, 5 of 9 sites ever seen). */
-    if (window.FWJourneyEngine && truck.journey && FWJourneyEngine.isRoadStage(to)) {
-      FWJourneyEngine.depart(truck, ctx ? ctx.journeyTracker : null);
-    }
+    const transition = J.stageTransition(LIFECYCLE, from, truck.journey, trigger);
+    if (transition.departs) J.depart(truck, ctx ? ctx.journeyTracker : null);
+    adoptStage(truck, transition, rng);
     const site = relocate(truck, registry, rng, ctx);
-    /* Slice 71 measures, rather than corrects, the drift between the lifecycle
-       and the journey: this stage advance may have landed the truck at a node
-       its new stage does not declare itself eligible at. The modulo cycle is
-       deliberately untouched here, so the disagreement is real and counted. */
-    if (ctx && window.FWJourneyEngine && truck.journey) {
-      FWJourneyEngine.recordAgreement(ctx.journeyTracker,
-        FWJourneyEngine.stageAgreement(truck.status, truck.journey));
+    /* The measurement slice 71 wrote, unchanged, now used as an invariant: the
+       stage and the position are one fact read two ways, so they cannot
+       disagree. A non-zero disagreement here would mean a stage was written by
+       something that did not consult the journey. */
+    const agreement = J.stageAgreement(truck.status, truck.journey);
+    if (ctx) J.recordAgreement(ctx.journeyTracker, agreement);
+    if (!agreement.agrees) {
+      throw new Error('behaviorEngine.advanceStage: truck ' + truck.id + ' took stage ' + truck.status + ' on ' +
+        trigger + ' and ' + agreement.why + '. Since Slice 72 the stage is derived from the journey, so this is not ' +
+        'drift to be counted -- it is the two facts having been measured from different places again.');
     }
-    const metadata = { from, to, summary: `${from} -> ${to}` };
+    const metadata = { from, to: transition.to, summary: `${from} -> ${transition.to}`,
+      trigger: trigger, reason: transition.reason, departed: transition.departs };
     if (site) { metadata.facilityId = site.id; metadata.facilityName = site.name; }
     const ev = FWEventEngine.emit(eventEngine, {
       type: 'TRUCK_STAGE_ADVANCED', entityId: truck.id,
@@ -273,19 +326,62 @@ const FWBehaviorEngine = (() => {
     trucks.forEach(truck => {
       if (!truck.behavior) attachBehavior(truck, rng, registry, ctx);
       truck.behavior.stageElapsed += dtSeconds;
-      /* Slice 71: movement is driven by sim-time and the leg's own derived
-         duration, not by the stage cycle -- once dispatched (see advanceStage)
-         a truck keeps travelling until it reaches the next node, however many
-         stages that takes. A dwelling truck consumes no distance here.
-         Nothing in this slice reads or writes LIFECYCLE or the modulo cycle
-         that walks it. */
-      if (window.FWJourneyEngine && truck.journey) {
-        const moved = FWJourneyEngine.advance(truck, dtSeconds, rng, ctx.journeyTracker);
-        if (moved.journeysCompleted) FWJourneyEngine.recordAssignment(ctx.journeyTracker, truck.journey);
-        if (moved.nodeChanged) relocate(truck, registry, rng, ctx);
+      /* Movement is driven by sim-time and the leg's own derived duration, not
+         by the stage timer -- once dispatched (see advanceStage) a truck keeps
+         travelling until it reaches the next node, and since Slice 72 it holds
+         the stage it departed on for that whole leg. A dwelling truck consumes
+         no distance here. */
+      const moved = FWJourneyEngine.advance(truck, dtSeconds, rng, ctx.journeyTracker);
+      if (moved.journeysCompleted) FWJourneyEngine.recordAssignment(ctx.journeyTracker, truck.journey);
+      /* Slice 72: ARRIVING IS A STAGE TRANSITION. nodeChanged is true only on
+         an arrival (a dwelling truck does not move and a mid-leg one changes no
+         node), and a truck that has just pulled into a gate is at that gate
+         whatever an unrelated 300-900 sim-second timer thinks. Slice 71 only
+         re-resolved the site here, which is why a truck could stand at a gate
+         carrying TRANSIT for the rest of the stage. advanceStage relocates, so
+         the site is still resolved exactly once per change of node. */
+      if (moved.nodeChanged) {
+        /* An arrival that finished the route is a NEW TRIP: advance() has
+           already taken the next journey from that same node, so the lifecycle
+           starts its pass again rather than continuing from wherever the last
+           trip left it. With a free-running phase the walk is a counter again
+           one level up -- measured, that phase-locked the only
+           disruption-eligible stage a yard allows onto one of the three yards
+           and left two of nine sites observing nothing over 60 sim-days. */
+        emitted.push(advanceStage(truck, rng, eventEngine, timestamp, registry, ctx,
+          moved.journeysCompleted ? 'JOURNEY_STARTED' : 'ARRIVED'));
       }
-      if (truck.behavior.stageElapsed >= truck.behavior.stageDuration) {
-        emitted.push(advanceStage(truck, rng, eventEngine, timestamp, registry, ctx));
+      /* THE STAGE TIMER IS A DWELL TIMER (Slice 72). It is only tested while
+         the truck is standing at a node, because a travelling truck's stage
+         lasts as long as its leg (journeyEngine, the note above
+         STAGE_TRIGGERS). stageElapsed therefore runs past stageDuration during
+         a long leg and is reset by the arrival, which is the coupling declared
+         rather than a tick that was missed: 300-900 sim-seconds is how long a
+         truck stands somewhere, and the leg's derived traverseSeconds is how
+         long it travels. */
+      if (truck.journey.dwelling && truck.behavior.stageElapsed >= truck.behavior.stageDuration) {
+        emitted.push(advanceStage(truck, rng, eventEngine, timestamp, registry, ctx, 'DWELL_ELAPSED'));
+      }
+      /* THE INVARIANT, CHECKED WHERE OMITTING A TRANSITION CAN BREAK IT.
+         advanceStage checks the stage it writes, which catches a stage written
+         wrongly and cannot catch a stage NOT WRITTEN AT ALL. Measured with the
+         arrival-driven transition above deleted (control72.py D): every truck
+         then pulls into a node still carrying the road stage it departed on and
+         holds it until the dwell timer expires -- and because every write that
+         follows still agrees, the per-write check reported 0 disagreements over
+         7,563 samples and all 8 live trucks fine. The fault slice 72 exists to
+         remove was invisible to the guard slice 72 added.
+
+         A stage is a claim the truck makes for every tick it holds it, not only
+         at the instant it is written, so it is checked for every tick it holds
+         it. This is the check the control had to fire, and it costs one table
+         lookup per truck per tick. */
+      const held = FWJourneyEngine.stageAgreement(truck.status, truck.journey);
+      if (!held.agrees) {
+        throw new Error('behaviorEngine.step: truck ' + truck.id + ' is holding stage ' + truck.status + ' and ' +
+          held.why + '. Since Slice 72 the stage is a function of the position, so a truck cannot hold a stage its ' +
+          'own journey disallows for even one tick -- a stage that is never advanced when the truck arrives is the ' +
+          'same fault as one advanced to the wrong place.');
       }
       if (DISRUPTION_ELIGIBLE_STAGES.has(truck.status) && rng.chance(chance)) {
         const type = hasShiftModel
@@ -314,12 +410,25 @@ const FWBehaviorEngine = (() => {
   }
 
   assertSelectionLiterals();
+  /* Slice 72: since the stage is now chosen from where the truck is, every
+     place a truck can arrive at must have at least one stage that is true of
+     it -- otherwise a truck driving to that node would have no stage to hold.
+     journeyEngine owns the topology; this module owns the list, so the list is
+     handed to the check rather than read from a module-private copy. */
+  const STAGE_DRIVE = FWJourneyEngine.assertStageForEveryNodeType(LIFECYCLE);
+  /* Measured, not asserted: the gap it finds is real in the world that ships,
+     and a load-time throw would refuse to run the simulation this project has.
+     Both tables are handed in, so the report is of these two and not of a
+     private copy of either. */
+  const DISRUPTION_REACH = FWJourneyEngine.observability(LIFECYCLE, [...DISRUPTION_ELIGIBLE_STAGES]);
   /* This module owns the list of disruption types; falsePositiveEngine owns the
      innocent explanations for them and loads first, so the two vocabularies can
      only be reconciled here. An uncatalogued type would make every event of that
      type fraudulent by construction, so this is a load-time failure by design. */
   FWFalsePositiveEngine.assertCausesCoverTypes(DISRUPTION_TYPES);
 
-  return { step, attachBehavior, relocate, LIFECYCLE, DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK,
+  return { step, attachBehavior, advanceStage, adoptStage, relocate, LIFECYCLE, STAGE_DURATION_RANGE, STAGE_DRIVE, DISRUPTION_REACH,
+    DISRUPTION_ELIGIBLE_STAGES,
+    DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK,
     SPARE_TRAILER_STATUS, SELECTABLE_CARRIER_STATUS, assertSelectionLiterals };
 })();

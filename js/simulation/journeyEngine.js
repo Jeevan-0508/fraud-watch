@@ -31,19 +31,24 @@
    of 350 recorded disruptions were unsited and only 5 of the 9 sites saw a
    single one. A place you can only be in for an instant is not a place.
 
+   SLICE 72 ADDED THE OTHER HALF. Slice 71 left advanceStage walking LIFECYCLE
+   with `% LIFECYCLE.length`, a counter independent of where the truck was, and
+   counted what that cost: 10,104 of 18,449 stage advances (54.8%) put a truck
+   at a place its own stage did not declare itself eligible at. Since slice 72
+   the stage is a function of the journey -- stageTransition() below walks the
+   caller's lifecycle forward and returns the first stage the truck's actual
+   position allows -- so the two are one fact measured twice instead of two
+   clocks that overlap. The vocabulary did not change: LIFECYCLE and
+   FWEntityTruck.STATUSES are untouched, and only what drives a transition
+   between them is different. stageAgreement() stays as the measurement of it,
+   and now reads 0 disagreements per run instead of 54.8%.
+
    WHAT IT DELIBERATELY DOES NOT DO.
 
-   - It does not touch behaviorEngine.LIFECYCLE, FWEntityTruck.STATUSES, or
-     advanceStage's `% LIFECYCLE.length` modulo loop. A journey advances
-     underneath that loop; decoupling the lifecycle from the modulo cycle is
-     its own later slice, and doing both at once would make the behaviour
-     change unattributable.
-   - Because of that, a journey's node and the lifecycle stage's declared
-     eligibility can DISAGREE (a truck standing at the port while its stage
-     says DEPOT). This module does not paper over that with a second random
-     draw: the position wins the site question, and the disagreement is
-     COUNTED (stageAgreement + a tracker) so the case for the decoupling
-     slice is a measurement rather than an opinion.
+   - It does not own the lifecycle. behaviorEngine still declares LIFECYCLE and
+     still decides WHEN a stage advances (its own 300-900 sim-second timer);
+     this module answers only WHICH stage is possible where the truck is, and
+     is handed the stage list rather than reading it.
    - It invents no coordinates. There are none in this graph (worldGraph's
      DISTANCE_SCALE says so), so ON_LEG carries elapsed sim-seconds and a
      fraction of the leg's derived duration, never an x/y or a "km from".
@@ -117,13 +122,14 @@ const FWJourneyEngine = (() => {
 
   const ASSUMPTIONS = [
     'A truck standing at a node departs only when its lifecycle advances into a stage worldGraph declares happens on a public road (EN_ROUTE_TO_PORT, TRANSIT, COMPLETED). That is the whole coupling between the lifecycle and movement in this slice, and it is what makes a node a place a truck can be at for a while rather than for an instant.',
-    'Once departed, a truck keeps travelling until it reaches the next node, whatever its lifecycle stage does in the meantime. Movement is driven by sim-time and the leg\'s derived duration, not by the stage cycle, so a 68 km leg takes the 5,440 sim-seconds the graph says it takes and not one lifecycle stage.',
+    'Once departed, a truck keeps travelling until it reaches the next node. Movement is driven by sim-time and the leg\'s derived duration, not by the stage timer, so a 68 km leg takes the 5,440 sim-seconds the graph says it takes and not one lifecycle stage. Since Slice 72 the converse holds too: the stage a truck departed on lasts exactly as long as that leg, so a stage changes only at a node and the two durations each drive the thing they are a duration of.',
     'A leg costs exactly its derived traverseSeconds. Nothing varies it -- no congestion, no queueing, no shift effect -- so the time a journey takes is a property of the graph, not of the run.',
     'Arriving ends the tick\'s movement: the leftover sim-seconds are spent standing at the node reached, because the truck will not depart again until it is dispatched. At most one arrival happens per truck per tick.',
     'When a journey reaches its destination the truck parks there and takes its next journey from that same node, so position is continuous: a truck never appears at a node it did not drive to.',
-    'The first journey of a truck\'s life is drawn at random from the declared routes and starts at that route\'s first node. That start is not chosen to match the truck\'s DISPATCHED stage, and often will not (see stageAgreement).',
+    'One journey is one pass through the lifecycle: a truck that takes a new route starts the stage list again from its head, so how far into the list a stage is tracks how far into the route the truck is. A route with more nodes and legs than the list has stages reuses stages to finish -- the 5-leg PORT_TO_DEPOT_OST needs 11 slots against 9 stages, so exactly one wrap happens on it, and stageTransition reports `wrapped` rather than leaving it to be noticed.',
+    'The first journey of a truck\'s life is drawn at random from the declared routes and starts at that route\'s first node. Since Slice 72 the truck\'s FIRST STAGE is then chosen to match that node (STAGE_TRIGGERS.JOURNEY_STARTED) rather than the node being chosen to match a stage: the route is drawn, the stage follows. A truck whose first node is an inland depot therefore begins life in DEPOT, not DISPATCHED.',
     'Which of the two cross-docks at Port Meridian handles a movement is not modelled. Where a node carries more than one seeded facility, one is drawn.',
-    'A journey and the lifecycle stage cycle independently in this slice. Where the node the truck is standing at is not a node type the stage declares itself eligible at, the position is still the answer to "where is it" and the disagreement is counted, not corrected.'
+    'The position decides which stages are possible and the lifecycle decides their order. A stage the truck cannot be in where it stands is skipped, never adopted, so the node the truck is at is always a node type its stage declares itself eligible at. The walk is still cyclic and still never runs backwards, so the list is still the order of a trip; what it no longer does is claim a stage happened somewhere it could not have.'
   ];
 
   const NOT_MODELLED = [
@@ -581,15 +587,19 @@ const FWJourneyEngine = (() => {
       candidates: eligible.length };
   }
 
-  /* THE DISAGREEMENT, MEASURED.
+  /* THE AGREEMENT, MEASURED.
 
      worldGraph.STAGE_NODE_TYPES says which node types a lifecycle stage can
-     occur at. A journey advances underneath advanceStage's modulo cycle in
-     this slice, so the two drift apart: a truck can be standing at the port
-     while its stage says DEPOT, or parked at a node while its stage says
-     TRANSIT. Nothing here corrects that -- correcting it means decoupling the
-     lifecycle from the modulo loop, which is its own slice. What this does is
-     count it, so that slice is argued from a number. */
+     occur at, and this compares that against where the truck actually is. It
+     was written in slice 71 to measure a drift it could not fix (10,104 of
+     18,449 stage advances disagreed) and it is deliberately UNCHANGED by slice
+     72, which fixed the drive: a guard rewritten in the same slice as the code
+     it checks proves only that the two were written together. Same probe, same
+     denominator, different number.
+
+     It stays because agreement is now an invariant rather than a statistic --
+     behaviorEngine.advanceStage throws on a disagreement here -- and an
+     invariant nothing measures is a comment. */
   function stageAgreement(stage, journey) {
     const g = requireWorldGraph('stage agreement');
     const eligible = g.archetypesForStage(stage) === null ? null : g.STAGE_NODE_TYPES[stage].slice();
@@ -609,6 +619,360 @@ const FWJourneyEngine = (() => {
     }
     return { stage: stage, roadStage: road, positionKind: position.kind, nodeId: position.nodeId,
       nodeType: nodeType, eligibleNodeTypes: eligible, agrees: agrees, why: why };
+  }
+
+  /* ======================================================================
+     THE LIFECYCLE, DRIVEN BY THE JOURNEY (Slice 72).
+
+     Slice 71 measured what happens when it is not. advanceStage walked
+     LIFECYCLE with `% LIFECYCLE.length` -- a counter whose only relationship
+     to the world was that it shared a length with the stage list -- and the
+     result was 10,104 of 18,449 stage advances (54.8%) putting a truck at a
+     place its own stage did not declare itself eligible at: DELIVERY while
+     standing at the port, TRANSIT while parked at a gate. The stage and the
+     position were two independent clocks that happened to overlap 45% of the
+     time, and an overlap is not an agreement.
+
+     What replaces it: THE POSITION DECIDES WHICH STAGES ARE POSSIBLE AND THE
+     LIFECYCLE DECIDES THEIR ORDER. Nothing here invents a stage -- every
+     answer is one of the caller's own list, walked forward from the stage the
+     truck holds, and the first candidate the truck's actual position allows
+     wins. The vocabulary is untouched: this changes what drives a transition,
+     not what a transition can be.
+
+     The lifecycle list is passed IN rather than read. behaviorEngine loads
+     after this module, so reading FWBehaviorEngine.LIFECYCLE here would be a
+     load-order dependency; and a guard that reads a module-private constant
+     cannot be made to fire by a planted fault (convention 34).
+     ====================================================================== */
+
+  /* "The stage changed" is four different facts, and collapsing them is how
+     the modulo cycle got away with being wrong: one rule for every case can
+     only be right when the cases are the same. Which stages a transition may
+     adopt, and whether it may dispatch the truck, differ per trigger. */
+  const STAGE_TRIGGERS = {
+    JOURNEY_STARTED: {
+      name: 'JOURNEY_STARTED',
+      when: 'a truck takes a new journey: either its first, or the one it picks up at the node where the last route ended.',
+      mayAdopt: 'only a stage the node it starts from declares itself eligible at.',
+      mayDispatch: false,
+      note: 'The walk starts AT the head of the lifecycle rather than after the stage the truck holds, so ONE JOURNEY IS ONE PASS through the stage list and how far into the list a truck is tracks how far into its route it is. This is also what stops the walk being a counter again: with a free-running phase, the three road stages form a 3-cycle, and YARD_SHUTTLE has exactly three legs, so every lap put the same stage at the same yard -- measured, Yard 1 and Yard 2 recorded zero disruptions over 60 sim-days because DEPOT, the only disruption-eligible stage a WAREHOUSE allows, was phase-locked onto Yard 3. Slice 71 wrote LIFECYCLE[0] here unconditionally, which is the other half of the same fault: a truck began life DISPATCHED even at an inland depot, a node worldGraph does not declare DISPATCHED eligible at.'
+    },
+    ARRIVED: {
+      name: 'ARRIVED',
+      when: 'the journey reached a node this tick.',
+      mayAdopt: 'only a stage that node type declares itself eligible at, so no road stage can survive an arrival.',
+      mayDispatch: false,
+      note: 'This is the transition the modulo cycle had no way to make. The position changed, so the stage must change with it -- otherwise a truck stands at a gate carrying TRANSIT until an unrelated timer happens to expire.'
+    },
+    DWELL_ELAPSED: {
+      name: 'DWELL_ELAPSED',
+      when: 'the stage timer expired while the truck stood at a node.',
+      mayAdopt: 'the next stage in lifecycle order that is either doable at this node or happens on a public road.',
+      mayDispatch: true,
+      note: 'A road stage means the truck DEPARTS, which is still the only way a truck ever leaves a node (ASSUMPTIONS, item 1). This is the one trigger that moves a truck.'
+    },
+  };
+
+  /* THERE IS NO MID-LEG TRIGGER, and that is a decision with a measurement
+     behind it. The first implementation had one (the stage timer expiring
+     while travelling, adopting the next road stage): a 5,440 sim-second leg
+     under a 300-900 sim-second timer flipped through the three road stages
+     about nine times per leg -- 1,068 mid-leg advances against 396 arrivals
+     over two sim-days -- so COMPLETED landed on a truck 516 times against
+     DISPATCHED's 98, and a truck reported COMPLETED and then EN_ROUTE_TO_PORT
+     without having gone anywhere. That made the stage mid-leg a function of
+     the timer, which is the same fault as the modulo cycle one level down.
+
+     So: while a truck is travelling, its stage is the one it departed on and
+     it lasts exactly as long as the leg. A stage changes only at a node. The
+     300-900 sim-second timer governs how long a truck stands somewhere, and
+     the leg's own derived traverseSeconds governs how long it travels; each
+     number drives the thing it is a duration of, and neither drives the
+     other. */
+
+  /* Why a candidate was taken, named, because "the walk stopped here" merges
+     three different reasons and a reader cannot check a reason that has no
+     name. */
+  const STAGE_REASONS = {
+    NODE_ALLOWS_IT: 'The node the truck is standing at is one of the node types this stage declares itself eligible at, so the truck stays put and takes it.',
+    DISPATCHED_ONTO_THE_ROAD: 'The next stage in lifecycle order happens on a public road, so the truck departs the node it was standing at and takes it, and holds it until it arrives somewhere. The journey supplies the leg; this decides only that it starts.'
+  };
+
+  /* A lifecycle this module can drive a journey with. Both checks are about
+     the LIST, not about any truck: a list with no road stage would park every
+     truck at its first node for the whole run, because DWELL_ELAPSED could
+     never find anything to dispatch on. isRoadStage() throws for a stage
+     worldGraph declares no eligibility for, so an unknown stage cannot slip
+     through as "not a road stage" either. */
+  function assertLifecycle(lifecycle) {
+    if (!Array.isArray(lifecycle) || !lifecycle.length) {
+      throw new Error('journeyEngine: no lifecycle given. This module drives a journey with the caller\'s stage ' +
+        'list; with none it would have to invent the stages, and an invented stage is a fact about a truck that ' +
+        'nothing declared.');
+    }
+    const road = lifecycle.filter(s => isRoadStage(s));
+    if (!road.length) {
+      throw new Error('journeyEngine: not one of the ' + lifecycle.length + ' stages given (' + lifecycle.join(', ') +
+        ') happens on a public road, so no truck standing at a node could ever be dispatched and every truck would ' +
+        'stand at its first node for the whole run. Departure is the only thing a stage advance does to a journey.');
+    }
+    return lifecycle;
+  }
+
+  /* WHICH STAGES THE TRUCK'S POSITION ALLOWS. The join between worldGraph's
+     STAGE_NODE_TYPES and a position, read in the direction the topology
+     declares it: node type -> eligible stages. Nothing is inferred backwards. */
+  function eligibleStagesAt(lifecycle, journey) {
+    const list = assertLifecycle(lifecycle);
+    const g = requireWorldGraph('stage eligibility');
+    const position = positionOf(journey);
+    if (position.kind === 'ON_LEG') {
+      return { positionKind: 'ON_LEG', nodeId: null, nodeType: null,
+        stages: list.filter(s => isRoadStage(s)),
+        note: 'A truck on a public road can only be in a stage that happens on one.' };
+    }
+    const nodeType = g.nodeType(position.nodeId);
+    const stages = list.filter(s => !isRoadStage(s) && g.STAGE_NODE_TYPES[s].indexOf(nodeType) >= 0);
+    return { positionKind: 'AT_NODE', nodeId: position.nodeId, nodeType: nodeType, stages: stages,
+      note: 'worldGraph declares ' + (stages.length ? stages.join('/') : 'no stage') + ' eligible at a ' +
+        nodeType + ' node.' };
+  }
+
+  /* THE TRANSITION. Walks the lifecycle forward from the stage the truck holds
+     and returns the first stage its position allows, with what that costs the
+     journey (`departs`). Cyclic, so the list still loops -- COMPLETED to
+     DISPATCHED is a new trip exactly as before -- but a stage the truck cannot
+     be in where it stands is skipped rather than adopted.
+
+     The walk never runs backwards and never skips a stage the position allows,
+     so the order in the list is still the order of a trip. What it does not do
+     is pretend a stage happened somewhere it could not have. */
+  function stageTransition(lifecycle, fromStage, journey, trigger) {
+    const list = assertLifecycle(lifecycle);
+    const t = STAGE_TRIGGERS[trigger];
+    if (!t) {
+      throw new Error('journeyEngine.stageTransition: "' + trigger + '" is not one of the declared triggers (' +
+        Object.keys(STAGE_TRIGGERS).join(', ') + '). Which stages a transition may adopt, and whether it may ' +
+        'dispatch the truck, are properties of the trigger, so an unnamed one would have to guess both.');
+    }
+    const here = eligibleStagesAt(list, journey);
+    /* Every trigger is a thing that happens at a node, so this is the whole
+       position check: a stage cannot change mid-leg (see the note above
+       STAGE_TRIGGERS), and a caller that thinks otherwise is reading a
+       different truck than the one its journey describes. */
+    if (here.positionKind !== 'AT_NODE') {
+      const p = positionOf(journey);
+      throw new Error('journeyEngine.stageTransition: ' + trigger + ' is a transition at a node and this journey is ' +
+        'mid-leg between ' + p.from + ' and ' + p.to + ', ' + Math.round(p.remainingSeconds) + ' sim-seconds short ' +
+        'of arriving. While a truck is travelling its stage is the one it departed on and lasts as long as the leg.');
+    }
+    const from = fromStage === undefined ? null : fromStage;
+    if (from !== null && list.indexOf(from) < 0) {
+      throw new Error('journeyEngine.stageTransition: stage "' + from + '" is not in the lifecycle it is being ' +
+        'advanced along (' + list.join(', ') + '), so "the next stage after it" has no meaning.');
+    }
+    /* A new journey is a new trip, so it starts the list again. Within a
+       journey the walk continues from the stage the truck holds. */
+    const start = (trigger === 'JOURNEY_STARTED' || from === null) ? 0 : list.indexOf(from) + 1;
+    const considered = [];
+    for (let n = 0; n < list.length; n++) {
+      const index = (start + n) % list.length;
+      const wrapped = (start + n) >= list.length;
+      const stage = list[index];
+      considered.push(stage);
+      const road = isRoadStage(stage);
+      if (here.stages.indexOf(stage) >= 0) {
+        return { from: from, to: stage, index: index, departs: false, trigger: trigger, wrapped: wrapped,
+          reason: 'NODE_ALLOWS_IT', positionKind: here.positionKind, nodeId: here.nodeId, nodeType: here.nodeType,
+          eligibleHere: here.stages.slice(), considered: considered };
+      } else if (road && t.mayDispatch) {
+        return { from: from, to: stage, index: index, departs: true, trigger: trigger, wrapped: wrapped,
+          reason: 'DISPATCHED_ONTO_THE_ROAD', positionKind: here.positionKind, nodeId: here.nodeId,
+          nodeType: here.nodeType, eligibleHere: here.stages.slice(), considered: considered };
+      }
+    }
+    /* Unreachable for the graph and lifecycle that ship, and asserted so at
+       load by assertStageForEveryNodeType rather than left to be discovered by
+       a truck that arrives somewhere no stage is true of. */
+    throw new Error('journeyEngine.stageTransition: no stage in ' + list.join(', ') + ' can be held at ' +
+      here.nodeId + ', a ' + here.nodeType + ' node, on trigger ' + trigger + '. A truck there would have no stage ' +
+      'at all, and a stage picked anyway would be the disagreement Slice 72 removed.');
+  }
+
+  /* THE LOAD-TIME GUARD FOR THE DRIVE. An ARRIVED transition may only adopt a
+     stage the node type allows, so a node type no stage is eligible at would
+     strand any truck that drove there with no stage to hold. Both the list and
+     the node types are arguments, so a planted fault in either can make this
+     fire. Every rate carries its denominator: the row count is the number of
+     node types checked, not the number that happen to be occupied today. */
+  function assertStageForEveryNodeType(lifecycle, nodeTypes) {
+    const list = assertLifecycle(lifecycle);
+    const g = requireWorldGraph('the stage-drive check');
+    const types = nodeTypes || g.NODE_TYPES;
+    if (!Array.isArray(types) || !types.length) {
+      throw new Error('journeyEngine.assertStageForEveryNodeType: no node types given, so every node type in the ' +
+        'graph would be reported as having a stage and nothing as wrong.');
+    }
+    const rows = types.map(type => {
+      const stages = list.filter(s => !isRoadStage(s) && (g.STAGE_NODE_TYPES[s] || []).indexOf(type) >= 0);
+      if (!stages.length) {
+        throw new Error('journeyEngine: no stage in the lifecycle (' + list.join(', ') + ') is eligible at a ' +
+          type + ' node, so a truck arriving at one could be given no stage at all. Since Slice 72 the stage is a ' +
+          'function of the position, which means every position must have one.');
+      }
+      return { nodeType: type, stages: stages };
+    });
+    const road = list.filter(s => isRoadStage(s));
+    return { state: 'CHECKED', nodeTypes: rows.length, rows: rows, roadStages: road,
+      note: 'All ' + rows.length + ' declared node types have at least one lifecycle stage eligible at them, and ' +
+        road.length + ' of the ' + list.length + ' stages happen on a public road, so an arriving truck always has ' +
+        'a stage to take and a standing truck can always be dispatched.' };
+  }
+
+  /* THE DRIVE, ENUMERATED (Slice 72).
+
+     The drive is deterministic: given a route and a direction, the stage at
+     every node and on every leg of the whole trip follows, with no rng in it
+     anywhere. The only random thing left about a truck's stage is which route
+     it draws next. So the complete set of stages a place can EVER hold is not a
+     statistic to be sampled over a long run -- it is an enumeration, and this
+     walks it, using depart() and advance() rather than a second copy of the
+     movement rules.
+
+     Why it matters: a node that appears in the route table only as a terminus
+     is always a journey start, so it always takes the head of the lifecycle and
+     never anything later. That is invisible in a node-type table (PORT *can*
+     hold DELIVERY) and obvious in this one (PORT_MERIDIAN never does, because
+     no route passes through it). Measured first, before this function existed:
+     both port cross-docks and Yard 3 recorded nothing over 60 sim-days and the
+     node-type report said every node type was fine. */
+  function routePass(lifecycle, routeId, direction) {
+    const list = assertLifecycle(lifecycle);
+    const nodes = orderedNodes(routeId, direction);
+    const legs = legsOf(routeId, direction);
+    const truck = { id: 'ROUTE_PASS', journey: create(routeId, direction) };
+    const atNode = nodes.map(() => []);
+    const onLeg = legs.map(() => null);
+    let t = stageTransition(list, null, truck.journey, 'JOURNEY_STARTED');
+    atNode[0].push(t.to);
+    let guard = 0;
+    for (let leg = 0; leg < legs.length; leg++) {
+      while (!t.departs) {
+        t = stageTransition(list, t.to, truck.journey, 'DWELL_ELAPSED');
+        if (!t.departs) atNode[leg].push(t.to);
+        if (++guard > list.length * legs.length * 4) {
+          throw new Error('journeyEngine.routePass: the walk stood at ' + nodes[leg] + ' on ' + routeId + ' for ' +
+            guard + ' transitions without ever reaching a stage that departs. assertLifecycle checks a road stage ' +
+            'exists, so this means the walk stopped moving forward through the list.');
+        }
+      }
+      onLeg[leg] = t.to;
+      depart(truck, null);
+      const moved = advance(truck, legs[leg].traverseSeconds, null, null);
+      if (leg < legs.length - 1) {
+        t = stageTransition(list, t.to, truck.journey, 'ARRIVED');
+        atNode[leg + 1].push(t.to);
+      } else if (!moved.journeysCompleted) {
+        throw new Error('journeyEngine.routePass: spending the last leg\'s full ' + legs[leg].traverseSeconds +
+          ' sim-seconds did not complete the journey on ' + routeId + '. The pass and advance() disagree about ' +
+          'what a leg costs.');
+      } else {
+        /* The final node is a journey start for the NEXT trip, so its stage
+           belongs to that trip's pass and not to this one. Recorded as such
+           rather than left blank: advance() has already assigned the next
+           journey from here, which is why every terminus takes the head of the
+           list. */
+        atNode[legs.length].push(stageTransition(list, null, truck.journey, 'JOURNEY_STARTED').to);
+      }
+    }
+    return { routeId: routeId, direction: direction, nodes: nodes, atNode: atNode, onLeg: onLeg,
+      slots: nodes.length + legs.length, lifecycleLength: list.length,
+      wrapped: nodes.length + legs.length > list.length };
+  }
+
+  /* Every stage every node can hold, over every route in both directions, with
+     how the node is used. `asTerminus` without `asIntermediate` is the shape
+     that pins a node to the head of the lifecycle for the whole run. */
+  function stagesByNode(lifecycle) {
+    const list = assertLifecycle(lifecycle);
+    const out = {};
+    const touch = (id) => (out[id] = out[id] || { nodeId: id, stages: [], asStart: 0, asIntermediate: 0, asEnd: 0 });
+    routes().forEach(r => DIRECTIONS.forEach(d => {
+      const pass = routePass(list, r.id, d);
+      pass.nodes.forEach((id, i) => {
+        const row = touch(id);
+        if (i === 0) row.asStart += 1;
+        else if (i === pass.nodes.length - 1) row.asEnd += 1;
+        else row.asIntermediate += 1;
+        pass.atNode[i].forEach(st => { if (row.stages.indexOf(st) < 0) row.stages.push(st); });
+      });
+    }));
+    Object.keys(out).forEach(id => { out[id].stages.sort(); });
+    return out;
+  }
+
+  /* WHICH PLACES CAN EVER BE OBSERVED.
+
+     Before this slice every site saw every stage sooner or later, because the
+     stage was a free-running counter -- so every site eventually recorded a
+     disruption whatever its role in the network was. Now the stage is a
+     function of the position, so which stages a node holds is fixed by the
+     route table, and whether anything can EVER be written down about a truck
+     standing there is fixed with it: behaviorEngine only rolls a disruption in
+     DISRUPTION_ELIGIBLE_STAGES.
+
+     That join spans two modules -- this one owns node -> stages, behaviorEngine
+     owns which stages are eligible -- so it is computed from both, handed in,
+     and REPORTED rather than asserted. It does not throw: the hole it finds is
+     real in the world that ships, and worldGraph.nodeCoverage set the
+     precedent that a measured gap is named, not a failed load.
+
+     A node with no observable stage is not a bug in the drive. It is this build
+     saying that nothing suspicious is ever written down at a place a truck only
+     ever starts a trip from. Whether that is right is a question for the
+     disruption model and for Phase D's route table, and it now has a number. */
+  function observability(lifecycle, disruptionStages) {
+    const list = assertLifecycle(lifecycle);
+    const g = requireWorldGraph('the observability report');
+    if (!Array.isArray(disruptionStages) || !disruptionStages.length) {
+      throw new Error('journeyEngine.observability: no disruption-eligible stages given, so every node would be ' +
+        'reported as unobservable and the report would say nothing about this build.');
+    }
+    const unknown = disruptionStages.filter(st => list.indexOf(st) < 0);
+    if (unknown.length) {
+      throw new Error('journeyEngine.observability: ' + unknown.join(', ') + ' is not in the lifecycle (' +
+        list.join(', ') + '). A disruption gate naming a stage nothing can hold excludes everything while reading ' +
+        'like a rule.');
+    }
+    const byNode = stagesByNode(list);
+    const rows = Object.keys(byNode).map(id => {
+      const row = byNode[id];
+      const node = g.node(id);
+      const observableStages = row.stages.filter(st => disruptionStages.indexOf(st) >= 0);
+      return { nodeId: id, nodeType: node.type, facilities: node.facilityNames.slice(),
+        stages: row.stages, observableStages: observableStages,
+        observable: observableStages.length > 0,
+        terminusOnly: row.asIntermediate === 0,
+        use: { asStart: row.asStart, asIntermediate: row.asIntermediate, asEnd: row.asEnd } };
+    });
+    const blindSited = rows.filter(r => !r.observable && r.facilities.length);
+    const facilities = rows.reduce((a, r) => a + r.facilities.length, 0);
+    const blindFacilities = blindSited.reduce((a, r) => a + r.facilities.length, 0);
+    return {
+      state: 'MEASURED', nodes: rows.length, rows: rows,
+      seededFacilities: facilities, unobservableFacilities: blindFacilities,
+      unobservableSited: blindSited.map(r => ({ nodeId: r.nodeId, facilities: r.facilities, stages: r.stages })),
+      unobservableEmptyNodes: rows.filter(r => !r.observable && !r.facilities.length).map(r => r.nodeId),
+      note: blindFacilities
+        ? blindFacilities + ' of the ' + facilities + ' facilities this build seeds stand at one of ' +
+          blindSited.length + ' node(s) -- ' + blindSited.map(r => r.nodeId).join(', ') + ' -- that hold only ' +
+          'stages no disruption is ever rolled in, so nothing can ever be written down about a truck standing there. Each is a node no route passes THROUGH, which since ' +
+          'Slice 72 means it always takes the head of the lifecycle. Before Slice 72 they recorded disruptions only ' +
+          'because the stage was a counter unrelated to where the truck was.'
+        : 'Every node that carries a seeded facility holds at least one stage a disruption can be rolled in, so no ' +
+          'site in this graph is unobservable by construction.'
+    };
   }
 
   function createTracker() {
@@ -650,8 +1014,9 @@ const FWJourneyEngine = (() => {
   }
 
   /* Every rate carries its denominator, and the disagreement rate is reported
-     rather than buried: it is the measurement that says how far the lifecycle
-     and the journey have drifted, and it is the case for the next slice. */
+     rather than buried. Before Slice 72 it was the case for the decoupling
+     (10,104 of 18,449); after it, it is the standing proof that the drive holds
+     over a whole run, which is a different claim needing the same denominator. */
   function trackerSummary(tracker) {
     if (!tracker) {
       return { state: 'NOT_TRACKED',
@@ -683,12 +1048,17 @@ const FWJourneyEngine = (() => {
       disagreementRate: s ? tracker.disagree / s : null,
       disagreementDenominator: 'the ' + s + ' stage advances this run measured',
       byDisagreement: tracker.byDisagreement,
-      note: s
-        ? tracker.disagree + ' of ' + s + ' stage advances put the truck at a place its lifecycle stage does not ' +
-          'declare itself eligible at. That is the measured cost of a journey advancing underneath ' +
-          'advanceStage\'s modulo cycle, and it is what the decoupling slice has to remove -- not a bug in the ' +
-          'journey and not corrected by a second random draw.'
-        : 'No stage advance was measured against a position in this run.'
+      note: !s
+        ? 'No stage advance was measured against a position in this run.'
+        : tracker.disagree === 0
+          ? 'All ' + s + ' stage transitions this run put the truck in a stage its position allows. Since Slice 72 ' +
+            'the stage is derived from the journey, so this is the drive working rather than a coincidence: ' +
+            'behaviorEngine.advanceStage throws on a disagreement, and before that slice this same probe read ' +
+            '10,104 of 18,449 (54.8%).'
+          : tracker.disagree + ' of ' + s + ' stage transitions put the truck at a place its lifecycle stage does ' +
+            'not declare itself eligible at. Since Slice 72 that should be impossible -- advanceStage throws on ' +
+            'it -- so a non-zero count here means a stage was written by something that did not consult the ' +
+            'journey, which is the fault the modulo cycle was.'
     };
   }
 
@@ -721,6 +1091,8 @@ const FWJourneyEngine = (() => {
     routes, routeOf, legsOf, orderedNodes, create, assertJourney, positionOf, nodeIdOf, destinationOf,
     isRoadStage, continuations, assertRouteTermini, assertContinuations, assertReversalCosts,
     syncFields, assign, assignAt, depart, advance, facilitiesAtNode, resolveSite, stageAgreement,
+    STAGE_TRIGGERS, STAGE_REASONS, assertLifecycle, eligibleStagesAt, stageTransition,
+    assertStageForEveryNodeType, routePass, stagesByNode, observability,
     createTracker, recordAdvance, recordAssignment, recordSite, recordAgreement, trackerSummary, summary
   };
 })();

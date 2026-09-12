@@ -104,7 +104,7 @@ const FWWorldGraph = (() => {
     max: 5920,
     formula: 'round(distanceKm / SPEED_CLASSES[speedClass].kmh * 3600)',
     means: 'how long traversing this edge once is expected to take at the edge\'s declared speed class, in the same sim-seconds SimClock counts.',
-    doesNotMean: 'how long a traverse actually took in any run, a distribution, or a time that varies with congestion, queueing, weather, shift, driver hours or the load. None of those is modelled -- see NOT_MODELLED. It is also not a lifecycle stage duration: behaviorEngine.STAGE_DURATION_RANGE is a separate, unrelated 300-900 sim-seconds and nothing in this slice connects the two.',
+    doesNotMean: 'how long a traverse actually took in any run, a distribution, or a time that varies with congestion, queueing, weather, shift, driver hours or the load. None of those is modelled -- see NOT_MODELLED. It is also not a lifecycle stage duration: behaviorEngine.STAGE_DURATION_RANGE is a separate 300-900 sim-seconds and the two are not interchangeable. Since Slice 72 they are not unrelated either -- the stage timer is how long a truck STANDS at a node, and this duration is how long the stage it departs on lasts -- but neither number is derived from the other and no conversion between them exists.',
     notInterchangeableWith: 'behaviorEngine.STAGE_DURATION_RANGE',
     speedBand: { minKmh: 5, maxKmh: 90 }
   };

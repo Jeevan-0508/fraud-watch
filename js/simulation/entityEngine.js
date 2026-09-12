@@ -123,8 +123,11 @@ const FWEntityEngine = (() => {
          different absences; this register keeps them apart.
        truck -- writableIsWholeVocabulary claims all 9 values are reachable and
          the scan resolves exactly ONE of them, the factory default. The other
-         two write sites are `truck.status = LIFECYCLE[0]` and
-         `truck.status = to`, both variables. The one kind that claims full
+         write site is `truck.status = transition.to`, a variable. There were two
+         until slice 72 made the lifecycle stage a function of the journey's real
+         position: `truck.status = LIFECYCLE[0]` is gone because the first stage
+         is now derived from the node the truck starts at, and adoptStage is the
+         single writer of the field. The one kind that claims full
          reachability is the kind a source scan can say almost nothing about,
          so it is reported UNRESOLVED_BY_SCAN rather than as agreement, and the
          claim rests where it already did -- on the mirror check against
