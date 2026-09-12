@@ -331,10 +331,16 @@ const FWSignalEngine = (() => {
       // never backfilled with the last site the vehicle touched.
       facilityId: (event.metadata && event.metadata.facilityId) || null,
       facilityName: (event.metadata && event.metadata.facilityName) || null,
-      // Hidden answer key carried over from falsePositiveEngine so a case
-      // stays investigable after the source event has aged out of the
-      // recent-event buffer. Never rendered: only investigationEngine
-      // reads it, and only in response to a deliberate analyst check.
+      /* Hidden answer key carried over from falsePositiveEngine so a case stays
+         investigable after the source event has aged out of the recent-event
+         buffer. This comment used to say "only investigationEngine reads it",
+         which was not true: outcomeEngine reads it as well, when it resolves a
+         case. Both readings are legitimate and they are different —
+         investigationEngine reads it in response to a deliberate analyst check,
+         outcomeEngine reads it as the resolver deciding what actually happened.
+         The rule is that no VIEW may read it: sim-debug.js is the only module
+         that renders it, and it is the declared answer-key panel, captioned as
+         such. If a third reader appears, name it here. */
       groundTruth: (event.metadata && event.metadata.groundTruth) || null
     };
     engine.log.push(signal);

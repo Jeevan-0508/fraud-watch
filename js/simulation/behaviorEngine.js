@@ -252,6 +252,11 @@ const FWBehaviorEngine = (() => {
   }
 
   assertSelectionLiterals();
+  /* This module owns the list of disruption types; falsePositiveEngine owns the
+     innocent explanations for them and loads first, so the two vocabularies can
+     only be reconciled here. An uncatalogued type would make every event of that
+     type fraudulent by construction, so this is a load-time failure by design. */
+  FWFalsePositiveEngine.assertCausesCoverTypes(DISRUPTION_TYPES);
 
   return { step, attachBehavior, relocate, LIFECYCLE, DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK,
     SPARE_TRAILER_STATUS, SELECTABLE_CARRIER_STATUS, assertSelectionLiterals };
