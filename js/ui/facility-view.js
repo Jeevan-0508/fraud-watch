@@ -96,7 +96,8 @@ const FWFacilityView = (() => {
       <div class="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5">Observation bias</div>
       <p class="text-[10px] text-slate-400 mb-1.5">${disagreeLine}</p>
       <p class="text-[10px] text-amber-300/80">Recording is work. A site that reconciles every movement produces records; a site that reconciles nothing produces silence. Ranked by raw count, the best-run site in this port floats to the top of the list.</p>
-      <p class="text-[10px] text-slate-500 mt-1.5">${summary.unsited.recorded} disruption${summary.unsited.recorded === 1 ? ' was' : 's were'} recorded on the public road, attributable to no site${summary.unsited.topType ? ` (most often ${pretty(summary.unsited.topType)}, ${summary.unsited.topTypeCount}×)` : ''}. Those are reported here rather than charged to whichever site the vehicle last touched.</p>`;
+      <p class="text-[10px] text-slate-500 mt-1.5">${summary.unsited.recorded} disruption${summary.unsited.recorded === 1 ? ' was' : 's were'} recorded on the public road, attributable to no site${summary.unsited.topType ? ` (most often ${pretty(summary.unsited.topType)}, ${summary.unsited.topTypeCount}×)` : ''}. Those are reported here rather than charged to whichever site the vehicle last touched.</p>
+      <p class="text-[10px] text-slate-500 mt-1.5">${summary.reconciliation.note} The shift panel counts the same population and cuts it by shift instead, road records included, so its total is the larger of the two figures and not a different quantity.</p>`;
   }
 
   function renderTable(state) {
@@ -137,7 +138,12 @@ const FWFacilityView = (() => {
 
     renderBias(summary);
     if (els.summary) {
-      els.summary.textContent = `${summary.totalRecorded} disruption${summary.totalRecorded === 1 ? '' : 's'} recorded across ${summary.rows.length} sites · click a site for its full record`;
+      // Scope-labelled: the table accounts for the sited part of the run's
+      // records, not all of them. It used to print the whole-run total
+      // against "across N sites", which the rows below never summed to.
+      const rec = summary.reconciliation;
+      els.summary.textContent =
+        `${rec.atSites} of ${rec.total} recorded disruptions happened at these ${rec.siteCount} sites · ${rec.unsited} on the public road · click a site for its full record`;
     }
   }
 

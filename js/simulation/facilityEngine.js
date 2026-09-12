@@ -81,6 +81,10 @@ const FWFacilityEngine = (() => {
 
   const UNSITED_LABEL = 'Public road (no site)';
 
+  // The population both this panel and the shift panel count, named once so
+  // the two headlines can be recognised as the same quantity.
+  const RECORDED_SCOPE = 'recorded disruptions in this run';
+
   const ASSUMPTIONS = [
     'Site oversight factors are stated modeling assumptions chosen to make the simulation behave plausibly. None is a measured detection rate for any real facility.',
     'A site factor multiplies the shift oversight probability, so the same yard is better observed at 09:00 than at 03:00 and a gatehouse at 03:00 can still beat a remote depot at noon.',
@@ -240,7 +244,36 @@ const FWFacilityEngine = (() => {
     const un = (tracker && tracker.unsited) || { recorded: 0, byType: {} };
     const unTop = topTypeOf(un.byType || {});
 
+    /* THE TABLE ABOVE DOES NOT ACCOUNT FOR ALL OF THEM. A disruption is
+       recorded either at one of the sites in this list or out on the public
+       road where no site can be charged with it, and until Slice 29 this
+       panel's own headline reported the whole-run total against the phrase
+       "across N sites" while the rows beneath it summed to the sited part
+       only. Two disjoint buckets, asserted to sum, and labelled, because
+       the shift panel partitions this same population by shift and includes
+       the road records -- so the two headlines are the same quantity cut
+       two different ways, and neither of them said so. */
+    const atSites = rows.reduce((a, r) => a + r.recorded, 0);
+    const total = (tracker && tracker.totalRecorded) || 0;
+    if (atSites + un.recorded !== total) {
+      throw new Error(
+        'facilityEngine: site records do not reconcile (' + atSites + ' at sites + ' +
+        un.recorded + ' on the public road vs ' + total + ' recorded). Every recorded ' +
+        'disruption happened either at one site or at none.'
+      );
+    }
+
     return {
+      reconciliation: {
+        atSites,
+        unsited: un.recorded,
+        total,
+        siteCount: rows.length,
+        scope: RECORDED_SCOPE,
+        note: atSites + ' of the ' + total + ' ' + RECORDED_SCOPE + ' happened at one of the ' +
+          rows.length + ' sites below. The other ' + un.recorded + ' happened on the public road, ' +
+          'attributable to no site, and are not in the table or its ordering.'
+      },
       rows,
       byRaw,
       byAdjusted,
@@ -269,7 +302,7 @@ const FWFacilityEngine = (() => {
   }
 
   return {
-    ARCHETYPES, KIND_ORDER, STAGE_SITES, ASSUMPTIONS, NOT_MODELLED,
+    ARCHETYPES, KIND_ORDER, STAGE_SITES, ASSUMPTIONS, NOT_MODELLED, RECORDED_SCOPE,
     UNSITED_LABEL, COVERAGE_MIN, COVERAGE_MAX,
     archetype, clampCoverage, coverage, meanCoverage,
     sitesForStage, assignForStage,

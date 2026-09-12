@@ -81,6 +81,50 @@ const FWShiftEngine = (() => {
     'Therefore per-shift counts below measure OBSERVATION, not risk. A low night count is a coverage artefact first and a safety claim never.'
   ];
 
+  /* WHAT THIS MODEL WILL NOT PRODUCE, with the reason. The sibling
+     parameter-facing panel (sites) has published a refused register since
+     Phase 5 and this one never did, which left the shift panel's single
+     hardest misreading -- night is quiet, therefore night is safe -- resting
+     entirely on a caveat sentence. Rendered verbatim in the UI at the same
+     weight as the counts. */
+  const NOT_MODELLED = [
+    {
+      figure: 'A per-shift incident rate, or these counts grossed up by the shift oversight parameter',
+      why: 'Dividing records by the coverage this model assumed returns the assumption, which is why it is refused as a rate everywhere in this project. There is a second reason here: the site model already shows one grossed-up count as an illustration of the bias, and a site oversight factor is expressed as a multiple OF THE SHIFT\'S. Doing the same division again on this panel would divide the same modelled parameter out twice, and a reader of both panels would have no way to tell.'
+    },
+    {
+      figure: 'A ranking of the shifts by how risky they are',
+      why: 'Two modelled quantities shape a shift\'s count and they pull in opposite directions: throughput (more movements, more chances for something to go wrong) and oversight coverage (less of what happens gets written down). A count that moves with both cannot be read as either. Separating them would take the unrecorded ledger, which is this simulation\'s hidden answer key.'
+    },
+    {
+      figure: 'The mix of disruption types within a shift, read as what that shift is like',
+      why: 'The type shown for each shift is the most RECORDED one, and the composition behind it is doubly shaped by the model: type-by-shift opportunity multipliers decide which behaviours are plausible when, and coverage decides how much of each gets recorded. The mix is those two assumption tables restated, so it is reported as a single count and never as a share.'
+    }
+  ];
+
+  /* The four shift buckets are disjoint and every recorded disruption falls
+     in exactly one, so the total is asserted rather than assumed. The scope
+     label exists because the site panel partitions the SAME population a
+     different way and only accounts for part of it -- see facilityEngine's
+     reconciliation. Without both labels the two panel headlines look like
+     the same quantity, or like two different ones, with no way to tell. */
+  const RECORDED_SCOPE = 'recorded disruptions in this run, wherever they happened — inside a site or out on the public road';
+
+  function recordedTotals(tracker) {
+    const rows = summary(tracker);
+    const byShift = {};
+    rows.forEach(r => { byShift[r.shift] = r.observed; });
+    const sum = rows.reduce((a, r) => a + r.observed, 0);
+    const total = (tracker && tracker.totalObserved) || 0;
+    if (sum !== total) {
+      throw new Error(
+        'shiftEngine: shift buckets do not reconcile (' + sum + ' across shifts vs ' + total +
+        ' recorded). Every recorded disruption happened in exactly one shift.'
+      );
+    }
+    return { total, byShift, shifts: SHIFT_ORDER.slice(), scope: RECORDED_SCOPE };
+  }
+
   function profile(shiftName) {
     return SHIFTS[shiftName] || SHIFTS.morning;
   }
@@ -187,7 +231,8 @@ const FWShiftEngine = (() => {
   }
 
   return {
-    SHIFTS, SHIFT_ORDER, OPPORTUNITY, ASSUMPTIONS, OVERSIGHT_RATIONALE, FAMILY,
+    SHIFTS, SHIFT_ORDER, OPPORTUNITY, ASSUMPTIONS, NOT_MODELLED, OVERSIGHT_RATIONALE, FAMILY,
+    RECORDED_SCOPE, recordedTotals,
     profile, familyOf, opportunityMultiplier, opportunityScale, observationProbability,
     throughputMultiplier, pickDisruptionType, createTracker, record, summary, hiddenLedger
   };

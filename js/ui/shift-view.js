@@ -6,7 +6,15 @@
    misread: night is quiet, therefore night is safe. It isn't -- night is
    quiet partly because fewer things move and partly because far less of
    what happens gets recorded. So the observed count is always shown
-   beside the modelled coverage that produced it, never alone. */
+   beside the modelled coverage that produced it, never alone.
+
+   Slice 29 gave this panel the two things its sibling site panel has had
+   since Phase 5 and it did not: a refused register rendered at the same
+   weight as the counts (the caveat sentence was carrying that whole load
+   alone), and a scope label on its headline total. The site panel counts
+   the same recorded disruptions and cuts them by site, accounting only for
+   the ones that happened at a site; this one cuts the whole population by
+   shift, road records included. Both headlines now say which. */
 const FWShiftView = (() => {
   let els = {};
   let assumptionsOpen = false;
@@ -23,6 +31,7 @@ const FWShiftView = (() => {
   function init() {
     els = {
       root: document.getElementById('shift-view-root'),
+      refused: document.getElementById('shift-refused'),
       summary: document.getElementById('shift-summary'),
       current: document.getElementById('shift-current'),
       table: document.getElementById('shift-table'),
@@ -36,6 +45,21 @@ const FWShiftView = (() => {
       });
     }
     renderAssumptions();
+    renderRefused();
+  }
+
+  // The site panel's treatment, applied here: reasons in words, in a card,
+  // not a footnote.
+  function renderRefused() {
+    if (!els.refused) return;
+    const items = FWShiftEngine.NOT_MODELLED.map(n => `
+      <div class="mb-2 pb-2 border-b border-slate-800 last:border-0 last:pb-0 last:mb-0">
+        <div class="text-[11px] text-rose-300">${n.figure}</div>
+        <div class="text-[10px] text-slate-400 mt-0.5">${n.why}</div>
+      </div>`).join('');
+    els.refused.innerHTML = `
+      <div class="text-[10px] uppercase tracking-wide text-rose-400/80 mb-1.5">Not modelled here</div>
+      ${items}`;
   }
 
   function renderAssumptions() {
@@ -77,7 +101,8 @@ const FWShiftView = (() => {
       ${bar('Traffic throughput', p.throughput, 1.5, t.bar)}
       ${bar('Oversight coverage', p.oversight, 1, 'bg-emerald-500')}
       <p class="text-[10px] text-slate-500 mt-1">${FWShiftEngine.OVERSIGHT_RATIONALE[shift] || ''}</p>
-      <p class="text-[10px] text-amber-300/80 mt-2">Modelled: about ${Math.round((1 - p.oversight) * 100)}% of disruptions occurring in this shift are never recorded at all — they still happen.</p>`;
+      <p class="text-[10px] text-amber-300/80 mt-2">Modelled: about ${Math.round((1 - p.oversight) * 100)}% of disruptions occurring in this shift are never recorded at all — they still happen.</p>
+      <p class="text-[10px] text-slate-500 mt-1.5">Both bars above shape this shift's count and they pull opposite ways: throughput decides how much moves, coverage decides how much of what happens gets written down. A count carrying both cannot be read as either.</p>`;
   }
 
   function renderTable(state) {
@@ -115,8 +140,12 @@ const FWShiftView = (() => {
     renderCurrent(state);
     renderTable(state);
     if (els.summary) {
-      const total = FWShiftEngine.summary(state.shiftTracker).reduce((a, r) => a + r.observed, 0);
-      els.summary.textContent = `${total} disruption${total === 1 ? '' : 's'} recorded across 4 shifts`;
+      // Asserted to sum, and scope-labelled against the site panel, which
+      // cuts this same population by site and leaves the road records out
+      // of its table.
+      const totals = FWShiftEngine.recordedTotals(state.shiftTracker);
+      els.summary.textContent =
+        `all ${totals.total} recorded disruption${totals.total === 1 ? '' : 's'} in this run, cut by shift · road records included`;
     }
   }
 
