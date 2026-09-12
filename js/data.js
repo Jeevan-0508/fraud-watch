@@ -26,8 +26,14 @@ const FW = (() => {
     return raw;
   }
 
-  function patterns() { return raw.patterns; }
-  function meta() { return raw.meta; }
+  /* Null-safe on purpose. `loaded()` is the difference between "the taxonomy
+     module is absent" and "the taxonomy has not arrived yet" -- callers that
+     guard on the module alone (moEngine.rankPatterns) were checking the first
+     and getting the second. Returning null lets them take the same empty path
+     either way rather than throwing mid-render. */
+  function loaded() { return raw != null; }
+  function patterns() { return raw ? raw.patterns : null; }
+  function meta() { return raw ? raw.meta : null; }
 
   function randomPattern() {
     const p = raw.patterns;
@@ -77,7 +83,7 @@ const FW = (() => {
   function severityColor(sev) { return SEVERITY_COLOR[sev] || '#94a3b8'; }
 
   return {
-    load, patterns, meta, randomPattern, pickIndicators, pickDecoy,
+    load, loaded, patterns, meta, randomPattern, pickIndicators, pickDecoy,
     bestCountermeasure, categoryColor, severityColor, CATEGORY_COLOR, SEVERITY_COLOR
   };
 })();

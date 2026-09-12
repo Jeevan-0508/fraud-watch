@@ -11,8 +11,16 @@ const FWCharts = (() => {
     decisionsChart = new Chart(dCtx, {
       type: 'doughnut',
       data: {
-        labels: ['Correct', 'Incorrect'],
-        datasets: [{ data: [0, 0], backgroundColor: ['#34d399', '#f87171'], borderWidth: 0 }]
+        /* Three arcs, not two. The third is every shipment that reached the
+           gate with no call made: it is not a variety of getting it wrong, so
+           it gets the neutral slate rather than the red. Labels come from
+           FWGame so the chart cannot drift from the panel beside it. */
+        labels: FWGame.RESOLUTION.map(k => FWGame.RESOLUTION_LABEL[k]),
+        datasets: [{
+          data: FWGame.RESOLUTION.map(() => 0),
+          backgroundColor: ['#34d399', '#f87171', '#64748b'],
+          borderWidth: 0
+        }]
       },
       options: {
         plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1', boxWidth: 12 } } },
@@ -41,8 +49,11 @@ const FWCharts = (() => {
     });
   }
 
-  function update(stats) {
-    decisionsChart.data.datasets[0].data = [stats.correct, stats.incorrect];
+  /* `resolutions` is FWGame.tallyResolutions() -- already sum-asserted there.
+     This module reads the buckets, it never rebuilds them. */
+  function update(stats, resolutions) {
+    if (!resolutions) throw new Error('FWCharts.update: needs the resolution tally; a two-way correct/incorrect split has no bucket for a shipment nobody called.');
+    decisionsChart.data.datasets[0].data = FWGame.RESOLUTION.map(k => resolutions[k]);
     decisionsChart.update();
     categoryChart.data.datasets[0].data = catOrder.map(c => stats.categoryCaught[c] || 0);
     categoryChart.update();

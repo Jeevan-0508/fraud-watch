@@ -40,7 +40,7 @@
   <div id="hud" class="flex flex-wrap items-center gap-2 font-orbitron">
     <div class="hud-pill"><span class="hud-label">SCORE</span><span id="stat-score" class="hud-value text-white">0</span></div>
     <div class="hud-pill"><span class="hud-label">STREAK</span><span id="stat-streak" class="hud-value text-amber-400">0</span></div>
-    <div class="hud-pill"><span class="hud-label">ACC</span><span id="stat-accuracy" class="hud-value text-emerald-400">—</span></div>
+    <div class="hud-pill"><span class="hud-label">CALLS MATCHED</span><span id="stat-accuracy" class="hud-value text-emerald-400">0 / 0</span></div>
     <div class="hud-pill"><span class="hud-label">LEVEL</span><span id="stat-level" class="hud-value text-sky-400">1</span></div>
     <div class="hud-pill hidden sm:flex"><span class="hud-label">RESOLVED</span><span id="stat-resolved" class="hud-value text-white">0</span></div>
   </div>
@@ -279,7 +279,8 @@
       <button id="stats-close" class="text-slate-400 hover:text-white text-2xl leading-none">×</button>
     </div>
     <div class="mb-6">
-      <h3 class="text-sm font-semibold text-slate-300 mb-2">Decisions</h3>
+      <h3 class="text-sm font-semibold text-slate-300 mb-2">Resolutions</h3>
+      <div id="scoreboard-note"></div>
       <canvas id="chart-decisions" height="180"></canvas>
     </div>
     <div>

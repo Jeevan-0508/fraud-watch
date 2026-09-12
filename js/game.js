@@ -18,9 +18,92 @@ const FWGame = (() => {
   let revealShowing = false;
 
   const state = {
-    score: 0, streak: 0, resolved: 0, correct: 0, incorrect: 0,
+    score: 0, streak: 0, resolved: 0,
+    aligned: 0, diverged: 0, undecided: 0,
     level: 1, categoryCaught: {}
   };
+
+  /* A resolution is exactly one of these three, and the third is not a
+     variety of the first two. A shipment that rolled to the depot gate with
+     nobody pressing anything is not a call the player got right and not a
+     call the player got wrong -- it is a call that was never made. Until
+     this slice all three landed in one correct/incorrect pair, so the ACC
+     pill read a percentage for a player who had made no calls at all
+     (measured: 56% after 108 resolutions, none of them decided). */
+  const RESOLUTION = ['DECIDED_ALIGNED', 'DECIDED_DIVERGED', 'NO_DECISION'];
+  const RESOLUTION_LABEL = {
+    DECIDED_ALIGNED: 'Your call matched the reveal',
+    DECIDED_DIVERGED: 'Your call went the other way',
+    NO_DECISION: 'Reached the gate with no call made'
+  };
+  const RESOLUTION_TONE = {
+    DECIDED_ALIGNED: 'text-emerald-400',
+    DECIDED_DIVERGED: 'text-red-400',
+    // Deliberately neutral: not deciding is not a third grade of wrong.
+    NO_DECISION: 'text-slate-400'
+  };
+
+  /* What the arcade meter is measured against, said on the panel that shows
+     it. The Sim's calibration panel reports an alignment percentage too, and
+     it means something else: it compares closures to the RECORDED verdict.
+     This one compares a call to the reveal, which is the pattern flag this
+     trainer generated for the shipment -- an answer key that exists only
+     because the shipment is synthetic. Same word in English, two different
+     meters, so neither panel may leave it unstated. */
+  const METER_SCOPE =
+    'Measured against the reveal: the pattern flag this trainer generated for ' +
+    'the shipment. Not comparable with the Sim\'s calibration alignment, which ' +
+    'is measured against a recorded verdict, and not a score of anybody.';
+
+  /* The one place the three buckets are read. Throws rather than reports if
+     they do not account for every resolution -- the failure this replaces was
+     silent by construction. */
+  function tallyResolutions() {
+    const cut = {
+      DECIDED_ALIGNED: state.aligned,
+      DECIDED_DIVERGED: state.diverged,
+      NO_DECISION: state.undecided
+    };
+    let sum = 0;
+    RESOLUTION.forEach(k => {
+      if (typeof cut[k] !== 'number') {
+        throw new Error('FWGame.tallyResolutions: no count for resolution ' + k);
+      }
+      sum += cut[k];
+    });
+    if (sum !== state.resolved) {
+      throw new Error(
+        'FWGame.tallyResolutions: buckets sum to ' + sum + ' but ' + state.resolved +
+        ' shipments resolved. A resolution in the base and in no bucket is the ' +
+        'shape that let undecided shipments be scored as calls.'
+      );
+    }
+    cut.decided = state.aligned + state.diverged;
+    cut.resolved = state.resolved;
+    return cut;
+  }
+
+  /* The meter, built through analyticsEngine.metric rather than divided here,
+     so it carries n / N on the row that states it and is withheld below the
+     same minimum sample every other rate in this project is held to. */
+  function alignmentMeter() {
+    const cut = tallyResolutions();
+    const m = FWAnalyticsEngine.metric({
+      id: 'arcade-call-alignment',
+      label: 'Calls matching the reveal',
+      kind: FWAnalyticsEngine.KIND.RATE,
+      numerator: cut.DECIDED_ALIGNED,
+      denominator: cut.decided,
+      of: 'calls you made (BUST or WAVE THROUGH)',
+      note: METER_SCOPE
+    });
+    // The pill always shows the base. A percentage appears only once the
+    // sample clears the threshold; below it the counts stand alone.
+    const pill = cut.decided === 0
+      ? '0 / 0'
+      : (m.withheld ? m.ratioLabel : m.ratioLabel + ' \u00b7 ' + FWAnalyticsEngine.pct(m.value));
+    return { metric: m, cut, pill };
+  }
 
   function elNS(tag, attrs) {
     const e = document.createElementNS(NS, tag);
@@ -165,33 +248,51 @@ const FWGame = (() => {
     s.resolved = true;
     const progress = Math.min(1, (s.x - ORIGIN_X) / (DEST_X - ORIGIN_X));
     const speedFrac = action === 'auto' ? 0 : (1 - progress);
-    let correct, delta;
+    // 'auto' means the shipment reached the gate on its own. Nobody called it.
+    const decided = action !== 'auto';
+    let aligned, delta;
 
     if (s.type === 'fraud') {
-      if (action === 'flag') { correct = true; delta = Math.round(60 + 80 * speedFrac); }
-      else if (action === 'clear') { correct = false; delta = -50; }
-      else { correct = false; delta = -70; }
+      if (action === 'flag') { aligned = true; delta = Math.round(60 + 80 * speedFrac); }
+      else if (action === 'clear') { aligned = false; delta = -50; }
+      else { aligned = null; delta = -70; }
     } else {
-      if (action === 'clear') { correct = true; delta = Math.round(20 + 20 * speedFrac); }
-      else if (action === 'flag') { correct = false; delta = -30; }
-      else { correct = true; delta = 10; }
+      if (action === 'clear') { aligned = true; delta = Math.round(20 + 20 * speedFrac); }
+      else if (action === 'flag') { aligned = false; delta = -30; }
+      else { aligned = null; delta = 10; }
     }
 
-    state.streak = correct ? state.streak + 1 : 0;
-    const mult = correct ? (1 + Math.min(state.streak, 10) * 0.05) : 1;
+    /* Points are a consequence of what happened in the yard: a pattern that
+       reached the gate costs, an uneventful arrival pays a little. The streak
+       and the meter are a record of the player's calls, so a resolution
+       nobody called leaves both untouched rather than extending or breaking
+       them. Score and meter answer different questions on purpose. */
+    if (decided) state.streak = aligned ? state.streak + 1 : 0;
+    const mult = decided && aligned ? (1 + Math.min(state.streak, 10) * 0.05) : 1;
     delta = Math.round(delta * mult);
     state.score = Math.max(0, state.score + delta);
     state.resolved++;
-    if (correct) state.correct++; else state.incorrect++;
-    if (correct && s.type === 'fraud') {
+    if (!decided) state.undecided++;
+    else if (aligned) state.aligned++;
+    else state.diverged++;
+    if (decided && aligned && s.type === 'fraud') {
       state.categoryCaught[s.pattern.category] = (state.categoryCaught[s.pattern.category] || 0) + 1;
     }
 
-    if (action === 'auto' && s.type === 'clean') {
-      pushAlert(`${s.id} cleared the gate — no pattern present.`, 'good');
-    } else {
-      queueReveal(s, action, correct, delta);
+    if (!decided) {
+      /* What the yard saw, and only that. This line used to read "cleared the
+         gate - no pattern present", which is the generated flag stated as an
+         observation in the live radio feed (Slice 34, one module over), in the
+         one tone the feed uses for a good outcome. The reveal card is where
+         the answer key belongs, labelled as one. */
+      const surfaced = s.revealedIdx + (s.revealedDecoy ? 1 : 0);
+      pushAlert(
+        `${s.id} reached the depot gate with no call made — ` +
+        `${surfaced} clue${surfaced === 1 ? '' : 's'} had surfaced by then.`,
+        'info'
+      );
     }
+    if (decided || s.type === 'fraud') queueReveal(s, action, aligned, delta);
 
     updateStats();
     if (selectedId === s.id) { selectedId = null; inspector.classList.add('hidden'); }
@@ -206,12 +307,12 @@ const FWGame = (() => {
     }
   }
 
-  function queueReveal(s, action, correct, delta) {
-    revealQueue.push({ s, action, correct, delta });
+  function queueReveal(s, action, aligned, delta) {
+    revealQueue.push({ s, action, aligned, delta });
     if (!revealShowing) showNextReveal();
   }
 
-  function verdict(s, action, correct) {
+  function verdict(s, action, aligned) {
     if (s.type === 'fraud') {
       if (action === 'flag') return { text: 'BUSTED!', icon: '🚨', color: 'text-emerald-400', flash: 'flash-good' };
       if (action === 'clear') return { text: 'IT GOT AWAY', icon: '🕵️', color: 'text-red-400', flash: 'flash-bad' };
@@ -224,8 +325,8 @@ const FWGame = (() => {
   function showNextReveal() {
     if (!revealQueue.length) { revealShowing = false; return; }
     revealShowing = true;
-    const { s, action, correct, delta } = revealQueue.shift();
-    const v = verdict(s, action, correct);
+    const { s, action, aligned, delta } = revealQueue.shift();
+    const v = verdict(s, action, aligned);
 
     revealFlash.className = v.flash;
     revealFlash.classList.remove('hidden');
@@ -265,6 +366,7 @@ const FWGame = (() => {
         <div class="font-mono text-sm mt-1 ${delta >= 0 ? 'text-emerald-400' : 'text-red-400'}">${delta >= 0 ? '+' : ''}${delta} pts</div>
       </div>
       <div class="reveal-detail bg-[#0d1420] border border-slate-700 rounded-xl p-4 text-left">
+        ${action === 'auto' ? `<p class="text-[11px] text-slate-400 border-l-2 border-slate-600 pl-2 mb-3">No call was made on this one \u2014 it reached the gate first. The points moved; the calls meter did not, because there was no call to measure.</p>` : ''}
         ${body}
         <button id="reveal-close" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 rounded-lg py-2 text-sm font-semibold">Continue</button>
       </div>`;
@@ -275,15 +377,47 @@ const FWGame = (() => {
     };
   }
 
+  /* The scoreboard's own words for its own numbers. Three disjoint rows that
+     sum to the resolutions, then the meter with its base and its scope. */
+  function renderScoreboard() {
+    const host = document.getElementById('scoreboard-note');
+    if (!host) return;
+    const { metric: m, cut } = alignmentMeter();
+    const rows = RESOLUTION.map(k => `
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="text-slate-400">${RESOLUTION_LABEL[k]}</span>
+        <span class="font-mono ${RESOLUTION_TONE[k]}">${cut[k]}</span>
+      </div>`).join('');
+    host.innerHTML = `
+      <div class="text-[11px] space-y-1 mb-3">
+        ${rows}
+        <div class="flex items-baseline justify-between gap-3 border-t border-slate-800 pt-1">
+          <span class="text-slate-500">Shipments resolved</span>
+          <span class="font-mono text-slate-300">${cut.resolved}</span>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-300 mb-1">
+        Calls matching the reveal:
+        <span class="font-mono text-white">${m.ratioLabel}</span>
+        ${m.withheld ? '' : `<span class="font-mono text-white"> \u00b7 ${FWAnalyticsEngine.pct(m.value)}</span>`}
+        <span class="text-slate-500">${m.basisLabel}</span>
+      </div>
+      ${m.withheld ? `<p class="text-[10px] text-slate-500 italic mb-1">${m.withheldReason}</p>` : ''}
+      <p class="text-[10px] text-slate-500 italic">${METER_SCOPE}</p>
+      <p class="text-[10px] text-slate-500 italic mt-1">${cut.NO_DECISION} of these ${cut.resolved} were never called, so they are in no numerator and in no denominator of that rate. Points still moved for them: the score follows what happened in the yard, the rate follows what you decided.</p>`;
+  }
+
   function updateStats() {
     statEls.score.textContent = state.score;
     statEls.streak.textContent = state.streak;
     statEls.level.textContent = state.level;
     statEls.resolved.textContent = state.resolved;
-    const total = state.correct + state.incorrect;
-    statEls.accuracy.textContent = total ? Math.round(100 * state.correct / total) + '%' : '—';
+    // Always the base. A bare percentage here was over a population that
+    // included every shipment nobody called.
+    statEls.accuracy.textContent = alignmentMeter().pill;
     if (state.resolved > 0 && state.resolved % 6 === 0) state.level = Math.min(6, 1 + Math.floor(state.resolved / 6));
-    FWCharts.update(state);
+    FWCharts.update(state, tallyResolutions());
+    renderScoreboard();
   }
 
   function tick(ts) {
@@ -352,8 +486,12 @@ const FWGame = (() => {
     };
     buildStatic();
     FWCharts.init();
+    renderScoreboard();
     document.getElementById('btn-start').addEventListener('click', start);
   }
 
-  return { init };
+  return {
+    init, state, RESOLUTION, RESOLUTION_LABEL, RESOLUTION_TONE, METER_SCOPE,
+    tallyResolutions, alignmentMeter, renderScoreboard
+  };
 })();
