@@ -264,10 +264,14 @@ const FWSimDebug = (() => {
 
   // Whether anybody decided this, or whether the correlation engine faded it
   // out on its own when its signals stopped. The two are not the same fact
-  // and the status word is identical for both.
+  // and the status word is identical for both. The rule and its wording are
+  // moEngine's -- it is the module that fades a case -- and as of Slice 35
+  // three panels were each reading the one boolean their own way.
   function closureHand(mo) {
-    if (!mo.autoFaded) return '';
-    return ' <span class="text-slate-500">(faded out by the engine, no analyst review recorded)</span>';
+    if (!window.FWMoEngine || !FWMoEngine.closureHand) return '';
+    const h = FWMoEngine.closureHand(mo);
+    if (h.hand !== 'ENGINE_FADE') return '';
+    return ` <span class="text-slate-500">(${h.note})</span>`;
   }
 
   function renderMOs(state) {

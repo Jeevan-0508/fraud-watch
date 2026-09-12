@@ -349,6 +349,32 @@ const FWMoEngine = (() => {
     return { created, updated, faded };
   }
 
+  /* WHOSE HAND CLOSED IT (Slice 35). `autoFaded` is one boolean and by
+     Slice 34 three different modules were reading it directly and wording
+     the distinction their own way. The distinction is moEngine's own --
+     this is the module that fades a case -- so the rule and its wording
+     live here once. A status word is identical whether an analyst reached
+     it or whether correlation dropped the case on its own, and those are
+     not the same fact about anybody's work.
+
+     OPEN is a third answer, not a missing one: an open case has no closing
+     hand yet, and reporting one would invent a decision. */
+  const CLOSURE_HAND = ['ANALYST_CLOSED', 'ENGINE_FADE', 'OPEN'];
+
+  const CLOSURE_HAND_NOTE = {
+    ANALYST_CLOSED: 'an analyst set this status',
+    ENGINE_FADE: 'faded out by the engine when its signals stopped, no analyst review recorded',
+    OPEN: 'still open, so no closing hand has been recorded'
+  };
+
+  function closureHand(mo) {
+    if (!mo || !CLOSED_STATUSES.has(mo.status)) {
+      return { hand: 'OPEN', note: CLOSURE_HAND_NOTE.OPEN };
+    }
+    const hand = mo.autoFaded === true ? 'ENGINE_FADE' : 'ANALYST_CLOSED';
+    return { hand: hand, note: CLOSURE_HAND_NOTE[hand] };
+  }
+
   function setStatus(mo, status, reason) {
     mo.status = status;
     mo.autoFaded = false; // an analyst has now touched it, whatever it was before
@@ -360,6 +386,7 @@ const FWMoEngine = (() => {
     siteBreakdown, applySites, SITE_SPREAD_NOTE,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
     signalSignature, classifyDiscovery, noveltyFromRecurrence, discoverySummary,
+    closureHand, CLOSURE_HAND, CLOSURE_HAND_NOTE,
     OPEN_STATUSES, CLOSED_STATUSES, CREATE_THRESHOLD, MIN_SIGNAL_TYPES
   };
 })();

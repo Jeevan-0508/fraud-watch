@@ -179,7 +179,9 @@ const FWAwayReportEngine = (() => {
     let engineFaded = 0, analystClosed = 0;
     const byStatus = {};
     closed.forEach(m => {
-      if (m.autoFaded) engineFaded += 1; else analystClosed += 1;
+      // moEngine's own rule (Slice 35), not a third local reading of the flag.
+      if (FWMoEngine.closureHand(m).hand === 'ENGINE_FADE') engineFaded += 1;
+      else analystClosed += 1;
       byStatus[m.status] = (byStatus[m.status] || 0) + 1;
     });
     if (engineFaded + analystClosed !== closed.length) {

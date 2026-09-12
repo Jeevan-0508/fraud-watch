@@ -345,8 +345,7 @@ const FWInvestigationEngine = (() => {
 
   function summary(mo) {
     const record = ensureRecord(mo);
-    const byOutcome = { EXCULPATORY: 0, MIXED: 0, CORROBORATING: 0, INCONCLUSIVE: 0, NO_RECORD_EXISTS: 0 };
-    record.findings.forEach(f => { if (byOutcome[f.outcome] != null) byOutcome[f.outcome]++; });
+    const byOutcome = tallyOutcomes(record.findings, 'the check-outcome tally for ' + (mo.id || 'a case'));
     return {
       checksRun: record.findings.length,
       effortSeconds: record.effortSeconds,
@@ -366,6 +365,48 @@ const FWInvestigationEngine = (() => {
   // would let this port's blind spot read as a case having been examined.
   const SUBSTANTIVE_OUTCOMES = ['EXCULPATORY', 'MIXED', 'CORROBORATING'];
   const LEARNED_NOTHING_OUTCOMES = ['NO_RECORD_EXISTS', 'INCONCLUSIVE'];
+
+  /* THE FULL SET, IN ONE PLACE (Slice 35). Slice 33 found a five-way
+     partition with one class silently missing from a hand-maintained list
+     of four, and two more hand-maintained tallies of these same outcomes
+     survived that slice: summary() and siteCheckOutcomes() both seeded an
+     object literal with five keys and then counted with an `!= null`
+     guard, so a sixth outcome would have been counted into the base and
+     into no bucket -- the exact shape of the earlier bug. Both now build
+     their tallies from this list and assert the buckets sum to the checks
+     they counted. The load-time check below closes the other direction:
+     an outcome that gets a note but never gets a bucket, or the reverse,
+     stops the module rather than under-counting quietly. */
+  const OUTCOMES = SUBSTANTIVE_OUTCOMES.concat(LEARNED_NOTHING_OUTCOMES);
+
+  function outcomeTally() {
+    const t = {};
+    OUTCOMES.forEach(k => { t[k] = 0; });
+    return t;
+  }
+
+  function tallyOutcomes(findings, label) {
+    const list = Array.from(findings || []);
+    const byOutcome = outcomeTally();
+    list.forEach(f => {
+      if (byOutcome[f.outcome] === undefined) {
+        throw new Error(
+          'investigationEngine: ' + label + ' met the outcome "' + f.outcome + '", which is not one ' +
+          'of ' + OUTCOMES.join(', ') + '. An outcome with no bucket sits in the denominator of ' +
+          'every rate and in the numerator of none, which is how a whole class of check goes missing.'
+        );
+      }
+      byOutcome[f.outcome] += 1;
+    });
+    const sorted = OUTCOMES.reduce((a, k) => a + byOutcome[k], 0);
+    if (sorted !== list.length) {
+      throw new Error(
+        'investigationEngine: ' + label + ' does not reconcile (' + sorted + ' sorted vs ' +
+        list.length + ' checks counted).'
+      );
+    }
+    return byOutcome;
+  }
 
   /* WAS THIS CASE EXAMINED, AND IF NOT, WHY NOT (Slice 26). Every panel
      that lists a case by its status implies the status was arrived at.
@@ -464,19 +505,65 @@ const FWInvestigationEngine = (() => {
      output, which is the circular arithmetic the facility model already
      refuses. It is a fact about the analyst's own checks here. */
   function siteCheckOutcomes(mos, facilityId) {
-    const byOutcome = { EXCULPATORY: 0, MIXED: 0, CORROBORATING: 0, INCONCLUSIVE: 0, NO_RECORD_EXISTS: 0 };
-    let checks = 0, cases = 0;
+    const here = [];
+    let cases = 0;
     Array.from(mos || []).forEach(mo => {
       const findings = (mo.investigation && mo.investigation.findings) || [];
       let touched = false;
       findings.forEach(f => {
         if (!(f.sites || []).some(s => s.facilityId === facilityId)) return;
-        checks += 1; touched = true;
-        if (byOutcome[f.outcome] != null) byOutcome[f.outcome] += 1;
+        here.push(f); touched = true;
       });
       if (touched) cases += 1;
     });
-    return { checks, cases, byOutcome, noRecord: byOutcome.NO_RECORD_EXISTS };
+    const byOutcome = tallyOutcomes(here, 'the site-record check tally for ' + facilityId);
+    return {
+      checks: here.length, cases, byOutcome,
+      noRecord: byOutcome.NO_RECORD_EXISTS,
+      cut: siteCheckCut(byOutcome, here.length),
+      CUT_NOTE: SITE_CHECK_CUT_NOTE
+    };
+  }
+
+  /* WHAT A PULL AGAINST A SITE CAME BACK WITH, CUT THREE WAYS (Slice 35).
+     The entity inspector printed this as two buckets -- the checks that
+     came back with nothing to fetch, and "the rest returned something to
+     read". The rest does not. An INCONCLUSIVE pull is a source that could
+     not be reached or whose records were incomplete: effort spent, nothing
+     read. Folding it into the readable side can only run one way, and it
+     ran on a panel whose entire subject is not mistaking how hard a site
+     watches for what happened there -- an unreachable source counted as a
+     record that answered is that exact collapse, one check at a time.
+
+     The two ways of learning nothing stay apart for the reason they always
+     do here: nothing to fetch says the record was never written, and
+     unreachable says only that this attempt missed it. */
+  const SITE_CHECK_CUT = ['returnedSomething', 'nothingToFetch', 'unreachable'];
+
+  const SITE_CHECK_CUT_NOTE = {
+    returnedSomething: 'returned a record to read',
+    nothingToFetch: 'came back with no record of that kind to fetch, so there was never anything to read',
+    unreachable: 'could not be reached or held incomplete records, so the effort was spent and nothing was read'
+  };
+
+  function siteCheckCut(byOutcome, checks) {
+    const cut = {
+      returnedSomething: SUBSTANTIVE_OUTCOMES.reduce((a, k) => a + byOutcome[k], 0),
+      nothingToFetch: byOutcome.NO_RECORD_EXISTS,
+      unreachable: byOutcome.INCONCLUSIVE
+    };
+    const sorted = SITE_CHECK_CUT.reduce((a, k) => a + cut[k], 0);
+    if (sorted !== checks) {
+      throw new Error(
+        'investigationEngine: the site-record cut does not reconcile (' + sorted + ' sorted vs ' +
+        checks + ' checks pulled here). Every pull returned a record, found none to fetch, or ' +
+        'could not be reached; a pull outside all three would be counted as readable by default.'
+      );
+    }
+    cut.checks = checks;
+    cut.keys = SITE_CHECK_CUT;
+    cut.notes = SITE_CHECK_CUT_NOTE;
+    return cut;
   }
 
   const OUTCOME_NOTE = {
@@ -487,8 +574,23 @@ const FWInvestigationEngine = (() => {
     NO_RECORD_EXISTS: 'No record of this kind exists at that site and hour, so there was never anything to fetch. Confidence is unchanged by design — a missing record where watching is thin is what thin watching produces.'
   };
 
+  // Both directions, at load: an outcome with a bucket and no note, or a
+  // note and no bucket, is a class half-added.
+  OUTCOMES.forEach(k => {
+    if (!OUTCOME_NOTE[k]) throw new Error('investigationEngine: outcome ' + k + ' has no note');
+  });
+  Object.keys(OUTCOME_NOTE).forEach(k => {
+    if (OUTCOMES.indexOf(k) < 0) {
+      throw new Error(
+        'investigationEngine: outcome ' + k + ' has a note but is in neither SUBSTANTIVE_OUTCOMES ' +
+        'nor LEARNED_NOTHING_OUTCOMES, so nothing counts it.'
+      );
+    }
+  });
+
   return {
     ACTION_CATALOG, OUTCOME_NOTE, SUBSTANTIVE_OUTCOMES, LEARNED_NOTHING_OUTCOMES,
+    OUTCOMES, tallyOutcomes, SITE_CHECK_CUT, SITE_CHECK_CUT_NOTE, siteCheckCut,
     EXAMINATION_CLASSES, EXAMINATION_NOTE, classifyCounts, examination, examinationRollup, siteCheckOutcomes,
     availableActions, performAction, summary, isInvestigable,
     signalsForMo, sitedSignals, siteRecordChance, narrateSiteUnavailable,

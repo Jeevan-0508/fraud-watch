@@ -354,7 +354,7 @@ const FWMoIntelligence = (() => {
       <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Investigate</div>
       ${meter}
       ${examLine}
-      ${mo.autoFaded ? `<div class="text-[10px] text-slate-500 italic mb-1">This case faded on its own before any analyst reviewed it. The records can still be checked.</div>` : ''}
+      ${FWMoEngine.closureHand(mo).hand === 'ENGINE_FADE' ? `<div class="text-[10px] text-slate-500 italic mb-1">${FWMoEngine.closureHand(mo).note}. The records can still be checked.</div>` : ''}
       ${controls}
       ${renderAdvice(advice, investigable)}
       <div class="text-[9px] text-slate-500 italic mt-1">Each source can be checked once per case. A check may come back inconclusive and change nothing. Finding no explanation is an absence of evidence, not proof — it moves confidence far less than finding a documented one. A site record check can also come back with no record existing at all, which moves confidence by exactly nothing: a missing record where watching is thin is what thin watching produces.</div>

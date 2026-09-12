@@ -38,7 +38,26 @@
    compressing both into "1 dismissed" hid the more useful half. Both
    panels now state which, in counts, and both say the same thing about
    what those counts are: an unexamined case is a fact about what was
-   looked at, never a fact about the truck. */
+   looked at, never a fact about the truck.
+
+   AND WHOSE HAND CLOSED IT (Slice 35). The examination line says how far a
+   case was taken; it does not say who took it there. A case can have two
+   answered checks on it and still have been dropped by the correlation
+   engine when its signals stopped, because running a check does not touch
+   the status -- so a badge reading DISMISSED beside "2 checks run, 2
+   answered" reads as an analyst having examined it and decided, when
+   nobody decided anything. Both case lists here now carry the closing hand
+   from moEngine's own rule rather than a fourth local reading of one
+   boolean.
+
+   AND WHAT A PULL AGAINST A SITE ACTUALLY RETURNED (Slice 35). The site
+   panel cut its record pulls two ways -- the ones with nothing to fetch,
+   and "the rest returned something to read" -- and the rest included the
+   pulls where the source could not be reached. Effort spent, nothing read,
+   counted as read. It runs one way only, and it ran on the one panel whose
+   whole subject is not confusing how hard a site watches with what
+   happened there. The cut is three ways now, summed and asserted in the
+   engine that owns the outcomes. */
 const FWEntityInspector = (() => {
   let els = {};
   let openKind = null;   // 'truck' | 'facility'
@@ -95,6 +114,18 @@ const FWEntityInspector = (() => {
     const open = { NEW: 'bg-sky-900 text-sky-300', MONITORING: 'bg-slate-700 text-slate-200', INVESTIGATING: 'bg-amber-900 text-amber-300', ESCALATED: 'bg-orange-900 text-orange-300' };
     const closed = { CONFIRMED: 'bg-red-900 text-red-300', FALSE_POSITIVE: 'bg-emerald-900 text-emerald-300', DISMISSED: 'bg-slate-800 text-slate-500', RESOLVED: 'bg-indigo-900 text-indigo-300' };
     return open[status] || closed[status] || 'bg-slate-700 text-slate-200';
+  }
+
+  /* The closing hand, from moEngine's rule rather than a local reading of
+     `autoFaded`. Both case lists on this panel use it: a site's list and a
+     truck's list print the same status words and neither said who arrived
+     at them. Nothing is printed for an open case -- there is no closing
+     hand yet, and inventing one would report a decision. */
+  function closureHandLine(mo) {
+    if (!window.FWMoEngine || !FWMoEngine.closureHand) return '';
+    const h = FWMoEngine.closureHand(mo);
+    if (h.hand !== 'ENGINE_FADE') return '';
+    return `<div class="text-[10px] text-slate-500 italic">${h.note}.</div>`;
   }
 
   function fmtSimTime(absSeconds) {
@@ -174,6 +205,7 @@ const FWEntityInspector = (() => {
         <div class="text-[11px] text-white">${m.title}</div>
         <div class="text-[10px] text-slate-500">${here ? here.signalCount : 0} of this case's signals were observed here${sole ? ', and every signal in it was' : ', and it also has signals recorded elsewhere'}.</div>
         <div class="text-[10px] text-slate-600">${spreadNote}</div>
+        ${closureHandLine(m)}
       </div>`;
     }).join('');
 
@@ -192,12 +224,18 @@ const FWEntityInspector = (() => {
        evidence about coverage would be taking the assumption back out of
        its own output. */
     const checks = FWInvestigationEngine.siteCheckOutcomes(Array.from(state.moEngine.mos.values()), facility.id);
+    const cut = checks.cut;
+    const cutRows = cut
+      ? cut.keys.map(k => `<div>${cut[k]} of ${cut.checks} ${cut.notes[k]}.</div>`).join('')
+      : '';
     const checksHtml = checks.checks
       ? `<div>
           <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Record checks pulled against this site (${checks.checks})</div>
           <div class="text-[11px] text-slate-300 space-y-0.5">
-            <div>Across ${checks.cases} case${checks.cases === 1 ? '' : 's'}, ${checks.noRecord} came back with no record of that kind to fetch and ${checks.checks - checks.noRecord} returned something to read.</div>
+            <div>Across ${checks.cases} case${checks.cases === 1 ? '' : 's'}:</div>
+            ${cutRows}
           </div>
+          <p class="text-[10px] text-slate-500 mt-1">Three buckets over the ${cut ? cut.checks : checks.checks} pulls, summing to them. A pull that could not be reached is not a record that was read, and it is not the same fact as no record existing: the first says this attempt missed, the second says the record was never written.</p>
           <p class="text-[10px] text-amber-300/80 mt-1">This is a count of what the analyst's own checks here returned. It is not a measured coverage rate for this site: those empty results are produced by the assumed coverage figure stated above, so reading them back as evidence about coverage would be returning the assumption to itself.</p>
         </div>`
       : `<div>
@@ -277,12 +315,15 @@ const FWEntityInspector = (() => {
         </div>`
       : '';
 
-    const outcomeSummary = Object.keys(outcomeCounts).length
+    // By current status, and said as that. Half of these labels belong to
+    // cases still open, and calling an open case's status an outcome would
+    // report a case as concluded because a panel needed a word.
+    const statusSummary = Object.keys(outcomeCounts).length
       ? Object.entries(outcomeCounts).map(([k, v]) => `${v} ${k.replace(/_/g, ' ').toLowerCase()}`).join(' · ')
       : 'no prior cases';
 
     const casesHtml = `<div>
-      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Case history (${allCases.length}) — ${outcomeSummary}</div>
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Case history (${allCases.length}) — by current status: ${statusSummary}</div>
       ${rollupHtml}
       ${allCases.length
         ? `<div class="space-y-1.5">${allCases.sort((a, b) => b.lastObserved - a.lastObserved).map(m => {
@@ -297,6 +338,7 @@ const FWEntityInspector = (() => {
               <div class="text-[10px] ${ex.everAnswered ? 'text-slate-500' : 'text-sky-300/80'}">${ex.checksRun
                 ? `${ex.checksRun} check${ex.checksRun === 1 ? '' : 's'} run — ${ex.note}`
                 : 'No check was ever run against this case.'}</div>
+              ${closureHandLine(m)}
             </div>`; }).join('')}</div>`
         : '<p class="text-slate-600 italic text-[11px]">This truck has never triggered a correlated case. History and reputation here are informational only -- they never decide the next case on their own (Phase 33).</p>'}
     </div>`;
