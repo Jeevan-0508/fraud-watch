@@ -95,6 +95,13 @@ const FWSimDebug = (() => {
       FWEntityInspector.init();
       FWSimRunner.onTick((state) => { if (FWEntityInspector.isOpen()) FWEntityInspector.render(state); });
     }
+    /* Slice 75: the network map. Booted before the older panels because it is
+       what the tab now opens on, and driven by the same onTick as everything
+       else -- the renderer observes the clock and never advances it. */
+    if (window.FWFreightMap) {
+      FWFreightMap.init();
+      FWSimRunner.onTick(FWFreightMap.render);
+    }
     if (window.FWNetworkView) {
       FWNetworkView.init();
       FWSimRunner.onTick(FWNetworkView.render);
@@ -122,6 +129,7 @@ const FWSimDebug = (() => {
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
+    if (window.FWFreightMap) FWFreightMap.render(FWSimRunner.getState());
     if (window.FWNetworkView) FWNetworkView.render(FWSimRunner.getState());
     if (window.FWCalibrationView) FWCalibrationView.render(FWSimRunner.getState());
     if (window.FWShiftView) FWShiftView.render(FWSimRunner.getState());

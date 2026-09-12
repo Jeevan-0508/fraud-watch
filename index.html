@@ -86,6 +86,18 @@
       <p class="text-xs text-slate-500 flex-1 min-w-[240px]">Debug window into the background simulation: a seeded port runs continuously, real disruptions get correlated into cases the way an eventual investigation screen would see them. Nothing here is wired to scoring yet.</p>
       <div id="sim-clock" class="font-orbitron text-[11px] whitespace-nowrap">—</div>
     </div>
+    <div id="freight-map-root" class="mb-3 bg-[#0b0f14] border border-slate-800 rounded-2xl p-3">
+      <div class="flex items-baseline justify-between mb-1 gap-3 flex-wrap">
+        <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Live Freight Network</h3>
+        <div id="freight-map-clock" class="font-orbitron text-[11px] whitespace-nowrap text-slate-300">&mdash;</div>
+      </div>
+      <p id="freight-map-stats" class="text-[10px] text-slate-500 mb-2"></p>
+      <div class="grid grid-cols-1 xl:grid-cols-4 gap-3">
+        <svg id="freight-map-svg" viewBox="0 0 800 430" class="w-full xl:col-span-3 rounded-xl bg-[#05070a] border border-slate-800" style="min-height:380px"></svg>
+        <div id="freight-map-selection" class="bg-[#0e1520] border border-slate-800 rounded-xl p-2 max-h-[420px] overflow-y-auto scrollbar-thin"></div>
+      </div>
+      <p class="text-[10px] text-slate-500 mt-2">Every place and every road drawn here is a node and an edge of the one topology this simulation moves trucks over, and a truck sits where its own journey says it is &mdash; standing at a place, or a stated fraction along the road between two of them. Nothing is animated between simulation steps, so a marker moves only when the world does. What the picture cannot tell you is distance: the drawn length of a road is a consequence of the layout, and the real figure is printed on the road. A dashed amber circle means the truck currently carries at least one active signal, which is an observation with a lifetime and not a finding &mdash; the case panels below are where a correlated pair becomes anything more than that.</p>
+    </div>
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <div id="sim-speed-controls" class="flex gap-1 bg-slate-900 rounded-lg p-0.5">
         <button data-speed="1" class="sim-speed-btn px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800">1x</button>
@@ -376,6 +388,7 @@
 <script src="js/ui/sim-debug.js"></script>
 <script src="js/ui/mo-intelligence.js"></script>
 <script src="js/ui/entity-inspector.js"></script>
+<script src="js/ui/freight-map.js"></script>
 <script src="js/simulation/networkEngine.js"></script>
 <script src="js/simulation/awayReport.js"></script>
 <script src="js/ui/away-report.js"></script>

@@ -122,6 +122,60 @@ const FWCopyRules = (() => {
       whereItOccurs: 'js/ui/entity-inspector.js and js/simulation/adviceEngine.js, both in the app\'s own voice refusing the reading.' }
   };
 
+  /* Slice 75. THE FIRST TOKEN COLLISION THAT COULD NOT BE RESOLVED IN THE COPY.
+
+     Slice 63 resolved the one banned word ever found in copy -- "outer ring",
+     the geometric sense -- by rewriting the sentence, and stated that as the
+     principle: the ban is not widened, the word is not dropped from the list,
+     and the scan is not taught a sense it cannot learn. That worked because the
+     sentence was this app\'s own prose.
+
+     The freight map (js/ui/freight-map.js) renders worldGraph\'s topology, and
+     the topology\'s vocabulary is not this app\'s prose. REGIONAL_HUB is one of
+     worldGraph.NODE_TYPES, and "Regional Hub West" is the declared label of the
+     node HUB_REGIONAL_WEST. There is no sentence here to rewrite. The remaining
+     options were to rename a place in the simulation model to satisfy a copy
+     rule, or to draw the network without saying what its nodes are -- and the
+     first is a view editing simulation truth, which the slice that introduced
+     the map is forbidden from doing.
+
+     So this is the third thing that can happen to a sense collision, declared
+     instead of performed quietly: a token whose banned sense is a claim about an
+     ENTITY may be exempt where it is a NAME the world model declares. "hub" is
+     banned because it turns a node with a high edge count into an organising
+     role -- a claim about a carrier, a driver or a site in a case. A freight
+     facility class is not that claim, and a place name is not a claim at all.
+
+     The exemption is deliberately narrow, and every part of it is checked
+     rather than asserted in prose:
+       - only the tokens listed here, and each one must actually be banned. An
+         exemption for a word nothing bans exempts nothing and hides a typo.
+       - each must name the module that declares the domain term, so the
+         exemption can be checked against the world model instead of believed.
+       - each must say when the word is STILL banned.
+       - it applies only through inspectTopology(), never through inspect(), so
+         no caller can acquire it by accident, and the result names every
+         exemption applied -- a clean result from it can never be read as a
+         clean result from the full list. */
+  const DOMAIN_SENSES = {
+    hub: {
+      domainSense: 'REGIONAL_HUB, one of the six worldGraph.NODE_TYPES, and "Regional Hub West", the declared label of the node HUB_REGIONAL_WEST.',
+      declaredBy: 'js/simulation/worldGraph.js -- NODE_TYPES and NODES',
+      permittedOn: 'copy a view renders straight out of the world graph: node labels, node type names and route labels.',
+      stillBannedWhen: 'it is used of an entity or a case in this app\'s own voice -- "this carrier is a hub", "the hub of this network" -- which is the reading the ban exists for.',
+      whyNotResolvedInTheCopy: 'there is no sentence of this app\'s own to rewrite. The alternative was renaming a node of the simulation model to satisfy a copy rule.'
+    },
+    hubs: {
+      domainSense: 'the plural of the same facility class, as in a count of the regional hubs the topology declares.',
+      declaredBy: 'js/simulation/worldGraph.js -- NODE_TYPES and NODES',
+      permittedOn: 'the same topology copy, where the count is a count of nodes of a declared type.',
+      stillBannedWhen: 'it counts organising centres in a fraud network rather than facilities in the graph -- the reading that invites enumerating groups nobody has enumerated.',
+      whyNotResolvedInTheCopy: 'the singular\'s reason applies unchanged, and exempting one without the other would leave the plural to be discovered later.'
+    }
+  };
+
+  const DOMAIN_SENSE_TOKENS = Object.keys(DOMAIN_SENSES);
+
   /* Slice 63. Slice 61 declared one open gap -- the static copy in index.html,
      which nothing had ever scanned. Closing it turned out to require answering
      a question the rules had never asked: WHICH SURFACES DOES THIS BAN APPLY
@@ -377,6 +431,49 @@ const FWCopyRules = (() => {
     return { state: 'CHECKED', surfaces: rows.length, closed: cl.length };
   }
 
+  /* A scan of copy that renders the world graph\'s own vocabulary. Identical to
+     inspect() in every other respect: the DOMAIN_SENSES tokens are dropped from
+     the banned list and nothing else is, so every other banned token and every
+     leak token still applies. The exemption is per token, not per panel. */
+  function inspectTopology(html, opts) {
+    const o = opts || {};
+    const requested = o.banned || BANNED_WORDS;
+    const applied = requested.filter(w => DOMAIN_SENSE_TOKENS.indexOf(w) < 0);
+    const out = inspect(html, Object.assign({}, o, { banned: applied }));
+    out.exemptTokens = requested.filter(w => DOMAIN_SENSE_TOKENS.indexOf(w) >= 0);
+    out.bannedTokensApplied = applied.length;
+    out.exemptionNote = 'This is not the full ban. ' + out.exemptTokens.length + ' token(s) declared in ' +
+      'DOMAIN_SENSES were not applied (' + (out.exemptTokens.join(', ') || 'none') + '), because on this surface ' +
+      'they are names the world model declares rather than claims this app makes. The other ' + applied.length +
+      ' banned token(s) and all ' + LEAKS.length + ' leak token(s) were applied.';
+    return out;
+  }
+
+  /* An exemption nothing checks is an oversight with a comment on it. */
+  function assertDomainSenses(senses, banned) {
+    const d = senses || DOMAIN_SENSES;
+    const b = banned || BANNED;
+    Object.keys(d).forEach(w => {
+      if (!Object.prototype.hasOwnProperty.call(b, w)) {
+        throw new Error('copy-rules: "' + w + '" is declared as a permitted domain sense of a banned word, and it ' +
+          'is not in the ban list at all. An exemption for a word nothing bans exempts nothing, and the likeliest ' +
+          'cause is a typo in one of the two tables.');
+      }
+      ['domainSense', 'declaredBy', 'permittedOn', 'stillBannedWhen', 'whyNotResolvedInTheCopy'].forEach(f => {
+        if (!d[w][f]) {
+          throw new Error('copy-rules: domain sense "' + w + '" declares no ' + f + '. An exemption that does not ' +
+            'name the module declaring the term, the surface it holds on, and when the word is still banned, ' +
+            'cannot be checked against anything.');
+        }
+      });
+      if (w !== w.toLowerCase()) {
+        throw new Error('copy-rules: domain sense "' + w + '" is not lower case, and the scan lower-cases before ' +
+          'comparing, so the exemption could never match the token it is written for.');
+      }
+    });
+    return { state: 'CHECKED', exempt: Object.keys(d).length, ofBanned: Object.keys(b).length };
+  }
+
   function assertRulesDeclared(banned, quoted, leaks) {
     const b = banned || BANNED;
     const q = quoted || QUOTED_SOURCES;
@@ -410,11 +507,13 @@ const FWCopyRules = (() => {
 
   assertRulesDeclared();
   assertSurfacesDeclared();
+  assertDomainSenses();
 
   return {
     BANNED, BANNED_WORDS, LEAKS, QUOTED_SOURCES, VISIBLE_ATTRIBUTES,
-    SENSE_COLLISIONS, SURFACES, UNSCANNED_SURFACE, CLOSED_SURFACES,
-    visibleText, inspect, scanDocumentCopy, coverage,
-    assertRulesDeclared, assertSurfacesDeclared
+    SENSE_COLLISIONS, DOMAIN_SENSES, DOMAIN_SENSE_TOKENS,
+    SURFACES, UNSCANNED_SURFACE, CLOSED_SURFACES,
+    visibleText, inspect, inspectTopology, scanDocumentCopy, coverage,
+    assertRulesDeclared, assertSurfacesDeclared, assertDomainSenses
   };
 })();

@@ -47,7 +47,7 @@ const FWGlobals = (() => {
     'FWFalsePositiveEngine', 'FWIntentEngine', 'FWBehaviorEngine', 'FWSignalEngine', 'FWMoEngine', 'FWActEngine',
     'FWInvestigationEngine', 'FWAdviceEngine', 'FWOutcomeEngine', 'FWExposureModel',
     'FWAnalyticsEngine', 'FWSimRunner', 'FWSimDebug', 'FWMoIntelligence',
-    'FWEntityInspector', 'FWNetworkEngine', 'FWAwayReportEngine', 'FWAwayReport',
+    'FWEntityInspector', 'FWFreightMap', 'FWNetworkEngine', 'FWAwayReportEngine', 'FWAwayReport',
     'FWNetworkView', 'FWCalibrationView', 'FWShiftView', 'FWExposureView',
     'FWFacilityView', 'FWAnalyticsView', 'FWGame', 'FWTraining',
     'FWCharts'
@@ -104,6 +104,7 @@ const FWGlobals = (() => {
     FWSimDebug: () => FWSimDebug,
     FWMoIntelligence: () => FWMoIntelligence,
     FWEntityInspector: () => FWEntityInspector,
+    FWFreightMap: () => FWFreightMap,
     FWNetworkEngine: () => FWNetworkEngine,
     FWAwayReportEngine: () => FWAwayReportEngine,
     FWAwayReport: () => FWAwayReport,
