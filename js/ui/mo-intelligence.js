@@ -192,8 +192,12 @@ const FWMoIntelligence = (() => {
     const summary = FWMoEngine.discoverySummary(state.moEngine);
     const byClass = FWMoEngine.CLASSIFICATIONS
       .map(k => `${summary.byClassification[k]} ${FWMoEngine.classificationTally(k)}`).join(' · ');
+    // A bucket that reads 0 because no case can carry it reads exactly like a
+    // bucket that reads 0 because none has come up, and one of those is an
+    // observation while the other is an impossibility.
+    const unissuable = (summary.unissuableClasses || []).length ? ` ${summary.reachNote}` : '';
     els.summary.textContent = `${mos.length} total cases · ${summary.totalSignatures} distinct behavior signatures seen · ` +
-      `by discovery class over ${summary.classifiedTotal} cases: ${byClass}`;
+      `by discovery class over ${summary.classifiedTotal} cases: ${byClass}` + unissuable;
   }
 
   /* Never "novelty 100/100": that reads as a share and there is no base. The
@@ -248,11 +252,21 @@ const FWMoIntelligence = (() => {
     // never reads. The vote is over name, category and aliases, and the number
     // of patterns that scored but are not shown is now stated.
     const cov = mo.resemblanceCoverage;
+    // The vote count is now distinct keywords, and the keywords themselves are
+    // listed: a count printed without the thing it counts is a claim the reader
+    // cannot check, and this one used to be inflated by repeated signals.
     const rows = mo.relatedHistoricalPatterns.map(p =>
-      `<li>${p.name} — ${p.votes} keyword vote${p.votes === 1 ? '' : 's'} (heuristic keyword match, not a statistical similarity score)</li>`
+      `<li>${p.name} — ${p.votes} shared keyword${p.votes === 1 ? '' : 's'}${p.keywords && p.keywords.length ? ` (${p.keywords.join(', ')})` : ''} (heuristic keyword match, not a statistical similarity score)</li>`
     ).join('');
+    // A resemblance that was re-derived is not the resemblance the case opened
+    // with, and reading the current one as the original would be reading a
+    // revision as a constant.
+    const revs = (mo.resemblanceRevisions || []).length
+      ? `<div class="text-[9px] text-amber-300/70 italic mt-1">Revised ${mo.resemblanceRevisions.length} time${mo.resemblanceRevisions.length === 1 ? '' : 's'} since this case opened. ${mo.resemblanceRevisions.map(r => `${r.from || 'no pattern'} → ${r.to || 'no pattern'}: ${r.reason}`).join(' ')}</div>`
+      : '';
+    const basis = mo.resemblanceBasis ? `<div class="text-[9px] text-slate-500 italic mt-1">${mo.resemblanceBasis.note}</div>` : '';
     return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Documented patterns sharing vocabulary</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul>
-      ${cov ? `<div class="text-[9px] text-slate-500 italic mt-1">${cov.note}</div>` : ''}</div>`;
+      ${cov ? `<div class="text-[9px] text-slate-500 italic mt-1">${cov.note}</div>` : ''}${basis}${revs}</div>`;
   }
 
   /* The heading used to read "What makes this different" over a list of

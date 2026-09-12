@@ -282,9 +282,13 @@ const FWSimDebug = (() => {
     const classSpans = FWMoEngine.CLASSIFICATIONS.map(k =>
       `<span>${summary.byClassification[k]} / ${summary.classifiedTotal} ${FWMoEngine.classificationTally(k)}</span>`
     ).join('');
+    const reachSpan = (summary.unissuableClasses || []).length
+      ? `<span class="basis-full text-slate-600 italic">${summary.reachNote}</span>`
+      : '';
     const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
       <span>${summary.totalSignatures} distinct behavior patterns seen</span>
       ${classSpans}
+      ${reachSpan}
     </div>`;
 
     if (!mos.length) {

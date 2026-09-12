@@ -41,6 +41,11 @@ const FWMoEngine = (() => {
 
   // Loose keyword associations used only to pick which real pattern an
   // MO resembles -- not a claim of equivalence.
+  //
+  // A row is allowed to be EMPTY only if the same type is declared in
+  // TYPES_WITHOUT_VOCABULARY below with a reason. An empty row and a missing
+  // row are the same thing to `PATTERN_KEYWORDS[t] || []` and they are not the
+  // same fact (see that declaration).
   const PATTERN_KEYWORDS = {
     GPS_SIGNAL_LOST: ['gps', 'spoof', 'telemat', 'geofenc'],
     ROUTE_DEVIATION: ['gps', 'route', 'spoof', 'geofenc'],
@@ -56,6 +61,99 @@ const FWMoEngine = (() => {
     HANDOVER_GAP: ['pickup', 'collection', 'load theft', 'deception'],
     STAGED_BREAKDOWN: ['parking', 'roadside', 'curtain', 'truck stop']
   };
+
+  /* CONVENTION 30, IN THE TABLE THAT DECIDES WHAT A CASE RESEMBLES.
+     `PATTERN_KEYWORDS[s.type] || []` made three different things
+     indistinguishable: a signal type this engine deliberately declines to vote
+     on, a type nobody has written keywords for yet, and a typo. All three came
+     out of `rankPatterns` as zero votes, which the panel renders as "No
+     taxonomy pattern shares any keyword with this signal combination" and
+     `classifyDiscovery` turns into EMERGING_BEHAVIOR, labelled "Unmatched by
+     the taxonomy" -- an assertion about the taxonomy, made without consulting
+     it, out of a gap in this engine's own vocabulary table.
+
+     UNEXPECTED_STOP is the live one. Measured over five seeded 60-day runs, 3
+     of 79 cases carry an UNEXPECTED_STOP signal, and every one of those had
+     its resemblance voted over FEWER signal types than it holds, with nothing
+     said (a subset figure must show its basis). The row is deliberate, so it
+     is now declared as deliberate, with the reason, and the coverage is
+     reported per case instead of vanishing. */
+  const TYPES_WITHOUT_VOCABULARY = {
+    UNEXPECTED_STOP: 'A stop is not distinctive vocabulary: every pattern in the taxonomy involves a vehicle ' +
+      'stopping somewhere, so a keyword for it would vote for everything, which says the same as voting for nothing. ' +
+      'This engine therefore declines to look this signal type up at all -- which is not the same as looking it up ' +
+      'and finding nothing, and a case carrying one has its resemblance voted over fewer signal types than it holds.'
+  };
+
+  /* Throwing, both directions, at this module's load: every signal type the
+     catalogue can issue must have a keyword row, no row may name a type the
+     catalogue cannot issue, an empty row must be declared empty, and a
+     declared-empty type must not also carry keywords. Without this the failure
+     mode is silent and points the wrong way -- at the taxonomy. */
+  function assertKeywordVocabularyDeclared(catalogTypes) {
+    const rows = Object.keys(PATTERN_KEYWORDS);
+    const declined = Object.keys(TYPES_WITHOUT_VOCABULARY);
+    const missing = catalogTypes.filter(t => !Object.prototype.hasOwnProperty.call(PATTERN_KEYWORDS, t));
+    if (missing.length) {
+      throw new Error('moEngine.assertKeywordVocabularyDeclared: signal type(s) ' + missing.join(', ') +
+        ' can be issued by the signal catalogue but have no keyword row here. They would fall through to an ' +
+        'empty keyword list, contribute no vote, and be reported as the taxonomy documenting nothing like them');
+    }
+    const orphaned = rows.filter(t => catalogTypes.indexOf(t) < 0);
+    if (orphaned.length) {
+      throw new Error('moEngine.assertKeywordVocabularyDeclared: keyword row(s) for ' + orphaned.join(', ') +
+        ' name signal types the catalogue cannot issue; dead vocabulary reads as coverage this engine does not have');
+    }
+    const undeclaredEmpty = rows.filter(t => !(PATTERN_KEYWORDS[t] || []).length && !TYPES_WITHOUT_VOCABULARY[t]);
+    if (undeclaredEmpty.length) {
+      throw new Error('moEngine.assertKeywordVocabularyDeclared: keyword row(s) for ' + undeclaredEmpty.join(', ') +
+        ' are empty without being declared in TYPES_WITHOUT_VOCABULARY; an undeclared empty row is indistinguishable ' +
+        'from an oversight and produces a claim about the taxonomy either way');
+    }
+    const contradicted = declined.filter(t => (PATTERN_KEYWORDS[t] || []).length);
+    if (contradicted.length) {
+      throw new Error('moEngine.assertKeywordVocabularyDeclared: type(s) ' + contradicted.join(', ') +
+        ' are declared vocabulary-free and also carry keywords');
+    }
+    const declinedUnissuable = declined.filter(t => catalogTypes.indexOf(t) < 0);
+    if (declinedUnissuable.length) {
+      throw new Error('moEngine.assertKeywordVocabularyDeclared: type(s) ' + declinedUnissuable.join(', ') +
+        ' are declared vocabulary-free but the catalogue cannot issue them');
+    }
+    return {
+      catalogTypes: catalogTypes.length,
+      withVocabulary: rows.filter(t => (PATTERN_KEYWORDS[t] || []).length).length,
+      declinedTypes: declined.slice().sort()
+    };
+  }
+
+  /* How much of a case's own signal vocabulary the resemblance vote was
+     actually able to look up. Reported per case, so a resemblance derived from
+     2 of a case's 3 signal types cannot read as one derived from all 3. */
+  function vocabularyCoverage(signals) {
+    const types = Array.from(new Set((signals || []).map(s => s.type))).sort();
+    const unknown = types.filter(t => !Object.prototype.hasOwnProperty.call(PATTERN_KEYWORDS, t) && !TYPES_WITHOUT_VOCABULARY[t]);
+    if (unknown.length) {
+      throw new Error('moEngine.vocabularyCoverage: signal type(s) ' + unknown.join(', ') +
+        ' have neither a keyword row nor a declared reason for having none; voting over them would report ' +
+        'a gap in the taxonomy that is a gap in this engine');
+    }
+    const lookedUp = types.filter(t => (PATTERN_KEYWORDS[t] || []).length);
+    const declined = types.filter(t => TYPES_WITHOUT_VOCABULARY[t]);
+    return {
+      types: types.length,
+      lookedUp: lookedUp.length,
+      lookedUpTypes: lookedUp,
+      declined: declined.length,
+      declinedTypes: declined,
+      note: declined.length
+        ? 'Resemblance is voted over ' + lookedUp.length + ' of the ' + types.length + ' signal type' +
+          (types.length === 1 ? '' : 's') + ' on this case. ' +
+          declined.map(t => TYPES_WITHOUT_VOCABULARY[t]).join(' ')
+        : 'Voted over all ' + types.length + ' signal type' + (types.length === 1 ? '' : 's') +
+          ' on this case; none was skipped.'
+    };
+  }
 
   function scoreSignals(signals) {
     return signals.reduce((sum, s) => sum + s.weight * s.reliability, 0);
@@ -352,25 +450,101 @@ const FWMoEngine = (() => {
   // Returns every taxonomy pattern with at least one keyword vote,
   // sorted strongest match first, so buildMo can pick the best while
   // also keeping runners-up for "related historical patterns."
+  /* A "KEYWORD VOTE" THAT COUNTED SIGNALS, NOT KEYWORDS. The loop ran over
+     every signal INSTANCE, so two copies of one signal type voted twice for the
+     same keywords and the panel printed the doubled figure verbatim as
+     "N keyword votes" beside a pattern name. A vote count labelled by keyword
+     has to be a count of keywords.
+
+     Measured over five seeded 60-day runs: 4 of 79 cases rendered a top vote
+     count above their own distinct vocabulary overlap, worst case printing 11
+     where 6 keywords were shared, the other 5 being one signal type observed
+     twice. It also moved cases across a classification boundary -- one
+     SEAL_MISMATCH scores 2 and classifies POTENTIAL_NEW_MO, two copies of that
+     same signal scored 4 and classified MO_VARIANT, whose declared meaning is
+     "shares several keywords with a documented pattern". Nothing extra was
+     shared; the blip repeated. This module's own header says a repeated blip is
+     not a chain and the creation gate enforces it -- the classifier did not.
+
+     Votes are now distinct keywords of the case's distinct signal types, so the
+     figure is stable under repetition and the label is true. The keywords
+     themselves are returned, so the count can be checked against the thing it
+     counts rather than trusted. */
+  const VOTE_BASIS = {
+    kind: 'PARAMETER',
+    unit: 'distinct keywords shared, counted once each',
+    scope: 'the distinct signal types on the case, voted against each pattern\'s name, category and aliases',
+    means: 'how much vocabulary this pattern shares with the kinds of signal observed.',
+    doesNotMean: 'a number of signals, a similarity score, a probability, a share of anything, and not a count of ' +
+      'matching documented indicators -- this engine never reads a pattern\'s indicators.',
+    countsRepeatedSignals: false
+  };
+
+  /* Checked once, from the program's own path, against the catalogue this engine
+     votes on -- both directions. Slice 55 put the same shape in behaviorEngine
+     for the cause catalogue; the reason is identical, the failure is silent and
+     it points at the wrong artefact.
+
+     Done lazily rather than at load, because a module that throws when a sibling
+     is absent cannot be loaded on its own and three suites do exactly that. But
+     a check that can be skipped is a check nobody can rely on, so being skipped
+     is RECORDED and readable: `vocabularyCheckState()` distinguishes "checked
+     and clean" from "never ran because the catalogue was not there", which is
+     the difference between an assurance and the absence of one. Called from
+     rankPatterns, so nothing can vote on a keyword table that was never
+     reconciled. */
+  let vocabularyChecked = false;
+
+  function checkVocabularyOnce() {
+    if (vocabularyChecked) return true;
+    if (typeof FWSignalEngine === 'undefined' || !FWSignalEngine || !FWSignalEngine.SIGNAL_CATALOG) return false;
+    assertKeywordVocabularyDeclared(Object.keys(FWSignalEngine.SIGNAL_CATALOG));
+    vocabularyChecked = true;
+    return true;
+  }
+
+  function vocabularyCheckState() {
+    return vocabularyChecked
+      ? { state: 'CHECKED', note: 'The keyword table has been reconciled against the signal catalogue, both directions.' }
+      : { state: 'NOT_CHECKED_CATALOGUE_ABSENT', note: 'The keyword table has NOT been reconciled: the signal ' +
+          'catalogue was not available when this engine last tried. That is the absence of a check, not a clean one.' };
+  }
+
   function rankPatterns(signals) {
     if (typeof FW === 'undefined' || !FW.patterns) return [];
     const patterns = FW.patterns();
     if (!patterns || !patterns.length) return [];
 
-    const votes = new Map();
-    signals.forEach(s => {
-      const keywords = PATTERN_KEYWORDS[s.type] || [];
-      keywords.forEach(kw => {
+    checkVocabularyOnce();
+    const types = Array.from(new Set((signals || []).map(s => s.type)));
+    // Not `PATTERN_KEYWORDS[t] || []`. That fallback is what made an undeclared
+    // type indistinguishable from a deliberately vocabulary-free one, and both
+    // came out as the taxonomy documenting nothing like this case.
+    const undeclared = types.filter(t => !Object.prototype.hasOwnProperty.call(PATTERN_KEYWORDS, t) && !TYPES_WITHOUT_VOCABULARY[t]);
+    if (undeclared.length) {
+      throw new Error('moEngine.rankPatterns: signal type(s) ' + undeclared.join(', ') +
+        ' have no declared keyword row and are not declared vocabulary-free. Voting over them silently would ' +
+        'return no resemblance, which this engine reports as a gap in the taxonomy when it is a gap here');
+    }
+    const hits = new Map();   // pattern id -> Set of distinct keywords matched
+    types.forEach(t => {
+      (PATTERN_KEYWORDS[t] || []).forEach(kw => {
         patterns.forEach(p => {
           const hay = `${p.name} ${p.category} ${(p.aliases || []).join(' ')}`.toLowerCase();
-          if (hay.includes(kw)) votes.set(p.id, (votes.get(p.id) || 0) + 1);
+          if (hay.includes(kw)) {
+            if (!hits.has(p.id)) hits.set(p.id, new Set());
+            hits.get(p.id).add(kw);
+          }
         });
       });
     });
-    return Array.from(votes.entries())
-      .map(([id, votes]) => ({ pattern: patterns.find(p => p.id === id), votes }))
+    return Array.from(hits.entries())
+      .map(([id, kws]) => ({ pattern: patterns.find(p => p.id === id), votes: kws.size, keywords: Array.from(kws).sort() }))
       .filter(r => r.pattern)
-      .sort((a, b) => b.votes - a.votes);
+      // Ties were broken by Map insertion order, i.e. by which signal arrived
+      // first -- an arrival accident deciding which pattern a case is titled
+      // after. Broken by pattern id instead, so it is at least declared.
+      .sort((a, b) => b.votes - a.votes || a.pattern.id.localeCompare(b.pattern.id));
   }
 
   function matchPattern(signals) {
@@ -439,6 +613,62 @@ const FWMoEngine = (() => {
     if (priorCount === 0) return topVotes >= 3 ? 'MO_VARIANT' : 'POTENTIAL_NEW_MO';
     if (priorCount < 3) return 'POTENTIAL_NEW_MO';
     return 'KNOWN_MO';                                     // signature seen 3+ times in THIS run; not a claim it is understood
+  }
+
+  /* THE ONE CLASS THAT ADMITS THE TAXONOMY DOES NOT COVER A CASE, AND NO CASE
+     COULD EVER CARRY IT. `classifyDiscovery` returns EMERGING_BEHAVIOR only
+     when `ranked.length === 0`, i.e. when NOT ONE of the case's signal types
+     produces a keyword vote. Exactly one of the catalogue's 13 signal types
+     does that (UNEXPECTED_STOP, the declared vocabulary-free row), and a case
+     cannot open below MIN_SIGNAL_TYPES distinct types -- so an all-silent case
+     is arithmetically impossible. Measured: 79 cases over five seeded 60-day
+     runs, EMERGING_BEHAVIOR issued 0 times, every single case told it resembles
+     something documented.
+
+     That is the humility branch of this engine. Its bucket read 0 in the
+     discovery panel next to three populated ones, which reads as "no such case
+     has come up yet" -- an observation. It is not an observation, it is a
+     structural impossibility, and those are opposite facts about the same zero
+     (a zero that cannot happen is not a zero that has not happened).
+
+     Computed from the live tables rather than asserted from a count, so it
+     cannot go stale: add keywords to UNEXPECTED_STOP, or a second
+     vocabulary-free type, and this answer changes on its own. It is REPORTED,
+     not thrown, because an unreachable humility class is a fact about the
+     current tables that the panel must state -- suppressing it by throwing
+     would hide it. */
+  function classificationReach() {
+    const catalog = (typeof FWSignalEngine !== 'undefined' && FWSignalEngine && FWSignalEngine.SIGNAL_CATALOG)
+      ? Object.keys(FWSignalEngine.SIGNAL_CATALOG)
+      : null;
+    if (!catalog || typeof FW === 'undefined' || !FW.patterns || !(FW.patterns() || []).length) {
+      return {
+        known: false,
+        unissuable: [],
+        note: 'Which discovery classes can be issued is not computable here: it depends on the signal catalogue and ' +
+          'the loaded taxonomy, and one of them is not available. Not knowing is being reported rather than guessed.'
+      };
+    }
+    const silent = catalog.filter(t => rankPatterns([{ type: t }]).length === 0).sort();
+    const emergingIssuable = silent.length >= MIN_SIGNAL_TYPES;
+    const unissuable = emergingIssuable ? [] : ['EMERGING_BEHAVIOR'];
+    return {
+      known: true,
+      catalogTypes: catalog.length,
+      silentTypes: silent,
+      minSignalTypes: MIN_SIGNAL_TYPES,
+      unissuable: unissuable,
+      note: emergingIssuable
+        ? 'All ' + CLASSIFICATIONS.length + ' discovery classes can be issued: ' + silent.length +
+          ' signal type' + (silent.length === 1 ? '' : 's') + ' share no keyword with anything documented, and a case needs ' +
+          MIN_SIGNAL_TYPES + ' distinct types, so a case with no resemblance at all is reachable.'
+        : '\u201c' + CLASSIFICATION.EMERGING_BEHAVIOR.label + '\u201d cannot be issued at all under the current tables. ' +
+          'It requires every signal type on the case to share no keyword with any documented pattern, and only ' + silent.length +
+          ' of the ' + catalog.length + ' catalogued type' + (catalog.length === 1 ? '' : 's') + ' does (' +
+          (silent.join(', ') || 'none') + '), while a case cannot open on fewer than ' + MIN_SIGNAL_TYPES +
+          ' distinct types. So its count is zero because no case can carry it, not because none has been seen ' +
+          '\u2014 and every case in this run is therefore told it resembles a documented pattern.'
+    };
   }
 
   /* This is `recurrenceCount` restated on a 0-100 axis and nothing else -- the
@@ -512,7 +742,8 @@ const FWMoEngine = (() => {
   const RESEMBLANCE_NOTES = {
     kind: 'PARAMETER',
     scope: 'how this case relates to documented taxonomy patterns, within moEngine',
-    derivedFrom: 'rankPatterns -- a keyword vote over each pattern\'s name, category and aliases',
+    derivedFrom: 'rankPatterns -- one vote per DISTINCT keyword shared with each pattern\'s name, category and aliases, ' +
+      'counted over the case\'s distinct signal types, so a signal type observed twice does not vote twice',
     means: 'which documented patterns share vocabulary with the kinds of signal observed, strongest first.',
     doesNotMean: 'that the case is an instance of any of them, that its signals are the pattern\'s documented indicators, and not a difference between the two.',
     REFUSED: {
@@ -535,10 +766,10 @@ const FWMoEngine = (() => {
     const notes = [];
     if (classification === 'KNOWN_MO') {
       notes.push('This signal combination has recurred, and shares most vocabulary with ' + top.pattern.name +
-        ' (' + top.votes + ' keyword vote' + (top.votes === 1 ? '' : 's') + '). Recurrence is a fact about this simulation\'s own history, ' +
+        ' (' + top.votes + ' shared keyword' + (top.votes === 1 ? '' : 's') + '). Recurrence is a fact about this simulation\'s own history, ' +
         'not about the pattern.');
     } else {
-      notes.push('Shares most vocabulary with ' + top.pattern.name + ' (' + top.votes + ' keyword vote' +
+      notes.push('Shares most vocabulary with ' + top.pattern.name + ' (' + top.votes + ' shared keyword' +
         (top.votes === 1 ? '' : 's') + '). This exact combination of signal types has not recurred in this simulation.');
     }
     if (names.length) notes.push('Shares some vocabulary with: ' + names.join(', ') + '.');
@@ -604,21 +835,31 @@ const FWMoEngine = (() => {
      scored were kept, with the number dropped never stated. */
   const RESEMBLANCE_SHOWN = 3;
 
-  function resemblanceCoverage(ranked) {
+  function resemblanceCoverage(ranked, signals) {
     const voted = (ranked || []).length;
     const shown = Math.min(voted, RESEMBLANCE_SHOWN);
-    return {
+    // The types the vote could actually be taken over, when the caller has them.
+    // A resemblance derived from 2 of a case's 3 signal types must not read as
+    // one derived from all 3, and only the caller knows the case's types.
+    const vocab = signals ? vocabularyCoverage(signals) : null;
+    const out = {
       voted: voted,
       shown: shown,
       withheld: voted - shown,
       votedOver: 'each pattern\'s name, category and aliases',
+      voteUnit: VOTE_BASIS.unit,
+      vocabulary: vocab,
       note: voted === 0
         ? 'No documented pattern shares a keyword with this signal combination.'
         : 'Showing the ' + shown + ' strongest of ' + voted + ' documented pattern' + (voted === 1 ? ' that shares' : 's that share') +
           ' a keyword with this combination' + (voted - shown > 0 ? ' (' + (voted - shown) + ' not shown)' : '') +
-          '. Votes are counted over ' + 'each pattern\'s name, category and aliases' +
-          ' \u2014 not over its documented indicators, which this engine never reads.'
+          '. A vote is one ' + VOTE_BASIS.unit.replace(', counted once each', '') +
+          ', counted over ' + 'each pattern\'s name, category and aliases' +
+          ' \u2014 not over its documented indicators, which this engine never reads, and not once per signal: ' +
+          'the same signal type observed twice does not share more vocabulary than it shared once.'
     };
+    if (vocab) out.note += ' ' + vocab.note;
+    return out;
   }
 
   /* Printed as a bare "contribution 1.7" on every evidence row. It is the
@@ -809,6 +1050,69 @@ const FWMoEngine = (() => {
     };
   }
 
+  /* THE CASE'S TITLE, ITS CATEGORY, ITS DOCUMENTED LEGITIMATE EXPLANATIONS AND
+     ITS COUNTERMEASURES WERE ALL FROZEN AT THE INSTANT IT OPENED. `mergeEvidence`
+     grows a case's signal record for the whole life of the case -- that is the
+     point of it -- and nothing ever re-derived the resemblance from the grown
+     record. Measured over five seeded 60-day runs: 14 of 79 cases acquired a
+     signal type they did not open with, and for 5 of them the documented pattern
+     their record most resembles is a DIFFERENT pattern from the one on the card.
+     Those five were titled "Possible X", categorised as X, and shown X's
+     documented false positives and X's countermeasures, while their own evidence
+     resembled Y. The false-positive list is the one list in this app that must
+     not be truncated (Slice 45) and on those cases it was the wrong pattern's
+     list entirely, which is worse than truncated.
+
+     Two decisions here, both deliberate:
+
+     BASIS is the case's evidence RECORD, not its active signal set. The record
+     only grows, so the resemblance can only ever become better informed, and an
+     observation does not stop having happened because its weight decayed. This
+     is a different basis from the correlation index on the same card, which is
+     computed over the ACTIVE set and therefore falls on its own -- so the basis
+     is named in what this returns rather than left for a reader to assume the
+     two figures share one.
+
+     EVERY CHANGE IS RECORDED. A case whose title silently changes from
+     "Possible Double Brokering" to "Possible Cargo Theft" between two glances is
+     its own defect: an analyst would read the second as what it always said.
+     `resemblanceRevisions` keeps from/to/when/why, so a revision is visible as a
+     revision. */
+  function applyResemblance(mo, typeBearing, now, reason) {
+    const ranked = rankPatterns(typeBearing);
+    const pattern = ranked.length ? ranked[0].pattern : null;
+    const previous = mo.relatedPattern !== undefined ? mo.relatedPattern : null;
+    mo.title = pattern ? 'Possible ' + pattern.name : 'Unclassified correlated anomaly';
+    mo.category = pattern ? pattern.category : 'unclassified';
+    mo.relatedPattern = pattern ? pattern.id : null;
+    mo.relatedHistoricalPatterns = ranked.slice(0, RESEMBLANCE_SHOWN)
+      .map(r => ({ id: r.pattern.id, name: r.pattern.name, votes: r.votes, keywords: r.keywords }));
+    mo.resemblanceCoverage = resemblanceCoverage(ranked, typeBearing);
+    mo.resemblanceNotes = resemblanceNotes(ranked, mo.classification);
+    mo.falsePositives = falsePositivesFor(pattern);
+    mo.patternCountermeasures = recommendedActionsFor(pattern);
+    mo.resemblanceBasis = {
+      types: Array.from(new Set(typeBearing.map(s => s.type))).sort(),
+      over: 'the case\'s whole evidence record, including signals whose weight has decayed out of the correlation index',
+      note: 'What this case resembles is voted over every signal type its record holds. The correlation index beside ' +
+        'it is computed over the signals still ACTIVE, so the two figures do not share a basis and a decayed signal ' +
+        'still counts here.'
+    };
+    mo.resemblanceRevisedAt = now;
+    if (reason && previous !== mo.relatedPattern) {
+      mo.resemblanceRevisions = (mo.resemblanceRevisions || []).concat([{
+        at: now, from: previous, to: mo.relatedPattern, reason: reason
+      }]);
+    }
+    return ranked;
+  }
+
+  // The unit the resemblance is re-derived against: the distinct signal types on
+  // the record, in one place, so buildMo and refreshMo cannot disagree about it.
+  function recordTypeKey(mo) {
+    return Array.from(new Set((mo.evidence || []).map(e => e.signalType))).sort().join('+');
+  }
+
   function buildMo(engine, truck, signals, now) {
     const id = 'MO-' + String(engine.nextMoId++).padStart(4, '0');
     const rawScore = scoreSignals(signals);
@@ -828,10 +1132,8 @@ const FWMoEngine = (() => {
     checkScopesOnce();
     const siteInfo = siteBreakdown(buildEvidence(signals));
 
-    return {
+    const mo = {
       id,
-      title: pattern ? `Possible ${pattern.name}` : 'Unclassified correlated anomaly',
-      category: pattern ? pattern.category : 'unclassified',
       confidence,
       baseConfidence: confidence,
       baseSignalSum: rawScore,
@@ -851,12 +1153,12 @@ const FWMoEngine = (() => {
       signals: signals.map(s => s.id),
       activeSignals: signals.map(s => s.id),
       timeline: buildEvidence(signals).map(e => ({ t: e.at, type: e.signalType })),
-      relatedPattern: pattern ? pattern.id : null,
-      relatedHistoricalPatterns: ranked.slice(0, RESEMBLANCE_SHOWN).map(r => ({ id: r.pattern.id, name: r.pattern.name, votes: r.votes })),
-      resemblanceCoverage: resemblanceCoverage(ranked),
-      resemblanceNotes: resemblanceNotes(ranked, classification),
-      falsePositives: falsePositivesFor(pattern),
-      patternCountermeasures: recommendedActionsFor(pattern),
+      // title, category, relatedPattern, relatedHistoricalPatterns,
+      // resemblanceCoverage, resemblanceNotes, falsePositives and
+      // patternCountermeasures are all set by applyResemblance below, from one
+      // place, because they are all one derivation and used to be re-derived
+      // nowhere.
+      resemblanceRevisions: [],
       evidence: buildEvidence(signals),
       firstObserved: Math.min(...signals.map(s => s.createdAt)),
       // When the case was OPENED, which is not when its first signal was
@@ -869,6 +1171,8 @@ const FWMoEngine = (() => {
       autoFaded: false,
       resolutionReason: null
     };
+    applyResemblance(mo, mo.evidence.map(e => ({ type: e.signalType })), now, null);
+    return mo;
   }
 
   // Displayed confidence = what the correlation engine derived from the
@@ -891,7 +1195,14 @@ const FWMoEngine = (() => {
   }
 
   function refreshMo(mo, signals, now) {
+    const typesBefore = recordTypeKey(mo);
     mergeEvidence(mo, signals);
+    const typesAfter = recordTypeKey(mo);
+    if (typesAfter !== typesBefore) {
+      applyResemblance(mo, mo.evidence.map(e => ({ type: e.signalType })), now,
+        'the case\'s evidence record gained a signal type it did not open with (' + (typesBefore || 'none') +
+        ' \u2192 ' + typesAfter + '), so what it resembles was re-derived from the record');
+    }
     const raw = scoreSignals(signals);
     mo.baseSignalSum = raw;
     mo.indexScaleNote = indexNote(raw);
@@ -928,7 +1239,15 @@ const FWMoEngine = (() => {
       throw new Error('moEngine.discoverySummary: discovery classes sum to ' + summed + ' over ' + all.length +
         ' cases; sharing a base is not adding up to it');
     }
-    return { totalSignatures: engine.signatures.size, totalMos: all.length, byClassification: byClass, classifiedTotal: summed };
+    const reach = classificationReach();
+    return {
+      totalSignatures: engine.signatures.size, totalMos: all.length, byClassification: byClass, classifiedTotal: summed,
+      // A bucket reading 0 because no case can carry it is not the same fact as
+      // a bucket reading 0 because none has come up, and the panel had no way
+      // to tell them apart.
+      unissuableClasses: reach.unissuable,
+      reachNote: reach.note
+    };
   }
 
   // Call once per simulation step (or batched) after behaviorEngine +
@@ -1104,6 +1423,9 @@ const FWMoEngine = (() => {
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
     RESEMBLANCE_NOTES, resemblanceNotes, COUNTERMEASURE_SCOPE, COUNTERMEASURE_BUCKETS,
     FALSE_POSITIVE_SCOPE, falsePositivesFor, RESEMBLANCE_SHOWN, resemblanceCoverage,
+    PATTERN_KEYWORDS, TYPES_WITHOUT_VOCABULARY, assertKeywordVocabularyDeclared, vocabularyCoverage,
+    checkVocabularyOnce, vocabularyCheckState,
+    VOTE_BASIS, classificationReach, applyResemblance,
     EVIDENCE_CONTRIBUTION, contributionScopes,
     CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
     CONFIDENCE_INDEX, indexNote, formatIndex, indexReach, indexBasis, assertIndexScaleDeclared,
