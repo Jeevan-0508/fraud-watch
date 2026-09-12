@@ -24,6 +24,28 @@
        in advance of any check, because it is a fact about where the
        signals were observed rather than about the case.
 
+   Since Slice 26 there is a shared four-class examination vocabulary, and
+   this report predated it while being the one panel whose entire subject is
+   a period when nobody was looking. Two things followed from that gap:
+
+     - The status-movement list showed net deltas per status. In this
+       simulation a case can reach DISMISSED without an analyst ever seeing
+       it: moEngine fades an idle open case out on its own and flags it
+       autoFaded. So "dismissed +3" in a report about an absence read as
+       three decisions taken, when it can be three cases that went quiet.
+       The window now splits its closures by whether an analyst closed them
+       and by investigationEngine's examination class, sum-asserted. The old
+       reading could only ever overstate how far the caseload was taken.
+     - "New cases" counted the ledger delta, while the classification list,
+       the record-source breakdown and the exposure band below it counted
+       cases whose FIRST SIGNAL fell in the window. Those are different
+       populations -- correlation needs a second signal type, so opening
+       always lags the first signal (300s to 6300s in the seeded run) -- and
+       at 17 of 1920 window boundaries in that one run the headline did not
+       equal the list beneath it. Everything per-case now counts cases
+       OPENED in the window, with the cases whose first signal predates the
+       window named as a labelled subset rather than silently dropped.
+
    What is deliberately NOT computed: a single average oversight figure for
    the window. It would read as the fraction of the period that was
    watched, and the obvious next step -- dividing the event count by it --
@@ -35,6 +57,23 @@ const FWAwayReportEngine = (() => {
   // A site whose assumed coverage is below this is reported as thin. The
   // threshold is a stated reporting cut-off, not a risk boundary.
   const THIN_COVERAGE = 0.5;
+
+  /* Figures this report will not print, and why. Same register pattern as
+     exposureModel / facilityEngine / shiftEngine: a refusal is content. */
+  const NOT_MODELLED = [
+    {
+      figure: 'How many of these you would have caught, or closed differently, had you been watching',
+      why: 'The simulation clock does not stop for the tab, and nothing here branches on whether anyone was looking. Every event and every fade in this window would have happened identically with the panel open, so a "cost of being away" figure would be a counterfactual with no model behind it -- the same reason the exposure model refuses loss-avoided.'
+    },
+    {
+      figure: 'A share of the window\'s closures that went unexamined, as a rate',
+      why: 'An away window closes a handful of cases at most. The analytics model withholds any rate under its own minimum-sample floor, and a percentage over three or four closures reads far stronger than the count it came from. The counts are shown with their base instead, and no bucket is dropped from them.'
+    },
+    {
+      figure: 'The fade-outs read as a consequence of the absence',
+      why: 'A case fades when its signals stop and it has been idle past the engine\'s threshold, whoever is at the screen. Attributing the fades to the absence would turn a fact about the signals into a fact about the analyst. What this report can say honestly is the narrower thing: these closed while nobody was looking, and this many had nothing ever answered against them.'
+    }
+  ];
 
   // Sim-seconds of the away window that fell in each shift, bucketed by
   // hour-of-day off the same clock mapping the simulation itself runs on.
@@ -83,16 +122,101 @@ const FWAwayReportEngine = (() => {
     };
   }
 
+  /* Which population "new cases in this window" means, reconciled instead of
+     left to two callers to disagree about. openedAt is when correlation
+     opened the case; firstObserved is when its earliest signal was seen, and
+     that can predate the window even for a case opened inside it. Both are
+     true facts; the report counts the opened ones and names the other as a
+     labelled subset. Throws rather than print two headlines that disagree. */
+  function newCaseScope(mos, fromAbs, ledgerDelta) {
+    const opened = mos.filter(m => openedAtOf(m) > fromAbs);
+    let signalInWindow = 0, signalPredatesWindow = 0;
+    opened.forEach(m => {
+      if (m.firstObserved > fromAbs) signalInWindow += 1;
+      else signalPredatesWindow += 1;
+    });
+    if (signalInWindow + signalPredatesWindow !== opened.length) {
+      throw new Error('awayReport: new-case first-signal split does not reconcile');
+    }
+    if (ledgerDelta != null && opened.length !== ledgerDelta) {
+      throw new Error(
+        'awayReport: ' + opened.length + ' cases opened in the window but the case ledger ' +
+        'grew by ' + ledgerDelta + '. The headline count and the per-case breakdowns below it ' +
+        'would be describing different populations.'
+      );
+    }
+    return { cases: opened, opened: opened.length, signalInWindow, signalPredatesWindow };
+  }
+
+  // Cases whose first signal predates openedAt for every case built before
+  // Slice 32; fall back to firstObserved so an older snapshot still sorts.
+  function openedAtOf(mo) {
+    return mo.openedAt != null ? mo.openedAt : mo.firstObserved;
+  }
+
+  /* What actually happened to the cases that reached a closing status while
+     nobody was looking. Two cuts over ONE base (the closures in this
+     window), each sum-asserted:
+       - who closed it: an analyst, or the engine fading an idle case out
+       - what had come back by then: investigationEngine's four examination
+         classes, via the shared classifyCounts precedence rule
+     Neither is a judgement of the closure. A faded case is not a mistake and
+     an unexamined one is not a wrong verdict; they are facts about how far
+     the case got, which a status label alone does not carry. */
+  function closuresInWindow(state, before) {
+    if (!window.FWMoEngine || !window.FWInvestigationEngine) return null;
+    const prior = (before && before.statusById) || null;
+    if (!prior) return null;
+    const closed = Array.from(state.moEngine.mos.values()).filter(m => {
+      if (!FWMoEngine.CLOSED_STATUSES.has(m.status)) return false;
+      const was = prior[m.id];
+      // Opened AND closed inside the window counts: it was never open while
+      // anyone could see it. Already closed before the window does not.
+      return was === undefined || !FWMoEngine.CLOSED_STATUSES.has(was);
+    });
+    if (!closed.length) return { total: 0, engineFaded: 0, analystClosed: 0, byClass: null, byStatus: {} };
+
+    let engineFaded = 0, analystClosed = 0;
+    const byStatus = {};
+    closed.forEach(m => {
+      if (m.autoFaded) engineFaded += 1; else analystClosed += 1;
+      byStatus[m.status] = (byStatus[m.status] || 0) + 1;
+    });
+    if (engineFaded + analystClosed !== closed.length) {
+      throw new Error('awayReport: closure hands do not reconcile with the closures counted');
+    }
+    // examinationRollup asserts its own four classes sum to the base.
+    const rollup = FWInvestigationEngine.examinationRollup(closed);
+    return {
+      total: closed.length,
+      engineFaded,
+      analystClosed,
+      byClass: rollup.byClass,
+      classes: rollup.classes,
+      notes: rollup.notes,
+      neverAnswered: rollup.total - rollup.byClass.ANSWERED,
+      byStatus
+    };
+  }
+
   function snapshot(state) {
     if (!state) return null;
     const mos = Array.from(state.moEngine.mos.values());
     const byStatus = {};
-    mos.forEach(m => { byStatus[m.status] = (byStatus[m.status] || 0) + 1; });
+    // Per-case status as well as the tally. A net delta per status cannot
+    // say which cases moved, and "which cases" is what the examination cut
+    // below needs -- two cases swapping statuses net to zero.
+    const statusById = {};
+    mos.forEach(m => {
+      byStatus[m.status] = (byStatus[m.status] || 0) + 1;
+      statusById[m.id] = m.status;
+    });
     return {
       simAbsoluteNow: FWSimRunner.absoluteNow(state.clock),
       totalEvents: state.totalEvents,
       totalMos: mos.length,
-      byStatus
+      byStatus,
+      statusById
     };
   }
 
@@ -103,7 +227,8 @@ const FWAwayReportEngine = (() => {
     const newMosSinceThen = after.totalMos - before.totalMos;
 
     const mos = Array.from(state.moEngine.mos.values());
-    const newlyCreated = mos.filter(m => m.firstObserved > before.simAbsoluteNow);
+    const newCases = newCaseScope(mos, before.simAbsoluteNow, newMosSinceThen);
+    const newlyCreated = newCases.cases;
     const newByClassification = newlyCreated.reduce((acc, m) => {
       acc[m.classification] = (acc[m.classification] || 0) + 1;
       return acc;
@@ -137,6 +262,12 @@ const FWAwayReportEngine = (() => {
     return {
       shiftMix: shiftMix(before.simAbsoluteNow, after.simAbsoluteNow),
       siteSources: siteSources(state, newlyCreated),
+      newCaseScope: {
+        opened: newCases.opened,
+        signalInWindow: newCases.signalInWindow,
+        signalPredatesWindow: newCases.signalPredatesWindow
+      },
+      closures: closuresInWindow(state, before),
       simSecondsElapsed,
       simDaysElapsed: simSecondsElapsed / 86400,
       eventsSinceThen,
@@ -148,5 +279,8 @@ const FWAwayReportEngine = (() => {
     };
   }
 
-  return { snapshot, diff, shiftMix, siteSources, THIN_COVERAGE };
+  return {
+    snapshot, diff, shiftMix, siteSources, newCaseScope, closuresInWindow,
+    THIN_COVERAGE, NOT_MODELLED
+  };
 })();

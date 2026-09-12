@@ -262,6 +262,12 @@ const FWMoEngine = (() => {
       recommendedActions: recommendedActionsFor(pattern),
       evidence: buildEvidence(signals),
       firstObserved: Math.min(...signals.map(s => s.createdAt)),
+      // When the case was OPENED, which is not when its first signal was
+      // seen: correlation needs a second signal type, so there is always a
+      // lag. Two different populations follow from the two timestamps, and
+      // a panel counting "new cases in a window" has to say which one it
+      // means (awayReport.js reconciles them).
+      openedAt: now,
       lastObserved: now,
       autoFaded: false,
       resolutionReason: null

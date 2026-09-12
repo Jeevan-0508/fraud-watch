@@ -10,7 +10,13 @@
    and by site. So the report shows the shifts the away window spanned with
    their stated oversight parameters, and how many of the new cases have no
    site record to pull at all. Neither adjusts a count -- they say what the
-   count is a count of. */
+   count is a count of.
+
+   Slice 32 added the two things a status delta could not say: which of the
+   window's closures an analyst actually decided (moEngine fades idle cases
+   out by itself), and what had come back against them by then, in the shared
+   examination vocabulary. Also relabelled the delta list as NET movement,
+   which is what it always was. */
 const FWAwayReport = (() => {
   let els = {};
   let lastSnapshot = null;
@@ -109,6 +115,62 @@ const FWAwayReport = (() => {
     </div>`;
   }
 
+  /* Cases opened in the window, with the two populations reconciled out
+     loud. The subset line only appears when it is non-zero, because "0 of N
+     had a first signal before you left" is noise, not a finding. */
+  function newCaseScopeBlock(scope) {
+    if (!scope || !scope.opened) return '';
+    const sub = scope.signalPredatesWindow
+      ? `<li>${scope.signalPredatesWindow} of ${scope.opened} had a first signal before this window opened — the signal was already recorded, it took a second signal type arriving to correlate the case</li>`
+      : '';
+    return `<div class="mb-3">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">What "new cases" counts here</div>
+      <ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">
+        <li>${scope.opened} case${scope.opened === 1 ? ' was' : 's were'} opened during this window — the count above, and the base for every breakdown below</li>
+        <li>${scope.signalInWindow} of ${scope.opened} had their first signal inside the window too</li>
+        ${sub}
+      </ul>
+    </div>`;
+  }
+
+  /* Closures during the absence, cut two ways over one base. This is the
+     part a status delta alone could not say: whether anyone closed it, and
+     what had come back by the time it closed. Framed both directions —
+     neither cut makes a closure right or wrong. */
+  function closureBlock(c) {
+    if (!c || !c.total) return '';
+    const statusList = Object.entries(c.byStatus)
+      .map(([st, n]) => `${n} ${st.replace(/_/g, ' ').toLowerCase()}`).join(', ');
+    const classRows = (c.classes || []).map(k => {
+      const n = c.byClass[k] || 0;
+      if (!n) return '';
+      return `<li>${n} of ${c.total}: ${c.notes[k]}</li>`;
+    }).join('');
+    return `<div class="mb-3 bg-[#0e1520] border border-slate-800 rounded-lg p-2">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Cases that closed while nobody was looking</div>
+      <div class="text-xs text-slate-300 mb-1">${c.total} reached a closing status during this window (${statusList}).</div>
+      <ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">
+        <li>${c.analystClosed} of ${c.total} closed by an analyst decision</li>
+        <li>${c.engineFaded} of ${c.total} faded out on their own: the signals stopped and the case sat idle past the threshold, with no analyst review recorded</li>
+      </ul>
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mt-2 mb-1">And what had come back by the time each closed</div>
+      <ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">${classRows}</ul>
+      <div class="text-[10px] text-slate-500 italic mt-1">A status says a case is closed; it does not say it was examined. ${c.neverAnswered} of ${c.total} closed with no check having answered against ${c.neverAnswered === 1 ? 'it' : 'them'} — which is not a claim the closure was wrong, and equally not evidence it was right. A faded case may well have been nothing; the record simply does not say either way, and reopening one costs nothing here.</div>
+    </div>`;
+  }
+
+  // The register, rendered. A refused figure is content in this project, not
+  // a gap, so it appears in the report rather than only in the source.
+  function refusedBlock() {
+    if (!window.FWAwayReportEngine || !FWAwayReportEngine.NOT_MODELLED) return '';
+    const rows = FWAwayReportEngine.NOT_MODELLED
+      .map(r => `<li><span class="text-slate-300">${r.figure}</span> — ${r.why}</li>`).join('');
+    return `<div class="mb-3">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Not shown for this window, and why</div>
+      <ul class="list-disc list-inside text-[10px] text-slate-500 space-y-1">${rows}</ul>
+    </div>`;
+  }
+
   function render(report) {
     const classRows = Object.entries(report.newByClassification)
       .map(([cls, n]) => `<li>${n} ${classificationLabel(cls)}</li>`).join('');
@@ -138,10 +200,13 @@ const FWAwayReport = (() => {
         </div>
       </div>
       ${classRows ? `<div class="mb-3"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">New cases by discovery classification</div><ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">${classRows}</ul></div>` : ''}
+      ${newCaseScopeBlock(report.newCaseScope)}
       ${shiftMixBlock(report.shiftMix)}
       ${siteSourceBlock(report.siteSources)}
-      ${statusRows ? `<div class="mb-3"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Case status movement</div><ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">${statusRows}</ul></div>` : ''}
+      ${closureBlock(report.closures)}
+      ${statusRows ? `<div class="mb-3"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Net case status movement</div><ul class="list-disc list-inside text-xs text-slate-300 space-y-0.5">${statusRows}</ul><div class="text-[10px] text-slate-500 italic mt-1">Net movement per status: two cases swapping statuses cancel out here, so this is not a count of cases that moved. The closure breakdown above counts the cases themselves.</div></div>` : ''}
       ${exposureRow}
+      ${refusedBlock()}
       <p class="text-[10px] text-slate-600 italic">No loss or loss-avoided figure is shown. The cost model (Exposure &amp; Cost panel) refuses both: one needs a probability of loss this simulation does not have, the other needs a counterfactual nobody can observe. Open MO Intelligence Center to review what's new.</p>
     `;
   }
