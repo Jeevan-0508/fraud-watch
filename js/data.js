@@ -40,6 +40,7 @@ const FW = (() => {
     const res = await fetch('data/fraud-data.json');
     raw = await res.json();
     measureIndicatorWeights();
+    checkSeverityTokens();
     return raw;
   }
 
@@ -64,6 +65,34 @@ const FW = (() => {
     INDICATOR_WEIGHT.max = max;
     INDICATOR_WEIGHT.n = n;
   }
+
+  /* The taxonomy's `severity` is an assessed HARM class for a pattern. It is
+     not a confidence, and moEngine's confidence band is not a severity --
+     three of these four tokens used to appear verbatim as MO confidence bands
+     (see FWMoEngine.CONFIDENCE_BAND), so the two are declared and checked
+     against each other rather than left to collide on screen. */
+  const SEVERITY = {
+    kind: 'PARAMETER',
+    scope: 'assessed harm of a taxonomy pattern, if it occurs',
+    means: 'how much damage this pattern of fraud does when it happens, as assessed in the taxonomy.',
+    doesNotMean: 'how likely it is happening here, how sure anyone is, and not a confidence band over any case.',
+    source: 'freight-fraud-taxonomy, per-pattern field',
+    tokens: Object.keys(SEVERITY_COLOR)
+  };
+
+  // Tokens are declared above; this asserts the loaded data uses no others,
+  // so a pattern cannot reach a badge with a severity nobody has a colour or
+  // a meaning for.
+  function checkSeverityTokens() {
+    (raw.patterns || []).forEach(p => {
+      if (SEVERITY.tokens.indexOf(p.severity) < 0) {
+        throw new Error('FW.load: pattern ' + p.id + ' carries severity "' + p.severity +
+          '", which is not one of the declared harm classes ' + SEVERITY.tokens.join('/'));
+      }
+    });
+  }
+
+  function severityScale() { return raw ? SEVERITY : null; }
 
   // null until the taxonomy has arrived -- the range is a property of the
   // loaded data, not of this module.
@@ -128,6 +157,6 @@ const FW = (() => {
   return {
     load, loaded, patterns, meta, randomPattern, pickIndicators, pickDecoy,
     bestCountermeasure, categoryColor, severityColor, CATEGORY_COLOR, SEVERITY_COLOR,
-    indicatorWeightScale
+    indicatorWeightScale, severityScale
   };
 })();

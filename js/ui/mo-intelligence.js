@@ -123,9 +123,24 @@ const FWMoIntelligence = (() => {
     return map[cls] || cls;
   }
 
-  function severityBadgeClass(sev) {
-    const map = { LOW: 'bg-slate-700 text-slate-200', WATCH: 'bg-sky-900 text-sky-300', ELEVATED: 'bg-amber-900 text-amber-300', HIGH: 'bg-orange-900 text-orange-300', CRITICAL: 'bg-red-900 text-red-300' };
-    return map[sev] || map.LOW;
+  /* Was a local copy of the band-to-colour map, duplicated again in
+     sim-debug.js. moEngine owns the band, so it owns its tone; a second copy
+     is how two panels come to disagree about what a band means. */
+  function bandBadgeClass(band) { return FWMoEngine.bandTone(band); }
+
+  /* The taxonomy's assessed harm for the pattern this case RESEMBLES. Stated
+     separately from the confidence band and scoped in words, because the two
+     point in opposite directions often enough to matter: a thin correlation
+     against a pattern the taxonomy assesses as high harm used to render as
+     "severity LOW". Informational in both directions -- it says nothing about
+     whether this case is that pattern. */
+  function patternHarmNote(mo) {
+    if (typeof FW === 'undefined' || !FW.loaded() || !mo.relatedPattern) return '';
+    const scale = FW.severityScale();
+    const pat = (FW.patterns() || []).find(p => p.id === mo.relatedPattern);
+    if (!pat || !scale) return '';
+    return `<br>The taxonomy assesses <b>${pat.name}</b> as <b>${pat.severity}</b> harm if it occurs — ` +
+      `${scale.means} That is a property of the pattern, not a finding about this case, and it is not ${scale.doesNotMean}`;
   }
 
   function tabBtn(kind, value, label, active) {
@@ -406,7 +421,8 @@ const FWMoIntelligence = (() => {
       Detected from: ${sigTypes || 'a correlated signal combination'}.
       This exact combination has been observed ${mo.recurrenceCount} time${mo.recurrenceCount === 1 ? '' : 's'} in this simulation, currently classified
       <b>${classificationLabel(mo.classification)}</b> (novelty ${mo.noveltyScore}/100).
-      Confidence ${Math.round(mo.confidence)}%, severity ${mo.severity}.
+      Confidence ${Math.round(mo.confidence)}% (band <b>${mo.confidenceBand}</b> — the same number, banded, not a second measurement).
+      ${patternHarmNote(mo)}
       ${mo.resolutionReason ? `<br>Resolution note: ${mo.resolutionReason}` : ''}
       ${renderCaseSites(mo)}
     </div>`;
@@ -433,7 +449,7 @@ const FWMoIntelligence = (() => {
       <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
         <span class="font-mono text-[11px] text-slate-300">${mo.id} · ${mo.entities.truckId}</span>
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${severityBadgeClass(mo.severity)}">${mo.severity} · ${Math.round(mo.confidence)}%</span>
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${bandBadgeClass(mo.confidenceBand)}">${mo.confidenceBand} · ${Math.round(mo.confidence)}%</span>
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${classificationBadgeClass(mo.classification)}">${classificationLabel(mo.classification)}</span>
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${statusBadgeClass(mo.status)}">${mo.status.replace(/_/g, ' ')}</span>
           <button data-mo-view="${mo.id}" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-700 hover:bg-slate-600 text-white">${isOpen ? 'HIDE' : 'VIEW'}</button>

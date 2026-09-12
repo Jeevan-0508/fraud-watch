@@ -132,16 +132,8 @@ const FWSimDebug = (() => {
 
   function fmtPct(x) { return Math.round(x * 100) + '%'; }
 
-  function severityBadgeClass(sev) {
-    const map = {
-      LOW: 'bg-slate-700 text-slate-200',
-      WATCH: 'bg-sky-900 text-sky-300',
-      ELEVATED: 'bg-amber-900 text-amber-300',
-      HIGH: 'bg-orange-900 text-orange-300',
-      CRITICAL: 'bg-red-900 text-red-300'
-    };
-    return map[sev] || map.LOW;
-  }
+  // The band and its tone are moEngine's, not this panel's second opinion.
+  function bandBadgeClass(band) { return FWMoEngine.bandTone(band); }
 
   function classificationBadgeClass(cls) {
     const map = {
@@ -301,7 +293,7 @@ const FWSimDebug = (() => {
       return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2 mb-2">
         <div class="flex items-center justify-between mb-1">
           <span class="font-mono text-[11px] text-slate-300">${mo.id} · ${mo.entities.truckId}</span>
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${severityBadgeClass(mo.severity)}">${mo.severity} · ${Math.round(mo.confidence)}%</span>
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${bandBadgeClass(mo.confidenceBand)}">${mo.confidenceBand} · ${Math.round(mo.confidence)}%</span>
         </div>
         <div class="text-xs text-white mb-1">${mo.title || mo.matchedPatternName || 'Unclassified pattern'}</div>
         <div class="flex items-center gap-2 mb-1">

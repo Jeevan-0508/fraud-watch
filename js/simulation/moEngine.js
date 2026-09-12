@@ -65,12 +65,84 @@ const FWMoEngine = (() => {
     return Math.max(1, Math.min(100, Math.round(rawScore * 12)));
   }
 
+  /* A band over the confidence number, and nothing else. It used to be stored
+     on the case as `severity` and printed beside the percentage as a second
+     fact -- "Confidence 20%, severity LOW" -- when it is the same number said
+     twice. Worse, three of its five tokens (LOW / HIGH / CRITICAL) were the
+     taxonomy's own harm classes verbatim, so a case whose resembled pattern
+     the taxonomy assesses as HIGH harm displayed "severity LOW" because the
+     correlation was thin. How sure we are is not how bad it is; the field is
+     `confidenceBand` and none of its tokens is a harm word.
+
+     Tone stops at amber on purpose. A band is informational either way -- it
+     says how much the signal sum supports opening the case, not that anything
+     was established -- and red is this app's verdict colour. */
+  const CONFIDENCE_BAND = {
+    kind: 'PARAMETER',
+    scope: 'band over this case\'s confidence number, within moEngine',
+    means: 'how much the correlated signal sum supports keeping this case open.',
+    doesNotMean: 'how much harm the pattern would do, the taxonomy severity of the pattern it resembles, and not a finding that anything occurred.',
+    tokens: ['MINIMAL', 'WATCH', 'ELEVATED', 'SUBSTANTIAL', 'STRONG'],
+    tone: {
+      MINIMAL:     'bg-slate-700 text-slate-200',
+      WATCH:       'bg-sky-900 text-sky-300',
+      ELEVATED:    'bg-sky-800 text-sky-200',
+      SUBSTANTIAL: 'bg-amber-900 text-amber-300',
+      STRONG:      'bg-amber-800 text-amber-200'
+    }
+  };
+
   function confidenceLabel(score) {
-    if (score <= 20) return 'LOW';
+    if (typeof score !== 'number' || !isFinite(score)) {
+      throw new Error('moEngine.confidenceLabel: no numeric confidence to band; a band would state support nobody derived');
+    }
+    if (score <= 20) return 'MINIMAL';
     if (score <= 40) return 'WATCH';
     if (score <= 60) return 'ELEVATED';
-    if (score <= 80) return 'HIGH';
-    return 'CRITICAL';
+    if (score <= 80) return 'SUBSTANTIAL';
+    return 'STRONG';
+  }
+
+  function bandTone(band) {
+    const tone = CONFIDENCE_BAND.tone[band];
+    if (!tone) {
+      throw new Error('moEngine.bandTone: no tone declared for band "' + band + '"');
+    }
+    return tone;
+  }
+
+  /* Both directions, the Slice 39 pattern: a confidence band that is also a
+     taxonomy harm class would be read as harm, and a harm class this app has
+     no colour for would reach a badge unstyled. Runs once, the first time a
+     case is created with the taxonomy present -- the taxonomy arrives async,
+     so a load-time IIFE here would check nothing. */
+  let scopesChecked = false;
+  function assertBandScopeDistinct(severityTokens) {
+    const harm = (severityTokens || []).map(t => String(t).toUpperCase());
+    CONFIDENCE_BAND.tokens.forEach(b => {
+      if (harm.indexOf(b) >= 0) {
+        throw new Error('moEngine: confidence band "' + b + '" is also a taxonomy harm class; ' +
+          'the same word for how sure and how bad is how "severity LOW" came to be printed on a HIGH-harm pattern');
+      }
+      if (!CONFIDENCE_BAND.tone[b]) {
+        throw new Error('moEngine: band "' + b + '" has no declared tone');
+      }
+    });
+    Object.keys(CONFIDENCE_BAND.tone).forEach(b => {
+      if (CONFIDENCE_BAND.tokens.indexOf(b) < 0) {
+        throw new Error('moEngine: tone declared for "' + b + '", which is not a confidence band');
+      }
+    });
+    return true;
+  }
+
+  function checkScopesOnce() {
+    if (scopesChecked) return;
+    if (typeof FW === 'undefined' || !FW.severityScale) return;
+    const scale = FW.severityScale();
+    if (!scale) return;
+    assertBandScopeDistinct(scale.tokens);
+    scopesChecked = true;
   }
 
   // Returns every taxonomy pattern with at least one keyword vote,
@@ -232,6 +304,7 @@ const FWMoEngine = (() => {
     const classification = classifyDiscovery(ranked, priorCount);
     const noveltyScore = noveltyFromRecurrence(priorCount);
 
+    checkScopesOnce();
     const siteInfo = siteBreakdown(buildEvidence(signals));
 
     return {
@@ -242,7 +315,7 @@ const FWMoEngine = (() => {
       baseConfidence: confidence,
       investigationAdjustment: 0,
       investigation: { findings: [], completed: [], effortSeconds: 0 },
-      severity: confidenceLabel(confidence),
+      confidenceBand: confidenceLabel(confidence),
       status: 'NEW',
       classification,
       noveltyScore,
@@ -284,7 +357,7 @@ const FWMoEngine = (() => {
     const base = mo.baseConfidence != null ? mo.baseConfidence : mo.confidence;
     const adj = mo.investigationAdjustment || 0;
     mo.confidence = Math.max(1, Math.min(100, Math.round(base + adj)));
-    mo.severity = confidenceLabel(mo.confidence);
+    mo.confidenceBand = confidenceLabel(mo.confidence);
     return mo.confidence;
   }
 
@@ -385,6 +458,7 @@ const FWMoEngine = (() => {
     createEngine, process, setStatus, recomputeConfidence, scoreSignals, mergeEvidence, matchPattern, rankPatterns,
     siteBreakdown, applySites, SITE_SPREAD_NOTE,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
+    CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
     signalSignature, classifyDiscovery, noveltyFromRecurrence, discoverySummary,
     closureHand, CLOSURE_HAND, CLOSURE_HAND_NOTE,
     OPEN_STATUSES, CLOSED_STATUSES, CREATE_THRESHOLD, MIN_SIGNAL_TYPES
