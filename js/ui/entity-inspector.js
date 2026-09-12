@@ -287,8 +287,11 @@ const FWEntityInspector = (() => {
     const signalsHtml = `<div>
       <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Active risk signals (${activeSignals.length})</div>
       ${activeSignals.length
-        ? `<ul class="list-disc list-inside text-[11px] text-slate-400 space-y-0.5">${activeSignals.map(s => `<li>${s.type.replace(/_/g, ' ')} — reliability ${Math.round(s.reliability * 100)}%</li>`).join('')}</ul>`
+        ? `<ul class="list-disc list-inside text-[11px] text-slate-400 space-y-0.5">${activeSignals.map(s => `<li>${s.type.replace(/_/g, ' ')} — ${FWSignalEngine.formatReliability(s.reliability)}</li>`).join('')}</ul>`
         : '<p class="text-slate-600 italic text-[11px]">None right now.</p>'}
+      ${activeSignals.length
+        ? `<p class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.reliabilityNote()}</p>`
+        : ''}
     </div>`;
 
     const history = (truck.history || []).slice(-10).reverse();

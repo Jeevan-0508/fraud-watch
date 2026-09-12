@@ -14,7 +14,16 @@
    dropped into moEngine's sum would clear CREATE_THRESHOLD (3.5) on its own,
    which is exactly the "one strong signal is not an MO" rule that module
    opens by refusing. Two numbers, one word, two scopes -- so each is now
-   declared where it lives and checked against its own declaration. */
+   declared where it lives and checked against its own declaration.
+   The catalog's OTHER number, `reliability`, went undeclared for far longer
+   and was rendered on every evidence row as `reliability 55%`. It is a
+   0.5-0.75 constant attached to a signal TYPE; nothing is divided anywhere in
+   it, so the percent sign was a denominator claim over nothing, and the word
+   "reliability" beside a percentage reads as "this observation is 55% likely
+   to be true" -- a probability claim about the world, one step from a
+   probability claim about fraud. It is neither: it is a fixed calibration
+   discount applied to weight before moEngine sums it. RELIABILITY_SCALE
+   declares that, and nothing may print it with a % again. */
 const FWSignalEngine = (() => {
   // decaySeconds: how long the signal stays "active" before it stops
   // counting toward anything — old, unexplained blips shouldn't haunt
@@ -42,10 +51,100 @@ const FWSignalEngine = (() => {
     scope: 'simulation signal strength, within this engine',
     min: 1,
     max: 3,
-    means: 'how much weight this engine attaches to one observed event when moEngine sums signals against CREATE_THRESHOLD.',
+    means: 'how much weight this engine attaches to one observed event, before the type reliability discount is applied to it.',
     doesNotMean: 'a likelihood that fraud occurred, and not the same quantity as the taxonomy indicator weight FW.indicatorWeightScale() describes.',
-    notInterchangeableWith: 'FW.indicatorWeightScale()'
+    notInterchangeableWith: 'FW.indicatorWeightScale()',
+    /* This field used to claim weight was the quantity moEngine sums against
+       CREATE_THRESHOLD. It is not: scoreSignals sums weight * reliability, so a
+       weight of 3 never contributes 3. Read as the summed quantity, this scale
+       materially overstates what opens a case -- effectiveSpan() measures by how
+       much. Corrected here rather than left as a true-sounding sentence. */
+    notTheSummedQuantity: 'moEngine.scoreSignals sums weight * reliability, never weight alone; see FWSignalEngine.effectiveSpan().'
   };
+
+  /* Undeclared until now, and printed as a percentage on every evidence row and
+     in the entity inspector. Declared in the terms Slice 43 established for the
+     correlation index, because this is the same question one field over. */
+  const RELIABILITY_SCALE = {
+    kind: 'PARAMETER',
+    unit: 'a dimensionless multiplier on a 0-1 scale, not a percentage',
+    scope: 'one signal TYPE in this catalog -- not one observation, not one entity, not one case',
+    min: 0.5,
+    max: 0.75,
+    divides: null,
+    denominator: 'none -- nothing is divided by anything to produce it, so it cannot carry a % sign',
+    source: 'ASSUMED -- hand-set calibration per signal type. No measurement, sample or reference rate stands behind any of these values.',
+    means: 'how much this engine discounts a type of observation before moEngine adds it to the signal sum: how much it is willing to lean on THIS KIND of observation in general.',
+    doesNotMean: 'the probability that this observation is correct, the probability the underlying event happened, the probability the event was fraudulent, or a grade of this particular piece of evidence.',
+    perObservation: false,
+    perObservationNote: 'Every signal of a type carries the identical constant, so a row reading "0.55" is restating the type name, not assessing that row. Two rows differing here differ only in KIND.',
+    updatedByInvestigation: false,
+    updatedByInvestigationNote: 'No engine ever writes back to it, so a signal an analyst check contradicted and a signal an analyst check corroborated keep the same number.',
+    doesNotDiscriminate: 'The constant is attached from the type alone, with no reference to whether the underlying event had a legitimate explanation, so it carries no information about which of two signals of different types is the more innocent.'
+  };
+
+  /* Measured from the catalog, not asserted in prose: what the declared weight
+     scale would imply about opening a case, against what the summed quantity
+     actually does. */
+  function effectiveSpan() {
+    const keys = Object.keys(SIGNAL_CATALOG);
+    const eff = keys.map(k => SIGNAL_CATALOG[k].weight * SIGNAL_CATALOG[k].reliability);
+    const T = 3.5; // moEngine.CREATE_THRESHOLD, quoted; moEngine owns it
+    let pairs = 0, byWeight = 0, bySum = 0;
+    for (let i = 0; i < keys.length; i++) {
+      for (let j = i + 1; j < keys.length; j++) {
+        pairs += 1;
+        const a = SIGNAL_CATALOG[keys[i]], b = SIGNAL_CATALOG[keys[j]];
+        if (a.weight + b.weight >= T) byWeight += 1;
+        if (a.weight * a.reliability + b.weight * b.reliability >= T) bySum += 1;
+      }
+    }
+    const round = (v) => Math.round(v * 100) / 100;
+    const span = {
+      declaredMin: WEIGHT_SCALE.min,
+      declaredMax: WEIGHT_SCALE.max,
+      effectiveMin: round(Math.min.apply(null, eff)),
+      effectiveMax: round(Math.max.apply(null, eff)),
+      threshold: T,
+      pairs: pairs,
+      pairsClearingOnWeight: byWeight,
+      pairsClearingOnSummedQuantity: bySum
+    };
+    span.note = 'A signal type is weighted ' + span.declaredMin + '-' + span.declaredMax +
+      ', but the number moEngine sums is weight x reliability, which spans ' +
+      span.effectiveMin + '-' + span.effectiveMax + ' -- so the strongest signal in the catalog ' +
+      'contributes ' + span.effectiveMax + ', not ' + span.declaredMax + '. Of the ' + span.pairs +
+      ' pairs of distinct signal types, ' + span.pairsClearingOnWeight + ' would reach the ' +
+      span.threshold + ' needed to open a case if weight were the summed quantity, and ' +
+      span.pairsClearingOnSummedQuantity + ' actually do.';
+    return span;
+  }
+
+  /* One owner for the display string, so the two panels that print this number
+     cannot drift into two units again. No % anywhere, by construction. */
+  function formatReliability(r) {
+    if (typeof r !== 'number' || !isFinite(r)) {
+      throw new Error('signalEngine.formatReliability: reliability is ' + r + '; a missing multiplier must not be rendered as one');
+    }
+    /* NOT "of " + RELIABILITY_SCALE.max: 0.55 of 0.75 is a construction that
+       invites dividing one by the other, which would be a share, which is the
+       reading this slice exists to remove. The declared scale and the span the
+       catalog happens to use are two different facts and are named as two. */
+    return 'type reliability ' + r + ' (a multiplier on 0-1, not a share; the catalog uses ' +
+      RELIABILITY_SCALE.min + '-' + RELIABILITY_SCALE.max + ')';
+  }
+
+  /* The caveat that belongs beside any rendering of it, stated at the point of
+     display rather than assumed known. */
+  function reliabilityNote() {
+    return 'Type reliability is ' + RELIABILITY_SCALE.unit + '. It is set once per signal type across the ' +
+      Object.keys(SIGNAL_CATALOG).length + ' types in this catalog, which use ' + RELIABILITY_SCALE.min +
+      ' to ' + RELIABILITY_SCALE.max + ', and every value is ' + RELIABILITY_SCALE.source.split(' -- ')[0] +
+      ': hand-set calibration, not measured. ' +
+      RELIABILITY_SCALE.perObservationNote + ' ' + RELIABILITY_SCALE.updatedByInvestigationNote +
+      ' It does not mean ' + RELIABILITY_SCALE.doesNotMean;
+  }
+
 
   (function assertOwnScale() {
     Object.keys(SIGNAL_CATALOG).forEach(k => {
@@ -55,6 +154,38 @@ const FWSignalEngine = (() => {
           WEIGHT_SCALE.min + '-' + WEIGHT_SCALE.max + '; either the entry or the declaration is wrong');
       }
     });
+  })();
+
+  /* Throws in both directions, on the pattern Slice 43 set: an entry outside the
+     declared span is a bug, and a declared bound no entry attains is also a bug
+     because it invents headroom the catalog does not use. */
+  (function assertReliabilityDeclared() {
+    if (/%/.test(RELIABILITY_SCALE.unit)) {
+      throw new Error('signalEngine: RELIABILITY_SCALE.unit carries a percent sign; nothing is divided to produce this number');
+    }
+    if (!(RELIABILITY_SCALE.min > 0) || !(RELIABILITY_SCALE.max <= 1)) {
+      throw new Error('signalEngine: RELIABILITY_SCALE must sit inside (0, 1]');
+    }
+    const vals = Object.keys(SIGNAL_CATALOG).map(k => SIGNAL_CATALOG[k].reliability);
+    vals.forEach((r, i) => {
+      const k = Object.keys(SIGNAL_CATALOG)[i];
+      if (typeof r !== 'number' || r < RELIABILITY_SCALE.min || r > RELIABILITY_SCALE.max) {
+        throw new Error('signalEngine: ' + k + ' reliability ' + r + ' is outside the declared span ' +
+          RELIABILITY_SCALE.min + '-' + RELIABILITY_SCALE.max + '; either the entry or the declaration is wrong');
+      }
+    });
+    if (Math.min.apply(null, vals) !== RELIABILITY_SCALE.min || Math.max.apply(null, vals) !== RELIABILITY_SCALE.max) {
+      throw new Error('signalEngine: RELIABILITY_SCALE declares a span of ' + RELIABILITY_SCALE.min + '-' +
+        RELIABILITY_SCALE.max + ' that the catalog does not reach (' + Math.min.apply(null, vals) + '-' +
+        Math.max.apply(null, vals) + '); a declared bound no entry attains invents headroom');
+    }
+    if (WEIGHT_SCALE.means.indexOf('CREATE_THRESHOLD') !== -1) {
+      throw new Error('signalEngine: WEIGHT_SCALE.means names weight as the quantity summed against CREATE_THRESHOLD; the summed quantity is weight * reliability');
+    }
+    const span = effectiveSpan();
+    if (span.effectiveMax >= WEIGHT_SCALE.max) {
+      throw new Error('signalEngine: effective contribution reaches the declared weight maximum, so reliability is no longer a discount and the two scales are one');
+    }
   })();
 
   function createEngine() {
@@ -124,5 +255,6 @@ const FWSignalEngine = (() => {
     return entity.riskSignals.filter(s => s.expiresAt > now);
   }
 
-  return { createEngine, deriveSignal, process, pruneExpired, getActiveSignals, SIGNAL_CATALOG, WEIGHT_SCALE };
+  return { createEngine, deriveSignal, process, pruneExpired, getActiveSignals, SIGNAL_CATALOG, WEIGHT_SCALE,
+    RELIABILITY_SCALE, effectiveSpan, formatReliability, reliabilityNote };
 })();
