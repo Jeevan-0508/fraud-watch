@@ -205,10 +205,15 @@ const FWMoIntelligence = (() => {
   function renderEvidenceList(mo) {
     if (!mo.evidence || !mo.evidence.length) return '';
     const active = new Set(mo.activeSignals || mo.signals || []);
+    const decl = FWMoEngine.EVIDENCE_CONTRIBUTION;
     const rows = mo.evidence.map(e =>
-      `<li>${e.signalType.replace(/_/g, ' ')} — contribution ${e.contribution}, reliability ${Math.round(e.reliability * 100)}% (${fmtSimTime(e.at)})${active.has(e.signalId) ? '' : ' <span class="text-slate-600">· decayed, no longer counting toward confidence</span>'}</li>`
+      `<li>${e.signalType.replace(/_/g, ' ')} — contributes ${e.contribution} ${decl.unit.split(',')[0]}, reliability ${Math.round(e.reliability * 100)}% (${fmtSimTime(e.at)})${active.has(e.signalId) ? '' : ' <span class="text-slate-600">· decayed, no longer counting toward the index</span>'}</li>`
     ).join('');
-    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Signals & evidence</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
+    // Two sums of one quantity at two scopes, stated and reconciled rather
+    // than left for the eye to add up into the index it will not match.
+    const scopes = FWMoEngine.contributionScopes(mo);
+    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Signals & evidence</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul>
+      <div class="text-[9px] text-slate-500 italic mt-1">${scopes.note} A contribution is not ${decl.doesNotMean}</div></div>`;
   }
 
   function renderTimeline(mo) {
@@ -227,10 +232,38 @@ const FWMoIntelligence = (() => {
     return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Historical pattern match</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
   }
 
+  /* The heading used to read "What makes this different" over a list of
+     resemblance sentences, and vanished entirely for a recurring case, which
+     left the case most strongly associated with a pattern saying nothing about
+     how it differs from it. The heading now matches the content, and the
+     difference question is refused in the open. */
   function renderDifferences(mo) {
-    if (!mo.differencesFromKnownPatterns || !mo.differencesFromKnownPatterns.length) return '';
-    const rows = mo.differencesFromKnownPatterns.map(d => `<li>${d}</li>`).join('');
-    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">What makes this different</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
+    const notes = mo.resemblanceNotes || [];
+    if (!notes.length) return '';
+    const rows = notes.map(d => `<li>${d}</li>`).join('');
+    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">How this case relates to documented patterns</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
+  }
+
+  /* "Recommended" over a responsive countermeasure quoted from a pattern the
+     case merely shares vocabulary with. The heading now says whose
+     countermeasures these are, each carries its bucket, and the coverage line
+     states how many of the documented set are shown and which bucket is not
+     read at all. */
+  function renderCountermeasures(mo) {
+    const cm = mo.patternCountermeasures;
+    if (!cm) return '';
+    const scope = FWMoEngine.COUNTERMEASURE_SCOPE;
+    const rows = (cm.picks || [])
+      .map(p => `<li><span class="text-slate-500 uppercase text-[9px]">${p.bucket}</span> ${p.text}</li>`).join('');
+    const head = cm.patternName
+      ? `Countermeasures documented for ${cm.patternName}`
+      : 'Countermeasures';
+    return `<div class="mb-1">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">${head}</div>
+      ${rows ? `<ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mb-1">${rows}</ul>` : ''}
+      <div class="text-[9px] text-amber-300/80 mb-1">${cm.note}</div>
+      <div class="text-[9px] text-slate-500 italic mb-1">These are ${scope.means} They are not ${scope.doesNotMean}</div>
+    </div>`;
   }
 
   function renderFalsePositives(mo) {
@@ -469,8 +502,7 @@ const FWMoIntelligence = (() => {
         ${renderFalsePositives(mo)}
         ${renderInvestigation(mo)}
         ${renderVerdictOutcome(mo)}
-        <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Recommended</div>
-        <ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mb-1">${(mo.recommendedActions || []).map(a => `<li>${a}</li>`).join('')}</ul>
+        ${renderCountermeasures(mo)}
         ${renderActions(mo)}
       </div>` : '';
 

@@ -294,8 +294,9 @@ const FWSimDebug = (() => {
     els.moList.innerHTML = summaryHtml + mos.slice(0, 12).map(mo => {
       const fp = (mo.falsePositivePossibilities || []).slice(0, 2)
         .map(f => `<li>${typeof f === 'string' ? f : (f.looks_like || JSON.stringify(f))}</li>`).join('');
-      const actions = (mo.recommendedActions || []).slice(0, 2).map(a => `<li>${a}</li>`).join('');
-      const diffs = (mo.differencesFromKnownPatterns || []).map(d => `<li>${d}</li>`).join('');
+      const cm = mo.patternCountermeasures || { picks: [], note: '' };
+      const actions = (cm.picks || []).map(a => `<li><span class="uppercase text-[9px] text-slate-600">${a.bucket}</span> ${a.text}</li>`).join('');
+      const diffs = (mo.resemblanceNotes || []).map(d => `<li>${d}</li>`).join('');
       const related = (mo.relatedHistoricalPatterns || []).map(p => p.name).join(', ');
       return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2 mb-2">
         <div class="flex items-center justify-between mb-1">
@@ -313,7 +314,8 @@ const FWSimDebug = (() => {
         ${related ? `<div class="text-[10px] text-slate-500 mb-1">Closest known patterns: ${related}</div>` : ''}
         ${diffs ? `<div class="text-[10px] text-slate-500">${diffs.replace(/<li>/g, '').replace(/<\/li>/g, ' ')}</div>` : ''}
         ${fp ? `<div class="text-[10px] text-slate-500">Could be innocent: <ul class="list-disc list-inside">${fp}</ul></div>` : ''}
-        ${actions ? `<div class="text-[10px] text-slate-500">Recommended: <ul class="list-disc list-inside">${actions}</ul></div>` : ''}
+        ${actions ? `<div class="text-[10px] text-slate-500">Countermeasures documented for ${cm.patternName}: <ul class="list-disc list-inside">${actions}</ul>${cm.note}</div>` : ''}
+        ${!actions && cm.note ? `<div class="text-[10px] text-slate-500">${cm.note}</div>` : ''}
       </div>`;
     }).join('');
   }

@@ -12,9 +12,11 @@
    whose name/category/aliases best resemble the kinds of signals
    observed. It never invents a new pattern and never claims the
    simulated signal literally IS a documented indicator -- the MO's
-   falsePositivePossibilities and recommendedActions are always pulled
-   verbatim from that matched pattern's real taxonomy data, or left
-   generic if nothing matches confidently.
+   falsePositivePossibilities and patternCountermeasures are always pulled
+   verbatim from that matched pattern's real taxonomy data, and are scoped on
+   screen as facts about the pattern rather than recommendations about the
+   case. If nothing shares a keyword, that is stated as a gap in the
+   taxonomy's vocabulary, not as a finding about the behaviour.
 
    DISCOVERY / NOVELTY: every MO's "signature" (its sorted distinct
    signal types) is tallied across the whole run in engine.signatures.
@@ -436,7 +438,7 @@ const FWMoEngine = (() => {
     if (!ranked.length) return 'EMERGING_BEHAVIOR';       // no resemblance to anything known
     if (priorCount === 0) return topVotes >= 3 ? 'MO_VARIANT' : 'POTENTIAL_NEW_MO';
     if (priorCount < 3) return 'POTENTIAL_NEW_MO';
-    return 'KNOWN_MO';                                     // recurring combination, well understood by now
+    return 'KNOWN_MO';                                     // signature seen 3+ times in THIS run; not a claim it is understood
   }
 
   /* This is `recurrenceCount` restated on a 0-100 axis and nothing else -- the
@@ -490,15 +492,104 @@ const FWMoEngine = (() => {
     };
   }
 
-  function differencesFromKnown(ranked, classification) {
-    if (classification === 'KNOWN_MO') return [];
-    if (!ranked.length) {
-      return ['This signal combination has no confident resemblance to any documented pattern in the taxonomy.'];
+  /* THE HEADING SAID DIFFERENCES AND THE LIST STATED RESEMBLANCE. This
+     function fed a panel section titled "What makes this different", and
+     every sentence it produced was a resemblance sentence -- "Resembles
+     Double Brokering but this exact combination hasn't recurred (yet)". No
+     difference between the case and the pattern was computed, because nothing
+     in this engine compares the case's signal types against the pattern's
+     documented indicators; matching is a keyword vote over the pattern's
+     name, category and aliases. Two claims under one heading.
+
+     Worse, a KNOWN_MO returned an empty array, and the panel drops an empty
+     section entirely -- so the case most strongly associated with a documented
+     pattern was the one with NOTHING said about how it differs from it, and
+     silence there reads as "no differences", which is identity. That is the
+     Slice 40 shape: an absent record rendered as an absence of the thing.
+
+     So the notes say what they are, the refusal below owns the difference
+     question, and no classification gets silence. */
+  const RESEMBLANCE_NOTES = {
+    kind: 'PARAMETER',
+    scope: 'how this case relates to documented taxonomy patterns, within moEngine',
+    derivedFrom: 'rankPatterns -- a keyword vote over each pattern\'s name, category and aliases',
+    means: 'which documented patterns share vocabulary with the kinds of signal observed, strongest first.',
+    doesNotMean: 'that the case is an instance of any of them, that its signals are the pattern\'s documented indicators, and not a difference between the two.',
+    REFUSED: {
+      figure: 'How this case differs from the pattern it resembles',
+      why: 'Nothing here compares the case\'s signal types against the pattern\'s documented indicators. ' +
+        'Resemblance is a keyword vote over the pattern\'s name, category and aliases, and a vote count cannot ' +
+        'produce a difference. A section headed "What makes this different" listing resemblance sentences stated ' +
+        'a comparison nobody made.'
     }
+  };
+
+  function resemblanceNotes(ranked, classification) {
+    if (!ranked || !ranked.length) {
+      return ['No documented pattern shares a keyword with this signal combination \u2014 zero votes, ' +
+        'which is a gap in what the taxonomy\'s vocabulary covers, not a finding that the behaviour is new. ' +
+        RESEMBLANCE_NOTES.REFUSED.why];
+    }
+    const top = ranked[0];
     const names = ranked.slice(1, 3).map(r => r.pattern.name);
-    const base = [`Resembles ${ranked[0].pattern.name} but this exact combination of signal types hasn't recurred (yet) in this simulation.`];
-    if (names.length) base.push(`Also shares partial characteristics with: ${names.join(', ')}.`);
-    return base;
+    const notes = [];
+    if (classification === 'KNOWN_MO') {
+      notes.push('This signal combination has recurred, and shares most vocabulary with ' + top.pattern.name +
+        ' (' + top.votes + ' keyword vote' + (top.votes === 1 ? '' : 's') + '). Recurrence is a fact about this simulation\'s own history, ' +
+        'not about the pattern.');
+    } else {
+      notes.push('Shares most vocabulary with ' + top.pattern.name + ' (' + top.votes + ' keyword vote' +
+        (top.votes === 1 ? '' : 's') + '). This exact combination of signal types has not recurred in this simulation.');
+    }
+    if (names.length) notes.push('Shares some vocabulary with: ' + names.join(', ') + '.');
+    // Stated for every classification, so no case is left in silence where
+    // silence would read as "there are no differences".
+    notes.push(RESEMBLANCE_NOTES.REFUSED.why);
+    return notes;
+  }
+
+  /* Printed as a bare "contribution 1.7" on every evidence row. It is the
+     per-signal term of the sum the index is built from -- weight * reliability
+     -- so once the index declared its unit (Slice 43) this number was the same
+     quantity one step upstream, still unlabelled and on a different scale.
+     And the rows cover EVERY signal the case holds while the index covers only
+     the active ones, so the contributions on screen sum to something the index
+     was not computed from: 3.70 against a baseSignalSum of 1.65 on the seeded
+     run, two figures of one quantity at two scopes, neither labelled. */
+  const EVIDENCE_CONTRIBUTION = {
+    kind: 'PARAMETER',
+    unit: 'signal-sum points, the input to the correlation index before its x' + INDEX_MULTIPLIER + ' multiplier',
+    scope: 'one signal, listed for every signal the case holds including decayed ones',
+    derivedFrom: 'signal weight x signal reliability, the term moEngine.scoreSignals adds up',
+    means: 'how much this one signal adds to the sum the index is built from, while it is active.',
+    doesNotMean: 'index points, a percentage, a likelihood this signal indicates fraud, and not a figure comparable across scopes without saying which scope.'
+  };
+
+  /* The two sums of one quantity, disjoint and summed at the point of display
+     rather than left to be read as one number twice (reconciled-totals
+     discipline). */
+  function contributionScopes(mo) {
+    const active = new Set(mo.activeSignals || mo.signals || []);
+    const rows = mo.evidence || [];
+    let activeSum = 0, decayedSum = 0;
+    rows.forEach(e => {
+      if (active.has(e.signalId)) activeSum += e.contribution; else decayedSum += e.contribution;
+    });
+    const round = (v) => Math.round(v * 100) / 100;
+    const scopes = {
+      activeSum: round(activeSum),
+      decayedSum: round(decayedSum),
+      recordSum: round(activeSum + decayedSum),
+      rows: rows.length
+    };
+    if (Math.abs(scopes.activeSum + scopes.decayedSum - scopes.recordSum) > 0.011) {
+      throw new Error('moEngine.contributionScopes: the two scopes do not sum to the record total');
+    }
+    scopes.note = 'Contributions listed for all ' + scopes.rows + ' signal' + (scopes.rows === 1 ? '' : 's') +
+      ' this case holds sum to ' + scopes.recordSum.toFixed(2) + ' ' + EVIDENCE_CONTRIBUTION.unit +
+      ', of which ' + scopes.activeSum.toFixed(2) + ' is still active and ' + scopes.decayedSum.toFixed(2) +
+      ' has decayed out. The correlation index is built from the active figure alone, so the rows above do not add up to it.';
+    return scopes;
   }
 
   function buildEvidence(signals) {
@@ -580,13 +671,69 @@ const FWMoEngine = (() => {
     return b;
   }
 
+  /* PRINTED UNDER A BARE HEADING READING "Recommended". These are
+     countermeasures the taxonomy documents for a pattern this case merely
+     shares vocabulary with, and one of the two picked is always from the
+     RESPONSIVE bucket -- on the seeded run that is "Suspend further tendering
+     to the entity immediately and freeze open invoices pending
+     reconciliation", recommended, unscoped, on a case at index 20/100 with no
+     record source checked and nothing ruled out. An action against a party is
+     not a thing a resemblance can recommend.
+
+     It also read exactly two of the three documented buckets and never said
+     so: the preventive bucket, four entries deep on the seeded pattern, was
+     silently unread, and 2 of 12 documented countermeasures were shown as if
+     they were the set. Scope, coverage and the buckets not read are now
+     returned with the picks, and the caller states them. */
+  const COUNTERMEASURE_BUCKETS = ['preventive', 'detective', 'responsive'];
+  const COUNTERMEASURE_SCOPE = {
+    kind: 'PARAMETER',
+    scope: 'countermeasures the taxonomy documents for the resembled pattern',
+    means: 'what the taxonomy recommends against that pattern, quoted verbatim.',
+    doesNotMean: 'a recommendation about this case, an action this case justifies, and not a step any finding here supports.',
+    readBuckets: ['detective', 'responsive'],
+    unreadBuckets: ['preventive'],
+    unreadWhy: 'A preventive control is a change to how the operation runs. It is not a response to one case, ' +
+      'and quoting one here would read as a step this case justifies.'
+  };
+
   function recommendedActionsFor(pattern) {
-    if (!pattern) return ['Monitor for additional correlated signals before escalating.'];
+    if (!pattern) {
+      return {
+        patternId: null, patternName: null, picks: [],
+        coverage: { shown: 0, documented: 0, byBucket: {} },
+        note: 'This case resembles no documented pattern, so the taxonomy documents no countermeasures for it. ' +
+          'That is an absence of a documented pattern, not a finding that nothing should be done.'
+      };
+    }
     const cm = pattern.countermeasures || {};
     const picks = [];
-    if (cm.detective && cm.detective.length) picks.push(cm.detective[0]);
-    if (cm.responsive && cm.responsive.length) picks.push(cm.responsive[0]);
-    return picks.length ? picks : ['Monitor for additional correlated signals before escalating.'];
+    COUNTERMEASURE_SCOPE.readBuckets.forEach(b => {
+      if (cm[b] && cm[b].length) picks.push({ bucket: b, text: cm[b][0] });
+    });
+    const byBucket = {};
+    let documented = 0;
+    COUNTERMEASURE_BUCKETS.forEach(b => {
+      const have = (cm[b] || []).length;
+      documented += have;
+      byBucket[b] = {
+        documented: have,
+        shown: picks.filter(x => x.bucket === b).length,
+        read: COUNTERMEASURE_SCOPE.readBuckets.indexOf(b) >= 0
+      };
+    });
+    const unread = COUNTERMEASURE_BUCKETS.filter(b => byBucket[b].documented && !byBucket[b].read);
+    return {
+      patternId: pattern.id,
+      patternName: pattern.name,
+      picks: picks,
+      coverage: { shown: picks.length, documented: documented, byBucket: byBucket },
+      note: 'Documented by the taxonomy against ' + pattern.name + ', a pattern this case shares vocabulary with. ' +
+        'Showing ' + picks.length + ' of ' + documented + ' documented countermeasures' +
+        (unread.length ? ' \u2014 the ' + unread.join(' and ') + ' bucket is not read here. ' +
+          COUNTERMEASURE_SCOPE.unreadWhy : '.') +
+        ' None of this is a step this case has established a basis for.'
+    };
   }
 
   function buildMo(engine, truck, signals, now) {
@@ -633,9 +780,9 @@ const FWMoEngine = (() => {
       timeline: buildEvidence(signals).map(e => ({ t: e.at, type: e.signalType })),
       relatedPattern: pattern ? pattern.id : null,
       relatedHistoricalPatterns: ranked.slice(0, 3).map(r => ({ id: r.pattern.id, name: r.pattern.name, votes: r.votes })),
-      differencesFromKnownPatterns: differencesFromKnown(ranked, classification),
+      resemblanceNotes: resemblanceNotes(ranked, classification),
       falsePositivePossibilities: pattern ? pattern.false_positives.slice(0, 2) : [],
-      recommendedActions: recommendedActionsFor(pattern),
+      patternCountermeasures: recommendedActionsFor(pattern),
       evidence: buildEvidence(signals),
       firstObserved: Math.min(...signals.map(s => s.createdAt)),
       // When the case was OPENED, which is not when its first signal was
@@ -786,6 +933,8 @@ const FWMoEngine = (() => {
     createEngine, process, setStatus, recomputeConfidence, scoreSignals, mergeEvidence, matchPattern, rankPatterns,
     siteBreakdown, applySites, SITE_SPREAD_NOTE,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
+    RESEMBLANCE_NOTES, resemblanceNotes, COUNTERMEASURE_SCOPE, COUNTERMEASURE_BUCKETS,
+    EVIDENCE_CONTRIBUTION, contributionScopes,
     CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
     CONFIDENCE_INDEX, indexNote, formatIndex, indexReach, indexBasis, assertIndexScaleDeclared,
     INDEX_MIN, INDEX_MAX, INDEX_MULTIPLIER,
