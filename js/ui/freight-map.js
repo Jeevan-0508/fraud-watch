@@ -957,6 +957,38 @@ const FWFreightMap = (() => {
     IDLE:       { fill: '#111827', stroke: '#4b5563' }
   };
 
+  /* THE CAMERA. Slices 75 and 76 drew the whole network into one fixed
+     rectangle. That is the right default -- a reader arrives and sees the whole
+     network, which is the only view that tells them what the network IS -- and it
+     was also the only option, so a reader who wanted to watch one truck was
+     reading a marker twelve pixels wide.
+
+     This is a transform over which rectangle of the drawing reaches the screen.
+     It is not a second position source and it is not a filter: it chooses no
+     coordinate, removes nothing that exists, and cannot put a marker anywhere
+     other than where the position it was handed puts it. summary().positionSource
+     is unchanged by this addition and stays true.
+
+     The rectangle is kept inside the drawing on purpose. An unclamped pan lets a
+     reader drag into blank space and conclude the map has broken, and the map has
+     no way to tell them otherwise. */
+  const CAMERA = {
+    isA: 'a rectangle of the layout, in layout units, mapped onto the whole viewport.',
+    minScale: 1,
+    maxScale: 6,
+    step: 1.5,
+    followScale: 2.5,
+    clampedTo: 'the drawing, so no press, scroll or drag can leave a reader looking at empty space.',
+    doesNotMean: 'Magnifying the view does not bring two places closer together. The drawn length ' +
+      'of a road is a consequence of the layout and never a distance, at every magnification -- ' +
+      'the real figure stays printed on the road.',
+    followMeans: 'Following re-centres the rectangle on the position a truck already has, each time ' +
+      'the simulation advances. It moves the view and never the truck.',
+    offScreenMeans: 'A truck outside the rectangle is still on the network and still counted by the ' +
+      'line above. It is off the screen, not out of the simulation, which is why every figure here ' +
+      'states which of the two it counts.'
+  };
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   let els = {};
@@ -970,6 +1002,96 @@ const FWFreightMap = (() => {
   // and the card stayed blank until something was selected.
   let lastCardSig = null;
   let lastTimelineSig = null;
+  let lastCameraSig = null;
+  /* cx/cy null means "the centre of the drawing", so an untouched camera holds no
+     coordinate of its own that could drift out of step with the layout. */
+  let camera = { scale: CAMERA.minScale, cx: null, cy: null };
+  let followTruckId = null;
+  let followState = 'OFF';        // OFF | FOLLOWING | UNPLACEABLE
+  let suppressNextClick = false;  // set by a drag, so a pan does not also select
+
+  function r2(v) { return Math.round(v * 100) / 100; }
+
+  /* The entire camera as one pure function of a layout and a camera state.
+     Nothing here touches the document, so every rectangle the controls can
+     produce is checkable without rendering anything. */
+  function viewBoxFor(layout, cam) {
+    const c = cam || camera;
+    const scale = Math.min(CAMERA.maxScale, Math.max(CAMERA.minScale, c.scale || CAMERA.minScale));
+    const w = layout.width / scale, h = layout.height / scale;
+    const wantX = (c.cx === null || c.cx === undefined) ? layout.width / 2 : c.cx;
+    const wantY = (c.cy === null || c.cy === undefined) ? layout.height / 2 : c.cy;
+    const x = Math.min(Math.max(wantX - w / 2, 0), layout.width - w);
+    const y = Math.min(Math.max(wantY - h / 2, 0), layout.height - h);
+    return {
+      scale: Math.round(scale * 1000) / 1000,
+      x: r2(x), y: r2(y), w: r2(w), h: r2(h),
+      viewBox: r2(x) + ' ' + r2(y) + ' ' + r2(w) + ' ' + r2(h),
+      wholeDrawing: scale <= CAMERA.minScale,
+      centre: { x: r2(x + w / 2), y: r2(y + h / 2) },
+      clamped: r2(x) !== r2(wantX - w / 2) || r2(y) !== r2(wantY - h / 2)
+    };
+  }
+
+  /* How many of the things that ARE drawn fall inside the rectangle. Both
+     figures are reported against the drawn total and never against the registry
+     total: "3 trucks" on a magnified view would otherwise read as a claim about
+     the network when it is a fact about the screen. */
+  function inView(box, placements, nodes) {
+    const inside = (px, py) => px >= box.x && px <= box.x + box.w && py >= box.y && py <= box.y + box.h;
+    const drawn = (placements || []).filter(p => p.drawn);
+    const truckIds = drawn.filter(p => inside(p.drawX, p.drawY)).map(p => p.truckId);
+    const placeIds = (nodes || []).filter(n => inside(n.x, n.y)).map(n => n.id);
+    return {
+      trucksDrawn: drawn.length, trucksInView: truckIds.length,
+      trucksOffScreen: drawn.length - truckIds.length, truckIds: truckIds,
+      places: (nodes || []).length, placesInView: placeIds.length, placeIds: placeIds
+    };
+  }
+
+  function setCamera(scale, aboutX, aboutY) {
+    camera = {
+      scale: Math.min(CAMERA.maxScale, Math.max(CAMERA.minScale, scale)),
+      cx: aboutX === undefined ? camera.cx : aboutX,
+      cy: aboutY === undefined ? camera.cy : aboutY
+    };
+    return camera.scale;
+  }
+  function zoomBy(factor, aboutX, aboutY) { return setCamera(camera.scale * factor, aboutX, aboutY); }
+  function zoomIn(aboutX, aboutY) { return zoomBy(CAMERA.step, aboutX, aboutY); }
+  function zoomOut(aboutX, aboutY) { return zoomBy(1 / CAMERA.step, aboutX, aboutY); }
+
+  /* A pan is expressed in layout units, so a caller converts pixels once and the
+     camera never has to know how large the viewport happens to be. Panning by
+     hand ends any following, because a view that snapped back to a truck on the
+     next tick would be undoing the reader's own drag. */
+  function panBy(dx, dy, layout) {
+    const lay = layout || defaultLayout();
+    const box = viewBoxFor(lay, camera);
+    camera = { scale: camera.scale, cx: box.centre.x + dx, cy: box.centre.y + dy };
+    followTruckId = null; followState = 'OFF';
+    return viewBoxFor(lay, camera);
+  }
+
+  function resetCamera() {
+    camera = { scale: CAMERA.minScale, cx: null, cy: null };
+    followTruckId = null; followState = 'OFF';
+    return cameraState();
+  }
+
+  /* Follow stores an id and never a coordinate. A stored coordinate would be this
+     module remembering a position, which is the one thing it does not do -- the
+     centring is resolved fresh in render() from the frame's own placement. */
+  function follow(truckId) {
+    followTruckId = truckId || null;
+    followState = followTruckId ? 'FOLLOWING' : 'OFF';
+    if (followTruckId && camera.scale <= CAMERA.minScale) {
+      camera = { scale: CAMERA.followScale, cx: camera.cx, cy: camera.cy };
+    }
+    return followTruckId;
+  }
+  function following() { return { truckId: followTruckId, state: followState }; }
+  function cameraState() { return { scale: camera.scale, cx: camera.cx, cy: camera.cy }; }
 
   function nodeShape(n) {
     const s = n.style, x = n.x, y = n.y, k = s.size;
@@ -1037,14 +1159,26 @@ const FWFreightMap = (() => {
       selection: document.getElementById('freight-map-selection'),
       entityCard: document.getElementById('fm-entity-card'),
       expand: document.getElementById('fm-entity-expand'),
-      timeline: document.getElementById('fm-timeline')
+      timeline: document.getElementById('fm-timeline'),
+      cameraLine: document.getElementById('fm-camera'),
+      zoomIn: document.getElementById('fm-zoom-in'),
+      zoomOut: document.getElementById('fm-zoom-out'),
+      zoomReset: document.getElementById('fm-zoom-reset'),
+      followBtn: document.getElementById('fm-follow')
     };
     if (els.svg) {
       els.svg.addEventListener('click', (e) => {
+        // A pan ends in a click. Without this a reader who dragged the view would
+        // also have selected or deselected whatever happened to be under the
+        // pointer when they let go.
+        if (suppressNextClick) { suppressNextClick = false; return; }
         const target = e.target && e.target.closest ? e.target.closest('[data-truck-id]') : null;
         if (!target) { select(null); if (window.FWSimRunner) render(FWSimRunner.getState()); return; }
         const id = target.dataset ? target.dataset.truckId : target.getAttribute('data-truck-id');
         select(id === selectedTruckId ? null : id);
+        // Following something that is no longer named anywhere on screen would
+        // leave the view locked to a truck the reader has just let go of.
+        if (followTruckId && followTruckId !== selectedTruckId) follow(null);
         // A click selects. It no longer throws the full-screen panel over the
         // map, because a reader who has to dismiss a modal to see the network
         // again has been charged for asking. The read-out lands in the card
@@ -1056,7 +1190,74 @@ const FWFreightMap = (() => {
     if (els.expand) {
       els.expand.addEventListener('click', () => { expandSelected(); });
     }
+    wireCamera();
     return els;
+  }
+
+  /* The camera controls. Every one of them ends the same way: change the camera
+     state, then re-render from simulation state. None advances the clock, and
+     none redraws the roads and places -- that geometry is static and only the
+     rectangle over it moves. */
+  function wireCamera() {
+    const redraw = () => { if (window.FWSimRunner) render(FWSimRunner.getState()); };
+    if (els.zoomIn) els.zoomIn.addEventListener('click', () => { zoomIn(); redraw(); });
+    if (els.zoomOut) els.zoomOut.addEventListener('click', () => { zoomOut(); redraw(); });
+    if (els.zoomReset) els.zoomReset.addEventListener('click', () => { resetCamera(); redraw(); });
+    if (els.followBtn) {
+      els.followBtn.addEventListener('click', () => {
+        follow(followTruckId ? null : selectedTruckId);
+        redraw();
+      });
+    }
+    if (!els.svg || !els.svg.addEventListener) return;
+
+    /* Pixels to layout units. The SVG is width-responsive, so the ratio is
+       measured from the live box rather than assumed; a viewport that cannot be
+       measured (a headless run reports zero) falls back to a centred operation
+       instead of dividing by nothing. */
+    const perPixel = () => {
+      const lay = defaultLayout();
+      const box = viewBoxFor(lay, camera);
+      const r = els.svg.getBoundingClientRect ? els.svg.getBoundingClientRect() : null;
+      if (!r || !r.width || !r.height) return null;
+      return { kx: box.w / r.width, ky: box.h / r.height, rect: r, box: box };
+    };
+
+    els.svg.addEventListener('wheel', (e) => {
+      if (e.preventDefault) e.preventDefault();
+      const factor = e.deltaY < 0 ? CAMERA.step : 1 / CAMERA.step;
+      const m = perPixel();
+      if (!m) { zoomBy(factor); redraw(); return; }
+      /* Zoom about the pointer: the layout point under the cursor stays under the
+         cursor, which is the only zoom that does not lose the reader's place. */
+      const lx = m.box.x + (e.clientX - m.rect.left) * m.kx;
+      const ly = m.box.y + (e.clientY - m.rect.top) * m.ky;
+      zoomBy(factor, lx, ly);
+      followTruckId = null; followState = 'OFF';
+      redraw();
+    });
+
+    let drag = null;
+    els.svg.addEventListener('mousedown', (e) => {
+      if (camera.scale <= CAMERA.minScale) return;   // at full fit there is nothing to pan to
+      drag = { x: e.clientX, y: e.clientY, moved: 0 };
+    });
+    els.svg.addEventListener('mousemove', (e) => {
+      if (!drag) return;
+      const m = perPixel();
+      if (!m) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      drag.moved += Math.abs(dx) + Math.abs(dy);
+      drag.x = e.clientX; drag.y = e.clientY;
+      panBy(-dx * m.kx, -dy * m.ky);
+      redraw();
+    });
+    const endDrag = () => {
+      if (drag && drag.moved > 3) suppressNextClick = true;
+      drag = null;
+    };
+    els.svg.addEventListener('mouseup', endDrag);
+    els.svg.addEventListener('mouseleave', endDrag);
   }
 
   /* The press that opens the full panel. It passes an id and nothing else: the
@@ -1315,10 +1516,25 @@ const FWFreightMap = (() => {
     const f = frame(state);
     if (!f) return null;
     if (!staticBuilt) {
-      els.svg.setAttribute('viewBox', f.layout.viewBox);
       els.svg.innerHTML = staticSvg(f.layout);
       staticBuilt = true;
     }
+    /* Following is resolved HERE, once per frame, from the placement this frame
+       already carries -- so the camera never holds a coordinate of its own and a
+       followed truck cannot be centred on a position the simulation has moved on
+       from. A truck with no placeable position is said so rather than silently
+       dropping the instruction. */
+    if (followTruckId) {
+      const fp = f.trucks.filter(t => t.truckId === followTruckId)[0];
+      if (fp && fp.drawn) {
+        camera = { scale: Math.max(camera.scale, CAMERA.followScale), cx: fp.drawX, cy: fp.drawY };
+        followState = 'FOLLOWING';
+      } else {
+        followState = 'UNPLACEABLE';
+      }
+    }
+    const box = viewBoxFor(f.layout, camera);
+    els.svg.setAttribute('viewBox', box.viewBox);
     renderRoute(f);
     renderActivity(f);
     renderTrucks(f);
@@ -1326,7 +1542,48 @@ const FWFreightMap = (() => {
     renderSelection(f);
     renderEntityCard(f);
     renderTimeline(f);
+    renderCamera(f, box);
     return f;
+  }
+
+  /* What the camera is currently showing, in the same terms as everything else on
+     this panel: a figure and what it is a figure OF. A magnified view hides
+     trucks, and a line that said "3 trucks" without saying "of the 8 drawn" would
+     be a claim about the network made out of a screen size. */
+  function renderCamera(f, box) {
+    if (!els.cameraLine) return;
+    const v = inView(box, f.trucks, f.nodes);
+    const fol = following();
+    const sig = box.viewBox + '|' + v.trucksInView + '/' + v.trucksDrawn + '|' + v.placesInView +
+      '|' + fol.state + '|' + (fol.truckId || '');
+    if (els.followBtn) {
+      const on = !!fol.truckId;
+      els.followBtn.textContent = on ? 'Stop following' : 'Follow the selected truck';
+      els.followBtn.disabled = !on && !f.selectedTruckId;
+    }
+    if (sig === lastCameraSig) return;
+    lastCameraSig = sig;
+
+    let lead;
+    if (box.wholeDrawing) {
+      lead = 'Showing the whole network: all ' + v.places + ' places and all ' + v.trucksDrawn +
+        ' placeable truck' + (v.trucksDrawn === 1 ? '' : 's') + ' are on screen.';
+    } else {
+      lead = 'Magnified ' + box.scale + 'x. ' + v.placesInView + ' of ' + v.places + ' places and ' +
+        v.trucksInView + ' of the ' + v.trucksDrawn + ' placeable trucks are inside the view' +
+        (v.trucksOffScreen ? '; ' + v.trucksOffScreen + ' placeable truck' +
+          (v.trucksOffScreen === 1 ? ' is' : 's are') + ' off screen and still on the network' : '') + '.';
+    }
+    let followClause = '';
+    if (fol.state === 'FOLLOWING') {
+      followClause = ' Following ' + esc(fol.truckId) + ' \u2014 the view re-centres on it whenever the ' +
+        'simulation advances, which moves the view and never the truck.';
+    } else if (fol.state === 'UNPLACEABLE') {
+      followClause = ' ' + esc(fol.truckId) + ' has no position this simulation can place right now, so ' +
+        'there is nothing to centre on and the view has not moved.';
+    }
+    els.cameraLine.innerHTML = '<span class="text-slate-400">' + esc(lead) + '</span>' + followClause +
+      ' <span class="text-slate-600">' + esc(CAMERA.doesNotMean) + '</span>';
   }
 
   function summary() {
@@ -1346,6 +1603,9 @@ const FWFreightMap = (() => {
       entityCardDefersTo: ENTITY_CARD.defersTo.length,
       timelineFields: TIMELINE_VIEW.rows.slice(),
       timelineChannel: TIMELINE_VIEW.channel,
+      cameraIs: CAMERA.isA,
+      cameraRange: CAMERA.minScale + 'x to ' + CAMERA.maxScale + 'x',
+      cameraChangesPosition: false,
       interpolatesBetweenTicks: false,
       interpolationNote: 'A truck moves only when the simulation advances. There is no tween between two ticks, ' +
         'because a position between two simulation states is one the simulation never held.'
@@ -1363,6 +1623,8 @@ const FWFreightMap = (() => {
     ENTITY_CARD, TIMELINE_VIEW, BASIS_TONE,
     ARRIVING_WINDOW_SECONDS, STYLE_CHECK, EDGE_CHECK, VIEW_CHECK,
     assertNodeStyles, assertEdgeStyles, assertViewStates, assertLayoutCoversGraph,
+    CAMERA, viewBoxFor, inView, zoomIn, zoomOut, zoomBy, panBy, resetCamera, follow, following,
+    cameraState,
     hopDepths, buildLayout, defaultLayout, placementFor, stackAtNodes, selectedRoute, frame,
     entityCardFor, timelineOf, clockLabel, expandSelected,
     staticSvg, init, render, select, selected, summary
