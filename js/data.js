@@ -19,12 +19,55 @@ const FW = (() => {
     low: '#94a3b8', medium: '#facc15', high: '#fb923c', critical: '#f87171'
   };
 
+  /* The taxonomy's indicator `weight` is an analyst-assigned salience inside
+     one pattern. It is a PARAMETER, not a measurement, and it is NOT a second
+     copy of the simulation's signal weight (see FWSignalEngine.WEIGHT_SCALE) --
+     the two run on different ranges and nothing blends them. This module owns
+     the fact, and its range is READ FROM THE LOADED DATA rather than restated
+     here, so a taxonomy revision cannot leave a stale number on screen. */
+  const INDICATOR_WEIGHT = {
+    kind: 'PARAMETER',
+    scope: 'taxonomy indicator salience, within one pattern',
+    means: 'how much an analyst assessed this observation narrows the field, relative to the other indicators of the SAME pattern.',
+    doesNotMean: 'a probability that fraud occurred, a share of anything, and not a score comparable across patterns or against the simulation signal weights.',
+    source: 'freight-fraud-taxonomy, per-indicator field',
+    min: null,
+    max: null
+  };
+
   async function load() {
     if (raw) return raw;
     const res = await fetch('data/fraud-data.json');
     raw = await res.json();
+    measureIndicatorWeights();
     return raw;
   }
+
+  /* A missing or non-numeric weight used to reach the Field Guide as the
+     literal text "wundefined". Refuse at load, naming the indicator, rather
+     than letting the panel print a number nobody assigned. */
+  function measureIndicatorWeights() {
+    let min = Infinity, max = -Infinity, n = 0;
+    (raw.patterns || []).forEach(p => {
+      (p.indicators || []).forEach((i, k) => {
+        if (typeof i.weight !== 'number' || !isFinite(i.weight)) {
+          throw new Error('FW.load: indicator ' + p.id + '#' + k + ' has no numeric weight; ' +
+            'a salience the taxonomy did not assign would have to be invented to render it');
+        }
+        n++;
+        if (i.weight < min) min = i.weight;
+        if (i.weight > max) max = i.weight;
+      });
+    });
+    if (!n) throw new Error('FW.load: taxonomy carries no indicators, so no weight scale can be stated');
+    INDICATOR_WEIGHT.min = min;
+    INDICATOR_WEIGHT.max = max;
+    INDICATOR_WEIGHT.n = n;
+  }
+
+  // null until the taxonomy has arrived -- the range is a property of the
+  // loaded data, not of this module.
+  function indicatorWeightScale() { return raw ? INDICATOR_WEIGHT : null; }
 
   /* Null-safe on purpose. `loaded()` is the difference between "the taxonomy
      module is absent" and "the taxonomy has not arrived yet" -- callers that
@@ -84,6 +127,7 @@ const FW = (() => {
 
   return {
     load, loaded, patterns, meta, randomPattern, pickIndicators, pickDecoy,
-    bestCountermeasure, categoryColor, severityColor, CATEGORY_COLOR, SEVERITY_COLOR
+    bestCountermeasure, categoryColor, severityColor, CATEGORY_COLOR, SEVERITY_COLOR,
+    indicatorWeightScale
   };
 })();

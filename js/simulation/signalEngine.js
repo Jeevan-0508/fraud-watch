@@ -5,10 +5,16 @@
    Operation (weighing multiple signals together, checking for a
    legitimate explanation) is deliberately a separate, later module —
    this one must not decide anything, only observe and record.
-   Weight/reliability scale loosely mirrors the taxonomy's own
-   indicator "weight" field (1-3) so the eventual MO engine can blend
-   simulation signals with real taxonomy indicator weights on the same
-   scale, instead of inventing a second incompatible scoring system. */
+   Weight here is this engine's OWN scale and is not interchangeable with
+   the taxonomy's indicator weight (FW.indicatorWeightScale()). An earlier
+   comment claimed both ran 1-3 so an MO engine could blend them; neither
+   half was true. The taxonomy's indicators run 2-5, and moEngine ranks
+   patterns by keyword vote and never reads an indicator weight at all. The
+   claim was load-bearing in the wrong direction: a taxonomy weight of 5
+   dropped into moEngine's sum would clear CREATE_THRESHOLD (3.5) on its own,
+   which is exactly the "one strong signal is not an MO" rule that module
+   opens by refusing. Two numbers, one word, two scopes -- so each is now
+   declared where it lives and checked against its own declaration. */
 const FWSignalEngine = (() => {
   // decaySeconds: how long the signal stays "active" before it stops
   // counting toward anything — old, unexplained blips shouldn't haunt
@@ -28,6 +34,28 @@ const FWSignalEngine = (() => {
     HANDOVER_GAP:               { signalType: 'HANDOVER_GAP',               weight: 2, reliability: 0.55, decaySeconds: 7200 },
     STAGED_BREAKDOWN:           { signalType: 'STAGED_BREAKDOWN',           weight: 2, reliability: 0.5,  decaySeconds: 5400 }
   };
+
+  /* Declared, not assumed. The range is asserted against the catalog at load
+     so an entry cannot drift outside the scale this engine says it uses. */
+  const WEIGHT_SCALE = {
+    kind: 'PARAMETER',
+    scope: 'simulation signal strength, within this engine',
+    min: 1,
+    max: 3,
+    means: 'how much weight this engine attaches to one observed event when moEngine sums signals against CREATE_THRESHOLD.',
+    doesNotMean: 'a likelihood that fraud occurred, and not the same quantity as the taxonomy indicator weight FW.indicatorWeightScale() describes.',
+    notInterchangeableWith: 'FW.indicatorWeightScale()'
+  };
+
+  (function assertOwnScale() {
+    Object.keys(SIGNAL_CATALOG).forEach(k => {
+      const w = SIGNAL_CATALOG[k].weight;
+      if (typeof w !== 'number' || w < WEIGHT_SCALE.min || w > WEIGHT_SCALE.max) {
+        throw new Error('signalEngine: ' + k + ' weight ' + w + ' is outside the declared scale ' +
+          WEIGHT_SCALE.min + '-' + WEIGHT_SCALE.max + '; either the entry or the declaration is wrong');
+      }
+    });
+  })();
 
   function createEngine() {
     return { nextSignalId: 1, log: [] };
@@ -96,5 +124,5 @@ const FWSignalEngine = (() => {
     return entity.riskSignals.filter(s => s.expiresAt > now);
   }
 
-  return { createEngine, deriveSignal, process, pruneExpired, getActiveSignals, SIGNAL_CATALOG };
+  return { createEngine, deriveSignal, process, pruneExpired, getActiveSignals, SIGNAL_CATALOG, WEIGHT_SCALE };
 })();
