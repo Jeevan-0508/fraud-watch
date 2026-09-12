@@ -224,7 +224,13 @@ const FWCoreGame = (() => {
         v.restoreBaseSpeed();
 
         const before = this.scoring;
-        const severity = data.pattern ? data.pattern.severity : 'medium';
+        /* A case that carries no pattern has no assessed harm class, and it used
+           to be handed `medium` here -- an assessment of harm invented for a
+           clean vehicle. It was then ignored, because only `caught` scales by
+           harm and only a pattern case can be caught, so the invented value was
+           never read. Pass what there is; FWScoring refuses the combination
+           that would need a default. */
+        const severity = data.pattern ? data.pattern.severity : null;
         this.scoring = FWScoring.applyOutcome(before, outcome, { severity });
         const delta = this.scoring.totalScore - before.totalScore;
         this.updateHud();

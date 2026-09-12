@@ -224,12 +224,31 @@ const FWSimDebug = (() => {
     if (!els.eventFeed) return;
     const caption = `<div class="text-[10px] text-slate-500 italic border border-slate-800 rounded p-1.5 mb-2">${ANSWER_KEY_CAPTION}</div>`;
     els.eventFeed.innerHTML = caption + state.recentEvents.slice(0, 20).map(ev => {
-      const isDisruption = ev.severity === 'warn';
+      /* This used to compare ev.severity against the disruption token as a bare
+         inline literal, against a vocabulary nothing declared, and it decided
+         both the row's tone and whether the answer key was shown at all. A value
+         outside the space took the else branch of both, so a recorded disruption
+         rendered as ordinary traffic with its note dropped. The space is declared
+         by the module that stamps it now, and the outside-the-space case has its
+         own branch and says so on the row. With that module absent there is no
+         declaration to compare against, so the answer is that the row cannot be
+         classified -- not a second local copy of the comparison. */
+      const basis = window.FWEventEngine
+        ? FWEventEngine.severityBasis(ev.severity).basis
+        : 'UNDECLARED';
       const gt = ev.metadata && ev.metadata.groundTruth;
-      const tone = isDisruption ? 'border-amber-500/60 text-amber-200' : 'border-slate-700 text-slate-400';
-      const gtNote = isDisruption ? groundTruthNote(gt) : '';
+      const TONE = {
+        DISRUPTION: 'border-amber-500/60 text-amber-200',
+        ROUTINE: 'border-slate-700 text-slate-400',
+        UNDECLARED: 'border-fuchsia-500/60 text-fuchsia-200'
+      };
+      const tone = TONE[basis] || TONE.ROUTINE;
+      const gtNote = basis === 'DISRUPTION' ? groundTruthNote(gt) : '';
+      const undeclaredNote = basis === 'UNDECLARED'
+        ? ` <span class="text-fuchsia-300">[this row carries a severity this program does not declare, so whether it recorded a disruption is not known here and it is not being shown as routine traffic]</span>`
+        : '';
       return `<div class="text-[11px] leading-snug border-l-2 ${tone} pl-2 py-0.5">
-        <span class="text-slate-500">${t2(ev.timestamp)}</span> ${ev.type.replace(/_/g, ' ')} — ${ev.entityId}${gtNote}
+        <span class="text-slate-500">${t2(ev.timestamp)}</span> ${ev.type.replace(/_/g, ' ')} — ${ev.entityId}${gtNote}${undeclaredNote}
       </div>`;
     }).join('');
   }

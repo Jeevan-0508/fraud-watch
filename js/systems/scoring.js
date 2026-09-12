@@ -16,21 +16,92 @@ const FWScoring = (() => {
      a decision that was never made is the mistake this table exists to stop.
      'decided' is the answer to "did anybody call this", nothing else. */
   const OUTCOMES = {
-    caught:         { decided: true,  carriedPattern: true,  bucket: 'casesSolved',
+    caught:         { usesHarmMultiplier: true, decided: true,  carriedPattern: true,  bucket: 'casesSolved',
                       label: 'Intercepted after your call' },
-    missed:         { decided: true,  carriedPattern: true,  bucket: 'casesMissed',
+    missed:         { usesHarmMultiplier: false, decided: true,  carriedPattern: true,  bucket: 'casesMissed',
                       label: 'You waved it through and it left' },
-    expiredPattern: { decided: false, carriedPattern: true,  bucket: 'casesUncalledPattern',
+    expiredPattern: { usesHarmMultiplier: false, decided: false, carriedPattern: true,  bucket: 'casesUncalledPattern',
                       label: 'Case window closed with no call made' },
-    cleared:        { decided: true,  carriedPattern: false, bucket: 'casesCleared',
+    cleared:        { usesHarmMultiplier: false, decided: true,  carriedPattern: false, bucket: 'casesCleared',
                       label: 'You waved a clean vehicle through' },
-    overCalled:     { decided: true,  carriedPattern: false, bucket: 'overCalls',
+    overCalled:     { usesHarmMultiplier: false, decided: true,  carriedPattern: false, bucket: 'overCalls',
                       label: 'You called a vehicle that carried no pattern' },
-    expiredClean:   { decided: false, carriedPattern: false, bucket: 'casesUncalledClean',
+    expiredClean:   { usesHarmMultiplier: false, decided: false, carriedPattern: false, bucket: 'casesUncalledClean',
                       label: 'Case window closed with no call made' }
   };
   const OUTCOME_NAMES = Object.keys(OUTCOMES);
   const BUCKETS = OUTCOME_NAMES.map(n => OUTCOMES[n].bucket);
+
+  /* WHICH OUTCOMES ACTUALLY MULTIPLY BY A HARM CLASS. Exactly one does, and
+     that was previously visible only as the shape of an `if` in applyOutcome
+     while a harm class was accepted (and defaulted) on every call. A case that
+     carried no pattern was handed the class `medium` by the caller and the
+     value was then ignored -- an assessment of harm invented for a clean
+     vehicle. Declared here so the reachable inputs are the declared ones. */
+  const HARM_MULTIPLIER = {
+    kind: 'PARAMETER',
+    scope: 'how much a solved case is worth, by the assessed harm of the pattern it carried',
+    means: 'the score for intercepting a case scales with how much damage the taxonomy assesses that pattern would do.',
+    doesNotMean: 'a probability, a share, an amount of money, and NOT the event-severity space -- FWEventEngine.EVENT_SEVERITY is a different vocabulary that happens to use the same field name.',
+    tokenOwner: 'FW.severityScale(), the taxonomy module -- these tokens are not declared here, they are reconciled against it',
+    multiplier: { low: 1, medium: 1.5, high: 2, critical: 3 },
+    usedByOutcomes: OUTCOME_NAMES.filter(n => OUTCOMES[n].usesHarmMultiplier),
+    note: 'Every outcome that consumes it carries a pattern by declaration, so on this app\u2019s own path a harm class is always available. A default would only ever fire on a call the app cannot make.'
+  };
+
+  /* Why a call got the multiplier it got, including the two cases that get no
+     multiplier at all. Both refusals used to be silent numbers: an unrecognised
+     token fell through `|| 1` and scored identically to `low` -- the one
+     declared class the taxonomy carries in none of its patterns -- and a missing
+     one was defaulted to `medium` and scored HIGHER than a real low-harm case. */
+  const HARM_BASIS = {
+    DECLARED_CLASS: 'a harm class the taxonomy module declares. The multiplier is the declared one.',
+    NOT_SUPPLIED: 'no harm class was supplied for an outcome that scales by one. There is no multiplier: a default would be an assessment of harm this program invented.',
+    UNDECLARED_CLASS: 'a value was supplied that the taxonomy module does not declare as a harm class. There is no multiplier, and it is not treated as the lowest class.'
+  };
+
+  /* Raw lookup. Returns the basis and, only for a declared class, a number --
+     the refusals are named rather than folded into a value. */
+  function harmMultiplier(severity) {
+    if (severity === undefined || severity === null || severity === '') {
+      return { multiplier: null, basis: 'NOT_SUPPLIED', why: HARM_BASIS.NOT_SUPPLIED, token: severity };
+    }
+    if (!Object.prototype.hasOwnProperty.call(HARM_MULTIPLIER.multiplier, severity)) {
+      return { multiplier: null, basis: 'UNDECLARED_CLASS', why: HARM_BASIS.UNDECLARED_CLASS, token: severity };
+    }
+    return { multiplier: HARM_MULTIPLIER.multiplier[severity], basis: 'DECLARED_CLASS',
+             why: HARM_BASIS.DECLARED_CLASS, token: severity };
+  }
+
+  /* Both directions against the module that owns the tokens. This table was an
+     inline object literal inside applyOutcome for thirty-six phases: a fourth
+     copy of the taxonomy's harm vocabulary that nothing compared to it. */
+  function assertHarmMultiplierTokens(harmTokens) {
+    const declared = harmTokens || [];
+    declared.forEach(t => {
+      if (!Object.prototype.hasOwnProperty.call(HARM_MULTIPLIER.multiplier, t)) {
+        throw new Error('FWScoring: the taxonomy declares harm class "' + t + '" and this record has no ' +
+          'multiplier for it, so a case carrying it could only be scored by inventing one');
+      }
+    });
+    Object.keys(HARM_MULTIPLIER.multiplier).forEach(t => {
+      if (declared.indexOf(t) < 0) {
+        throw new Error('FWScoring: a score multiplier is declared for "' + t + '", which the taxonomy ' +
+          'does not declare as a harm class');
+      }
+    });
+    return true;
+  }
+
+  let harmTokensChecked = false;
+  function checkHarmTokensOnce() {
+    if (harmTokensChecked) return;
+    if (typeof FW === 'undefined' || !FW.severityScale) return;
+    const scale = FW.severityScale();
+    if (!scale) return;
+    assertHarmMultiplierTokens(scale.tokens);
+    harmTokensChecked = true;
+  }
 
   /* Said wherever a legacy record's counts are shown. A record written before
      v2 cannot be repaired: its 'cleared' outcomes were never counted at all
@@ -137,6 +208,14 @@ const FWScoring = (() => {
         'all about the second.'
     },
     {
+      id: 'unscored-harm-class',
+      question: 'What is a solved case worth when nobody assessed how bad the pattern was?',
+      reason: 'The score for an interception scales by the taxonomy\u2019s assessed harm class. A missing ' +
+        'or unrecognised class used to be answered with a number anyway -- the same score as the lowest ' +
+        'declared class, or as the middle one -- so the record could not be told apart from a real ' +
+        'assessment. It is refused at the write instead.'
+    },
+    {
       id: 'improvement',
       question: 'Are you getting better?',
       reason: 'Nothing here is timestamped and the difficulty rises with the level, ' +
@@ -176,9 +255,15 @@ const FWScoring = (() => {
         'in the base and nowhere else.'
       );
     }
+    checkHarmTokensOnce();
     const s = Object.assign({}, state);
-    const severity = opts.severity || 'medium';
-    const sevMult = { low: 1, medium: 1.5, high: 2, critical: 3 }[severity] || 1;
+    const harm = harmMultiplier(opts.severity);
+    if (spec.usesHarmMultiplier && harm.multiplier === null) {
+      throw new Error('FWScoring.applyOutcome: outcome "' + outcome + '" scales by the assessed harm of the ' +
+        'pattern it carried, and the harm class given was "' + opts.severity + '" \u2014 ' + harm.why +
+        ' Known classes: ' + Object.keys(HARM_MULTIPLIER.multiplier).join('/') + '.');
+    }
+    const sevMult = harm.multiplier === null ? 1 : harm.multiplier;
 
     s.resolutions += 1;
     s[spec.bucket] += 1;
@@ -211,6 +296,8 @@ const FWScoring = (() => {
 
   return {
     load, save, reset, applyOutcome, migrate, tally, meters,
+    harmMultiplier, assertHarmMultiplierTokens,
+    HARM_MULTIPLIER, HARM_BASIS,
     KEY, VERSION, OUTCOMES, OUTCOME_NAMES, BUCKETS, LEGACY_NOTE, REFUSALS
   };
 })();

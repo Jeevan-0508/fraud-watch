@@ -19,6 +19,35 @@ const FW = (() => {
     low: '#94a3b8', medium: '#facc15', high: '#fb923c', critical: '#f87171'
   };
 
+  /* THE COLOUR AN UNRECOGNISED TOKEN GETS, AND WHY IT IS NOT A NICE ONE.
+     Both colour lookups here used to fall back to '#94a3b8', which is byte-
+     identical to `low`'s declared colour -- and `low` is declared but appears
+     in zero of the taxonomy's patterns (see SEVERITY.absentFromData). So a
+     token this app has no meaning for did not render as unrecognised, it
+     rendered as the one harm class the dataset never uses. This colour is
+     asserted below to be no declared class's colour in either space, so an
+     unrecognised token cannot be mistaken for a declared one on screen. */
+  const UNKNOWN_TOKEN_COLOR = '#ff00ff';
+
+  const COLOR_SPACES = {
+    category: { map: CATEGORY_COLOR, owner: 'freight-fraud-taxonomy, per-pattern category field' },
+    severity: { map: SEVERITY_COLOR, owner: 'freight-fraud-taxonomy, per-pattern severity field' }
+  };
+
+  function assertUnknownColorDistinct() {
+    Object.keys(COLOR_SPACES).forEach(space => {
+      const map = COLOR_SPACES[space].map;
+      Object.keys(map).forEach(tok => {
+        if (String(map[tok]).toLowerCase() === UNKNOWN_TOKEN_COLOR.toLowerCase()) {
+          throw new Error('data.js: the colour for an unrecognised token is the same colour as the declared ' +
+            space + ' "' + tok + '", so a token nobody declared would render as that class');
+        }
+      });
+    });
+    return true;
+  }
+  assertUnknownColorDistinct();
+
   /* The taxonomy's indicator `weight` is an analyst-assigned salience inside
      one pattern. It is a PARAMETER, not a measurement, and it is NOT a second
      copy of the simulation's signal weight (see FWSignalEngine.WEIGHT_SCALE) --
@@ -41,6 +70,8 @@ const FW = (() => {
     raw = await res.json();
     measureIndicatorWeights();
     checkSeverityTokens();
+    checkCategoryTokens();
+    measureDeclaredAbsence();
     return raw;
   }
 
@@ -92,7 +123,83 @@ const FW = (() => {
     });
   }
 
+  /* The taxonomy's `category` is what KIND of fraud a pattern is. It had a
+     colour map and no check of any sort, while its sibling `severity` had a
+     load-time token check -- an asymmetry that was invisible only because the
+     dataset happens to use exactly the eight categories declared above. A
+     ninth would have reached a badge coloured as an unrecognised token with
+     nothing said about it. Declared and checked in both directions now. */
+  const CATEGORY = {
+    kind: 'CLASSIFICATION',
+    scope: 'what kind of fraud a taxonomy pattern is',
+    means: 'the family of fraud this pattern belongs to, as classified in the taxonomy.',
+    doesNotMean: 'how bad it is, how likely it is happening here, and not an ordering of any sort -- these are names, not a scale.',
+    source: 'freight-fraud-taxonomy, per-pattern field',
+    tokens: Object.keys(CATEGORY_COLOR)
+  };
+
+  /* A declared token that never occurs in the data is not the same fact as a
+     token that occurs -- `low` is declared, colour-mapped, multiplied in the
+     score, and carried by none of the twelve patterns. Measured at load with
+     its denominator so no reader has to assume either way. */
+  function measureDeclaredAbsence() {
+    const ps = raw.patterns || [];
+    const seen = (field) => {
+      const set = {};
+      ps.forEach(p => { set[p[field]] = (set[p[field]] || 0) + 1; });
+      return set;
+    };
+    [[SEVERITY, 'severity'], [CATEGORY, 'category']].forEach(([reg, field]) => {
+      const counts = seen(field);
+      reg.patternsMeasured = ps.length;
+      reg.countsInData = counts;
+      reg.presentInData = reg.tokens.filter(t => counts[t] > 0);
+      reg.absentFromData = reg.tokens.filter(t => !counts[t]);
+      reg.absenceNote = reg.absentFromData.length
+        ? reg.absentFromData.join('/') + ' ' + (reg.absentFromData.length === 1 ? 'is' : 'are') +
+          ' declared here and carried by none of the ' + ps.length + ' patterns in the loaded taxonomy, ' +
+          'so nothing on screen can be an instance of ' + (reg.absentFromData.length === 1 ? 'it' : 'them') + '.'
+        : 'every declared token is carried by at least one of the ' + ps.length + ' patterns in the loaded taxonomy.';
+    });
+  }
+
+  // The mirror of checkSeverityTokens, which existed alone for eleven phases.
+  function checkCategoryTokens() {
+    (raw.patterns || []).forEach(p => {
+      if (CATEGORY.tokens.indexOf(p.category) < 0) {
+        throw new Error('FW.load: pattern ' + p.id + ' carries category "' + p.category +
+          '", which is not one of the declared categories ' + CATEGORY.tokens.join('/'));
+      }
+    });
+  }
+
+  /* Why a token got the colour it got. A colour alone cannot say whether a
+     class is declared-and-used, declared-and-absent, or not declared at all,
+     and those are three different facts about the same badge. */
+  const COLOR_BASIS = {
+    DECLARED_PRESENT: 'declared in this module and carried by at least one loaded pattern.',
+    DECLARED_ABSENT_IN_DATA: 'declared in this module and carried by no loaded pattern, so this colour is reachable only from data this taxonomy does not contain.',
+    UNDECLARED: 'not declared in this module at all -- the colour is the unrecognised-token colour and is deliberately no class\u2019s colour.',
+    UNKNOWN_SPACE: 'asked about a colour space this module does not have.'
+  };
+
+  function colorBasis(space, token) {
+    const spec = COLOR_SPACES[space];
+    if (!spec) return { basis: 'UNKNOWN_SPACE', why: COLOR_BASIS.UNKNOWN_SPACE, color: UNKNOWN_TOKEN_COLOR };
+    if (!Object.prototype.hasOwnProperty.call(spec.map, token)) {
+      return { basis: 'UNDECLARED', why: COLOR_BASIS.UNDECLARED, color: UNKNOWN_TOKEN_COLOR };
+    }
+    const reg = space === 'severity' ? SEVERITY : CATEGORY;
+    const absent = (reg.absentFromData || []).indexOf(token) >= 0;
+    return {
+      basis: absent ? 'DECLARED_ABSENT_IN_DATA' : 'DECLARED_PRESENT',
+      why: absent ? COLOR_BASIS.DECLARED_ABSENT_IN_DATA : COLOR_BASIS.DECLARED_PRESENT,
+      color: spec.map[token]
+    };
+  }
+
   function severityScale() { return raw ? SEVERITY : null; }
+  function categoryScale() { return raw ? CATEGORY : null; }
 
   // null until the taxonomy has arrived -- the range is a property of the
   // loaded data, not of this module.
@@ -196,12 +303,14 @@ const FW = (() => {
     };
   }
 
-  function categoryColor(cat) { return CATEGORY_COLOR[cat] || '#94a3b8'; }
-  function severityColor(sev) { return SEVERITY_COLOR[sev] || '#94a3b8'; }
+  function categoryColor(cat) { return CATEGORY_COLOR[cat] || UNKNOWN_TOKEN_COLOR; }
+  function severityColor(sev) { return SEVERITY_COLOR[sev] || UNKNOWN_TOKEN_COLOR; }
 
   return {
     load, loaded, patterns, meta, randomPattern, pickIndicators, pickDecoy,
     bestCountermeasure, categoryColor, severityColor, CATEGORY_COLOR, SEVERITY_COLOR,
-    indicatorWeightScale, severityScale
+    indicatorWeightScale, severityScale, categoryScale,
+    UNKNOWN_TOKEN_COLOR, COLOR_BASIS, colorBasis, COLOR_SPACES,
+    assertUnknownColorDistinct, checkCategoryTokens
   };
 })();
