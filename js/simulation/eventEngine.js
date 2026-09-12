@@ -12,6 +12,13 @@ const FWEventEngine = (() => {
     'DRIVER_CHECKED_IN', 'DRIVER_CHECKED_OUT', 'CHECKPOINT_INSPECTION'
   ];
 
+  /* The log is a bounded ring buffer. That bound is not a performance detail:
+     it is the size of the population every later reader of `engine.log` is
+     measuring over, so it is named and exported rather than left as a literal
+     inside emit(). See FWFalsePositiveEngine.POPULATIONS, which needs it to
+     state whether its own minimum sample is reachable at all. */
+  const LOG_CAP = 5000;
+
   function createEngine(seed) {
     return { rng: FWRng.createRng(seed), log: [], nextEventId: 1 };
   }
@@ -23,7 +30,7 @@ const FWEventEngine = (() => {
       source: 'simulation', metadata
     };
     engine.log.push(ev);
-    if (engine.log.length > 5000) engine.log.shift();
+    if (engine.log.length > LOG_CAP) engine.log.shift();
     return ev;
   }
 
@@ -60,5 +67,5 @@ const FWEventEngine = (() => {
     return emitted;
   }
 
-  return { createEngine, emit, step, NORMAL_EVENT_TYPES };
+  return { createEngine, emit, step, NORMAL_EVENT_TYPES, LOG_CAP };
 })();

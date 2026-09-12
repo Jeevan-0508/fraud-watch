@@ -326,6 +326,20 @@ const FWSimDebug = (() => {
     const writableSpan = wstate
       ? `<span class="basis-full text-slate-600 italic">${wstate.note}</span>`
       : '';
+    /* And the strongest claim this simulation makes about its own generator: that
+       a disruption's hidden explanation cannot be read off an event's shape. The
+       phrase this panel uses for that elsewhere belongs to the event feed only, so
+       the note below is worded for the case list. That check needs
+       100 annotated events and the event log is a ring buffer holding at most
+       LOG_CAP events of which roughly one percent are disruptions, so the log can
+       never hold enough -- the claim is asserted only over a capture no page keeps.
+       A page showing false-positive counts should say the claim behind them has
+       not been checked on what it is showing. */
+    const sepState = (window.FWFalsePositiveEngine && window.FWEventEngine && state && state.eventEngine)
+      ? FWFalsePositiveEngine.separabilityCheckState(state.eventEngine.log, FWEventEngine.LOG_CAP) : null;
+    const sepSpan = sepState
+      ? `<span class="basis-full text-slate-600 italic">${sepState.note}</span>`
+      : '';
     const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
       <span>${summary.totalSignatures} distinct behavior patterns seen</span>
       ${classSpans}
@@ -335,6 +349,7 @@ const FWSimDebug = (() => {
       ${reconSpan}
       ${guardSpan}
       ${writableSpan}
+      ${sepSpan}
     </div>`;
 
     if (!mos.length) {
