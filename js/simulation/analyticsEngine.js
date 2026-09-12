@@ -371,10 +371,14 @@ const FWAnalyticsEngine = (() => {
     if (window.FWShiftEngine) {
       FWShiftEngine.summary(state.shiftTracker).forEach(s => {
         metrics.push(metric({
-          id: 'cov-shift-' + s.shift, label: s.label + ' (' + s.window + ') goes unrecorded',
+          id: 'cov-shift-' + s.shift, label: s.label + ' (' + s.window + ') goes unrecorded, no site attributed',
           kind: KIND.PARAMETER, numerator: 1 - s.oversight,
           of: 'a stated oversight assumption in shiftEngine.js, not a rate over any observation',
-          note: s.oversightRationale + ' Recorded in this shift so far: ' + s.observed + '.'
+          note: s.oversightRationale + ' Recorded in this shift so far: ' + s.observed +
+            '. This is the figure for an occurrence out on the public road, where the oversight assumption ' +
+            'is the whole of the coverage. At a site it is multiplied by the archetype factor first, so the ' +
+            'real miss rate in this shift is worse at a yard and better at a gatehouse — shiftEngine refuses ' +
+            'to publish one number for the shift and facilityEngine.shiftMissRange has the spread.'
         }));
       });
     }
@@ -384,8 +388,9 @@ const FWAnalyticsEngine = (() => {
         metrics.push(metric({
           id: 'cov-site-' + r.facilityId, label: r.name + ' assumed coverage',
           kind: KIND.PARAMETER, numerator: r.meanCoverage,
-          of: 'a stated site factor times the shift assumption, traffic-weighted across the 24h cycle',
-          note: r.kindLabel + ', site factor ' + r.oversightFactor.toFixed(2) + '×. Recorded here so far: ' + r.recorded +
+          of: 'a stated site factor times the shift assumption, weighted across the 24h cycle by ' + r.coverageWeightedBy,
+          note: r.kindLabel + ', site factor ' + r.oversightFactor.toFixed(2) + '×; the same for every site ' +
+            'of this kind. Recorded here so far: ' + r.recorded +
             '. Ranked by raw records this site is #' + r.rawRank + '; once grossed up by its own assumed coverage, #' + r.adjustedRank + '.'
         }));
       });

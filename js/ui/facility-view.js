@@ -89,15 +89,40 @@ const FWFacilityView = (() => {
     const topRaw = summary.byRaw[0];
     const topAdj = summary.byAdjusted[0];
     const moved = summary.rows.filter(r => r.rankMoved).length;
+    /* The top of the list and the rest of the list are two different claims.
+       This sentence used to make the second one and then assert the first
+       regardless, so on the seeded run it read "the site at the top changes
+       from North Gate to North Gate" while six of nine sites really had
+       moved. The top is now only reported as changing when it changed. */
+    const topChanged = topRaw.facilityId !== topAdj.facilityId;
     const disagreeLine = summary.orderingsDisagree
-      ? `The two orderings disagree: ${moved} of ${summary.rows.length} sites change position, and the site at the top changes from <span class="text-slate-300">${topRaw.name}</span> (most records) to <span class="text-slate-300">${topAdj.name}</span> (most records once its assumed coverage is divided out).`
+      ? `The two orderings disagree: ${moved} of ${summary.rows.length} sites change position. ` + (topChanged
+          ? `The site at the top changes from <span class="text-slate-300">${topRaw.name}</span> (most records) to <span class="text-slate-300">${topAdj.name}</span> (most records once its assumed coverage is divided out).`
+          : `<span class="text-slate-300">${topRaw.name}</span> stays at the top of both, which is not agreement between them — it is one site holding first place while the order beneath it is rearranged.`)
       : 'The two orderings currently agree. With this little data that is coincidence, not corroboration — it will come apart as records accumulate.';
     els.bias.innerHTML = `
       <div class="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5">Observation bias</div>
       <p class="text-[10px] text-slate-400 mb-1.5">${disagreeLine}</p>
       <p class="text-[10px] text-amber-300/80">Recording is work. A site that reconciles every movement produces records; a site that reconciles nothing produces silence. Ranked by raw count, the best-run site in this port floats to the top of the list.</p>
       <p class="text-[10px] text-slate-500 mt-1.5">${summary.unsited.recorded} disruption${summary.unsited.recorded === 1 ? ' was' : 's were'} recorded on the public road, attributable to no site${summary.unsited.topType ? ` (most often ${pretty(summary.unsited.topType)}, ${summary.unsited.topTypeCount}×)` : ''}. Those are reported here rather than charged to whichever site the vehicle last touched.</p>
-      <p class="text-[10px] text-slate-500 mt-1.5">${summary.reconciliation.note} The shift panel counts the same population and cuts it by shift instead, road records included, so its total is the larger of the two figures and not a different quantity.</p>`;
+      <p class="text-[10px] text-slate-500 mt-1.5">${summary.reconciliation.note} The shift panel counts the same population and cuts it by shift instead, road records included, so its total is ${summary.reconciliation.unsited > 0 ? 'the larger of the two figures' : 'equal to this one while nothing has been recorded on the road'} and not a different quantity.</p>
+      ${weightingNote(summary)}`;
+  }
+
+  /* The divisor of every grossed-up count on this panel, stated. It used to
+     be weighted by throughput, which does not enter the disruption chance
+     anywhere, so it under-weighted the long badly-covered night and read
+     every site as better observed than the model's own parameters make it.
+     A reader of "grossed up by that coverage" is owed the weight. */
+  function weightingNote(summary) {
+    const b = summary.rows.length ? summary.rows[0].coverageBasis : null;
+    if (!b || !b.byShift.length) return '';
+    const spread = b.byShift.slice()
+      .sort((x, y) => y.weightShare - x.weightShare)
+      .map(r => `${r.label.toLowerCase()} ${r.hours}h, ${Math.round(r.weightShare * 100)}%`)
+      .join(' · ');
+    return `<p class="text-[10px] text-slate-500 mt-1.5">Each site's assumed coverage is a mean over the four shifts of one 24h cycle, weighted by ${b.weightedBy} — the shares are ${spread}. Traffic throughput is not the weight: it scales ordinary movement volume elsewhere in the model and is absent from the disruption chance, so weighting by it would divide these records by a number nothing produced them with.</p>
+      <p class="text-[10px] text-slate-500 mt-1.5">That mean is an archetype parameter, not a measurement: every site of the same kind carries the same figure however differently this run treated it. The site's own recorded shift mix is shown on its card and is deliberately not used as the weight — see the refused card.</p>`;
   }
 
   function renderTable(state) {
@@ -127,9 +152,10 @@ const FWFacilityView = (() => {
         </div>
         <div class="h-1.5 rounded bg-slate-800 overflow-hidden mb-1"><div class="h-full ${t.bar}" style="width:${w}%"></div></div>
         <div class="text-[10px] text-slate-500">
-          assumed coverage ${pct(r.meanCoverage)} (site factor ${r.oversightFactor.toFixed(2)}× the shift's) ·
+          assumed coverage ${pct(r.meanCoverage)} for the ${r.kindLabel.toLowerCase()} archetype (site factor ${r.oversightFactor.toFixed(2)}× the shift's) ·
           grossed up by that coverage: ${r.coverageAdjusted != null ? r.coverageAdjusted : 'n/a'}
         </div>
+        <div class="text-[10px] text-slate-600">weighted by ${r.coverageWeightedBy} · unweighted across the four shifts it would read ${pct(r.coverageUnweighted)}</div>
         <div class="text-[10px] text-slate-500">rank by records #${r.rawRank} · rank once grossed up #${r.adjustedRank}${r.rankMoved ? ' <span class="text-amber-300/80">(moves)</span>' : ''}</div>
         <div class="text-[10px] text-slate-600 mt-0.5">${r.topType ? `most recorded here: ${pretty(r.topType)} (${r.topTypeCount}×)` : 'nothing recorded here yet'}</div>
         <div class="text-[10px] text-slate-600 mt-0.5">${r.rationale}</div>

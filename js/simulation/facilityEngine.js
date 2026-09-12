@@ -91,7 +91,9 @@ const FWFacilityEngine = (() => {
     'Combined coverage is clamped to ' + Math.round(COVERAGE_MIN * 100) + '-' + Math.round(COVERAGE_MAX * 100) + '%. No site in this model records everything, and none records nothing.',
     'Recorded counts per site therefore measure observation as much as occurrence. A well-run gatehouse generates records; an unstaffed depot generates silence.',
     'The coverage-adjusted count grosses records up by this model\'s own stated coverage. It shows the direction and rough scale of the bias. It is not a corrected incident count and cannot be one.',
-    'Stages that happen on a public road are attributed to no site and reported separately, rather than being charged to whichever site the vehicle last touched.'
+    'Stages that happen on a public road are attributed to no site and reported separately, rather than being charged to whichever site the vehicle last touched.',
+    'A site\'s mean coverage is a weighted mean over the four shifts of one 24h cycle. The weight is the shift\'s length in hours times its opportunityScale, which is what actually decides how much disruption opportunity it carries. It is deliberately NOT throughput: throughput scales ordinary traffic in eventEngine and is absent from the disruption chance.',
+    'That mean depends on nothing about a site except its archetype, so two yards always report the same coverage however differently the run treated them. It is an archetype parameter printed on a site row, not a measurement of that site.'
   ];
 
   const NOT_MODELLED = [
@@ -110,6 +112,10 @@ const FWFacilityEngine = (() => {
     {
       figure: 'Whether a site was open when a movement passed through it',
       why: 'A facility declares OPERATING, REDUCED and CLOSED and this build only ever issues OPERATING, so closure and reduced running are not modelled at all. The eligibility test in sitesForStage tests for CLOSED and therefore excludes nothing — see siteEligibility() for the count — and every figure here is over a site population that is fully operating by construction.'
+    },
+    {
+      figure: 'This site\'s coverage weighted by the shift mix it actually saw',
+      why: 'The per-site shift mix is recorded and would look like the obvious weight to use. It cannot be: it is a mix of RECORDED disruptions, and a shift is in it in proportion to how well that shift records. Weighting coverage by it pulls every site toward its best-covered hours and then divides the records by the result, which is the same circularity as grossing records up by assumed coverage, run twice. The weight used instead is the model\'s own opportunity-by-hour, which was fixed in place before any run happened.'
     },
     {
       figure: 'Site-level exposure or cost',
@@ -144,19 +150,129 @@ const FWFacilityEngine = (() => {
     };
   }
 
-  // Mean coverage a site sees across the whole 24h cycle, weighted by
-  // how much traffic each shift carries -- an unweighted mean would
-  // over-count the quiet night and understate the site's real coverage.
+  /* Mean coverage a site sees across the whole 24h cycle.
+
+     THE WEIGHT USED TO BE THROUGHPUT, and the comment here justified it:
+     "weighted by how much traffic each shift carries -- an unweighted mean
+     would over-count the quiet night and understate the site's real
+     coverage." Both halves of that were wrong.
+
+     Throughput scales ordinary traffic volume in eventEngine. It is absent
+     from the disruption chance, which behaviorEngine computes as
+     DISRUPTION_CHANCE_PER_TICK * shiftEngine.opportunityScale(shift). So the
+     weight was a quantity with no causal role in producing a single one of
+     the records this mean is used to divide. What does decide how much
+     opportunity a shift carries is its length in hours times its
+     opportunityScale, and shiftEngine.exposureWeight now owns that.
+
+     The two weightings do not approximate each other. Throughput gives the
+     night 11.6% of the weight; exposure gives it 39.2%; a seeded 20-day run
+     put 41.3% of occurrences there. Night is also the worst-covered shift,
+     so under-weighting it inflated every site's mean coverage: a gatehouse
+     read 0.9075 and is 0.8190, an 8.9-point overstatement, and the same
+     direction and rough size for all four archetypes. That number is the
+     divisor of coverageAdjusted, so the panel was under-stating the very
+     bias it exists to illustrate.
+
+     Second honesty, now stated rather than left to be noticed: this figure
+     depends on nothing about the site except its ARCHETYPE. Two yards
+     always return the same number, however differently the run treated
+     them, and the site's own observed shift mix is deliberately not used
+     as the weight -- see NOT_MODELLED for why it cannot be. */
   function meanCoverage(facility) {
     if (!window.FWShiftEngine) return clampCoverage(archetype(facility.kind).oversightFactor);
     const shifts = FWShiftEngine.SHIFT_ORDER;
     let num = 0, den = 0;
     shifts.forEach(s => {
-      const w = FWShiftEngine.throughputMultiplier(s);
+      const w = FWShiftEngine.exposureWeight(s);
       num += coverage(facility, s).combined * w;
       den += w;
     });
     return den ? num / den : 0;
+  }
+
+  // Unweighted mean over the four shifts. Not used as a divisor anywhere:
+  // it exists so the panel can show what the weighting is worth.
+  function unweightedMeanCoverage(facility) {
+    if (!window.FWShiftEngine) return clampCoverage(archetype(facility.kind).oversightFactor);
+    const shifts = FWShiftEngine.SHIFT_ORDER;
+    const sum = shifts.reduce((a, s) => a + coverage(facility, s).combined, 0);
+    return shifts.length ? sum / shifts.length : 0;
+  }
+
+  /* Everything a caller needs to print the mean coverage without implying
+     it is a measurement of this site. Per shift: the coverage, the weight
+     it got, and whether the clamp bit. */
+  function coverageBasis(facility) {
+    const hasShift = !!window.FWShiftEngine;
+    const shifts = hasShift ? FWShiftEngine.SHIFT_ORDER : [];
+    const total = shifts.reduce((a, s) => a + FWShiftEngine.exposureWeight(s), 0);
+    const byShift = shifts.map(s => {
+      const c = coverage(facility, s);
+      const w = FWShiftEngine.exposureWeight(s);
+      return {
+        shift: s,
+        label: FWShiftEngine.profile(s).label,
+        hours: FWShiftEngine.shiftHours()[s],
+        coverage: c.combined,
+        clamped: c.clamped,
+        weight: w,
+        weightShare: total ? w / total : null
+      };
+    });
+    const value = meanCoverage(facility);
+    const unweighted = unweightedMeanCoverage(facility);
+    return {
+      value,
+      unweighted,
+      weightedBy: hasShift ? FWShiftEngine.exposureBasis().weightedBy : 'nothing (shift model absent)',
+      byShift,
+      clampedShifts: byShift.filter(r => r.clamped).map(r => r.shift),
+      dependsOnlyOnKind: true,
+      kind: facility ? facility.kind : null,
+      basisLabel: 'the four modelled shifts of one 24h cycle, weighted by hours x opportunity',
+      note: 'A modelled coverage parameter for the ' + (facility ? archetype(facility.kind).label : 'unsited') +
+        ' archetype, not a measured detection rate for this site. Two sites of the same kind return the ' +
+        'same number. Unweighted across the four shifts it would read ' + Math.round(unweighted * 100) +
+        '%, which is a different figure because the shifts are not the same length and do not carry the ' +
+        'same opportunity.'
+    };
+  }
+
+  /* The clock half of coverage is not the coverage. shiftEngine owns the
+     oversight parameter and refuses to publish a single miss rate from it;
+     this is the range that makes the refusal usable, and it lives here
+     because this module owns the other half. */
+  function shiftMissRange(shiftName) {
+    if (!window.FWShiftEngine) return null;
+    const road = FWShiftEngine.roadCoverage(shiftName);
+    const perKind = KIND_ORDER.map(k => ({
+      kind: k,
+      label: ARCHETYPES[k].label,
+      coverage: clampCoverage(road * ARCHETYPES[k].oversightFactor),
+      clamped: Math.abs(clampCoverage(road * ARCHETYPES[k].oversightFactor) - road * ARCHETYPES[k].oversightFactor) > 1e-9
+    }));
+    const covs = perKind.map(r => r.coverage);
+    const best = Math.max.apply(null, covs);
+    const worst = Math.min.apply(null, covs);
+    return {
+      shift: shiftName,
+      roadCoverage: road,
+      roadMissRate: 1 - road,
+      bestCoverage: best,
+      worstCoverage: worst,
+      bestMissRate: 1 - best,
+      worstMissRate: 1 - worst,
+      bestKind: perKind.find(r => r.coverage === best).label,
+      worstKind: perKind.find(r => r.coverage === worst).label,
+      perKind,
+      note: 'Where no site can be charged with it, ' + Math.round((1 - road) * 100) +
+        '% of occurrences in this shift go unrecorded and the oversight parameter is the whole of the ' +
+        'coverage. At a site it is multiplied by the archetype factor first, so the same shift misses ' +
+        Math.round((1 - best) * 100) + '% at a ' + perKind.find(r => r.coverage === best).label.toLowerCase() +
+        ' and ' + Math.round((1 - worst) * 100) + '% at a ' +
+        perKind.find(r => r.coverage === worst).label.toLowerCase() + '. No single figure covers the shift.'
+    };
   }
 
   /* Site eligibility, and what the test actually excludes.
@@ -261,7 +377,8 @@ const FWFacilityEngine = (() => {
     const facilities = FWEntityEngine.all(registry, 'facility');
     const rows = facilities.map(f => {
       const r = (tracker && tracker.bySite[f.id]) || { recorded: 0, byType: {}, byShift: {} };
-      const cov = meanCoverage(f);
+      const basis = coverageBasis(f);
+      const cov = basis.value;
       const a = archetype(f.kind);
       const top = topTypeOf(r.byType || {});
       return {
@@ -273,6 +390,9 @@ const FWFacilityEngine = (() => {
         rationale: a.rationale,
         recorded: r.recorded,
         meanCoverage: cov,
+        coverageBasis: basis,
+        coverageUnweighted: basis.unweighted,
+        coverageWeightedBy: basis.weightedBy,
         // Records divided by the coverage this model assumed. See
         // NOT_MODELLED: this is an illustration of the bias, not a
         // corrected count.
@@ -356,7 +476,8 @@ const FWFacilityEngine = (() => {
     ARCHETYPES, KIND_ORDER, STAGE_SITES, ASSUMPTIONS, NOT_MODELLED, RECORDED_SCOPE,
     UNSITED_LABEL, COVERAGE_MIN, COVERAGE_MAX,
     SITE_INELIGIBLE_STATUSES, siteEligible, siteEligibility, assertSiteStatusLiterals,
-    archetype, clampCoverage, coverage, meanCoverage,
+    archetype, clampCoverage, coverage, meanCoverage, unweightedMeanCoverage,
+    coverageBasis, shiftMissRange,
     sitesForStage, assignForStage,
     createTracker, record, siteSummary, hiddenLedger
   };

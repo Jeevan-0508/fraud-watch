@@ -158,7 +158,9 @@ const FWEntityInspector = (() => {
     const summary = FWFacilityEngine.siteSummary(state.registry, state.facilityTracker);
     const row = summary.rows.find(r => r.facilityId === facility.id) || {
       recorded: 0, meanCoverage: 0, coverageAdjusted: null, rawRank: null, adjustedRank: null,
-      rankMoved: false, topType: null, topTypeCount: 0, byShift: {}
+      rankMoved: false, topType: null, topTypeCount: 0, byShift: {},
+      coverageBasis: FWFacilityEngine.coverageBasis(facility),
+      coverageWeightedBy: FWFacilityEngine.coverageBasis(facility).weightedBy
     };
 
     if (els.title) els.title.textContent = `${facility.name} — ${arch.label}`;
@@ -170,10 +172,11 @@ const FWEntityInspector = (() => {
       <div class="text-[11px] text-slate-300 space-y-0.5">
         <div>Type: ${arch.label} · status ${FWEntityEngine.formatStatus('facility', facility.status)}</div>
         <div>Assumed oversight factor: ${arch.oversightFactor.toFixed(2)}× the shift's own coverage</div>
-        <div>Mean assumed coverage across the day: ${Math.round(row.meanCoverage * 100)}%</div>
+        <div>Mean assumed coverage across the day: ${Math.round(row.meanCoverage * 100)}% <span class="text-slate-500">(${row.coverageWeightedBy || 'unweighted'})</span></div>
       </div>
       <p class="text-[10px] text-slate-500 mt-1">${arch.rationale}</p>
       <p class="text-[10px] text-slate-500 mt-1">Both figures are stated modeling assumptions, not measured detection rates for anything.</p>
+      <p class="text-[10px] text-slate-500 mt-1">${row.coverageBasis ? row.coverageBasis.note : ''}</p>
       <p class="text-[10px] text-amber-300/80 mt-1">${FWEntityEngine.statusNote('facility')}</p>
       <p class="text-[10px] text-slate-500 mt-1">${eligibility.note}</p>
     </div>`;
