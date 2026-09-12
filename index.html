@@ -74,8 +74,8 @@
 
       <!-- full-screen reveal flash + case-closed card -->
       <div id="port-reveal-flash" class="hidden absolute inset-0 z-40"></div>
-      <div id="port-reveal-backdrop" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4">
-        <div id="port-reveal-card" class="w-full max-w-md"></div>
+      <div id="port-reveal-backdrop" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div id="port-reveal-card" class="w-full max-w-md max-h-[85vh] overflow-y-auto my-auto"></div>
       </div>
     </div>
   </div>
@@ -94,9 +94,14 @@
       <p id="freight-map-stats" class="text-[10px] text-slate-500 mb-2"></p>
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-3">
         <svg id="freight-map-svg" viewBox="0 0 800 430" class="w-full xl:col-span-3 rounded-xl bg-[#05070a] border border-slate-800" style="min-height:380px"></svg>
-        <div id="freight-map-selection" class="bg-[#0e1520] border border-slate-800 rounded-xl p-2 max-h-[420px] overflow-y-auto scrollbar-thin"></div>
+        <div class="space-y-2 max-h-[420px] overflow-y-auto scrollbar-thin">
+          <div id="freight-map-selection" class="bg-[#0e1520] border border-slate-800 rounded-xl p-2"></div>
+          <button id="fm-entity-expand" class="hidden w-full text-[10px] font-semibold uppercase tracking-wide bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg px-2 py-1.5">Open the full entity panel</button>
+          <div id="fm-entity-card" class="bg-[#0e1520] border border-slate-800 rounded-xl p-2"></div>
+        </div>
       </div>
-      <p class="text-[10px] text-slate-500 mt-2">Every place and every road drawn here is a node and an edge of the one topology this simulation moves trucks over, and a truck sits where its own journey says it is &mdash; standing at a place, or a stated fraction along the road between two of them. Nothing is animated between simulation steps, so a marker moves only when the world does. What the picture cannot tell you is distance: the drawn length of a road is a consequence of the layout, and the real figure is printed on the road. A dashed amber circle means the truck currently carries at least one active signal, which is an observation with a lifetime and not a finding &mdash; the case panels below are where a correlated pair becomes anything more than that.</p>
+      <div id="fm-timeline" class="mt-3 bg-[#0e1520] border border-slate-800 rounded-xl p-2"></div>
+      <p class="text-[10px] text-slate-500 mt-2">Every place and every road drawn here is a node and an edge of the one topology this simulation moves trucks over, and a truck sits where its own journey says it is &mdash; standing at a place, or a stated fraction along the road between two of them. Nothing is animated between simulation steps, so a marker moves only when the world does. What the picture cannot tell you is distance: the drawn length of a road is a consequence of the layout, and the real figure is printed on the road. A dashed amber circle means the truck currently carries at least one active signal, which is an observation with a lifetime and not a finding &mdash; the case panels below are where a correlated pair becomes anything more than that. Selecting a truck reads out what it is linked to and what is currently observed about it beside the drawing, and the button there opens the full entity panel over the top when you want the per-case detail. The strip underneath lists the events this simulation has just recorded &mdash; when, what type, and against which entity &mdash; and nothing about why any of them happened.</p>
     </div>
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <div id="sim-speed-controls" class="flex gap-1 bg-slate-900 rounded-lg p-0.5">
@@ -252,8 +257,8 @@
 
     <!-- full-screen reveal flash -->
     <div id="reveal-flash" class="hidden absolute inset-0 z-40"></div>
-    <div id="reveal-backdrop" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4">
-      <div id="reveal-card" class="w-full max-w-md"></div>
+    <div id="reveal-backdrop" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div id="reveal-card" class="w-full max-w-md max-h-[85vh] overflow-y-auto my-auto"></div>
     </div>
   </div>
 </main>

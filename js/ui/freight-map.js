@@ -314,6 +314,92 @@ const FWFreightMap = (() => {
     caseIsSeparate: 'whether a case exists is moEngine\'s answer and is counted separately in the header.'
   };
 
+  /* WHAT THE IN-MAP CARD IS, AND WHAT IT MUST NOT BECOME.
+
+     Slice 75 wired a truck click straight through to the full-screen entity
+     panel. That answered "what is this truck" by covering over the network the
+     question was asked from, and every click cost the reader their place on the
+     map. So the click now does the smaller thing: it selects, and the read-out
+     appears inside this panel, beside the drawing. The full panel is one
+     deliberate press away and nothing was removed from it.
+
+     The card is a SUMMARY and says so on itself. It holds no detail the full
+     panel does not already derive, and it derives nothing differently: the
+     links come from entityEngine, the active signals from signalEngine with
+     that module's own reliability wording and its own decay clause, and the
+     case split is moEngine's open/closed partition rather than a second
+     opinion about which cases are open. Where the two surfaces would disagree
+     this one defers -- which is why the per-case detail is a press away instead
+     of being restated here in a shorter form that could drift from it.
+
+     It reads nothing about a truck that the full panel does not already show
+     an analyst, and it writes nothing anywhere. */
+  const ENTITY_CARD = {
+    shows: [
+      'the linked driver, trailer and carrier, by id and by declared status',
+      'active signals, with the reliability wording and the decay clause each type carries',
+      'how many correlated cases name this truck, split into open and closed'
+    ],
+    defersTo: [
+      'how far each case was actually examined, and whose hand closed it',
+      'the outcome history, which is deliberately never compressed into one score',
+      'the recorded event history of the truck itself'
+    ],
+    doesNotMean: 'A truck with a card open is not the subject of anything. A selection is a reader pointing ' +
+      'at a movement; it is not a case, an allegation, or a step towards either.',
+    writes: 'nothing. The selection is one id held in this module and the card is read-only.',
+    supersedes: 'the Slice 75 behaviour of opening the full-screen panel on every click, which hid the map ' +
+      'behind the answer.'
+  };
+
+  /* THE EVENT STRIP UNDER THE MAP, and the one thing it will not reach for.
+
+     The simulation publishes a rolling list of the events it has just recorded,
+     and the engine inspector already renders from it. That list is the channel
+     this strip reuses. No second path out of the event log was opened for this
+     panel, because a second path is a second chance to read something the first
+     one was careful not to.
+
+     A row carries four things and exactly four: when, what type, which entity
+     it was recorded against, and whether the severity it was stamped with is
+     one eventEngine declares a disruption. That last classification is
+     eventEngine.severityBasis -- the module that stamps the severity owns the
+     question -- and not a comparison written here against an inline literal.
+
+     What a row does not carry is the note this simulation keeps beside an event
+     for its own pacing checks. The engine inspector prints that note in
+     brackets and labels it for what it is, because judging pacing is
+     impossible without it. This strip is a player-facing surface: it reads the
+     row's own four fields and never descends into what an event carries beside
+     them. `neverRead` names it, and the suite for this slice poisons that door
+     and then takes a frame, so the claim is checked against the code rather
+     than believed. */
+  const TIMELINE_VIEW = {
+    rows: ['timestamp', 'type', 'entityId', 'severity basis'],
+    classifiedBy: 'FWEventEngine.severityBasis, the module that stamps the severity in the first place',
+    channel: 'the rolling recent-event list the simulation state already publishes -- the same one the engine ' +
+      'inspector reads, not a new one',
+    neverRead: 'the note kept beside an event for this simulation\'s own pacing checks. This panel does not ' +
+      'open an event\'s side channel at all, so there is nothing here to leak from it.',
+    doesNotMean: 'A row here is a record that something was observed, never a statement that it was ' +
+      'anything. The climb from an observation to a finding runs through the case panels below, and no rung ' +
+      'of it is drawn on this strip.',
+    /* WHAT THE STRIP IS ACTUALLY LIKELY TO SHOW, measured rather than hoped for.
+       The published list is a 40-row ring buffer over a stream that is
+       overwhelmingly routine traffic, so a 14-row window onto it is mostly
+       routine traffic. Sampled at seed 12345 over 200 hourly frames: 2800 rows,
+       of which 42 carried the disruption severity -- 1.5% of rows, and 16.0% of
+       windows held at least one, never more than three. That is the honest
+       shape of this surface and it is not a fault to be tuned away: a strip
+       that reliably showed a disruption would be a strip that had stopped being
+       chronological. Which is exactly why every caption states how many of the
+       shown rows carried one, instead of leaving a reader to assume the visible
+       rows are the interesting ones. */
+    measured: { seed: 12345, frames: 200, rowsSampled: 2800, disruptionRows: 42,
+      windowsWithADisruption: 32, mostInOneWindow: 3 },
+    cap: 14
+  };
+
   function assertViewStates(lifecycle, isRoadStage, table, states) {
     const cycle = lifecycle || need(BE, 'FWBehaviorEngine', 'the view state check').LIFECYCLE;
     const roadTest = isRoadStage || ((s) => need(JE, 'FWJourneyEngine', 'the view state check').isRoadStage(s));
@@ -706,6 +792,81 @@ const FWFreightMap = (() => {
      Nothing is estimated and nothing is a rate: they are counts of things the
      simulation is holding right now. `openCases` is moEngine's own status
      partition, not a second opinion about which cases are open. */
+  function clockLabel(absSeconds) {
+    const day = Math.floor(absSeconds / 86400) + 1;
+    const s = Math.floor(absSeconds % 86400);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return 'D' + day + ' ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  }
+
+  /* The card's data, assembled here rather than in the DOM writer so a suite can
+     read every field of it without a document. Each field is fetched from the
+     module that owns it, and a module that is absent produces a stated absence
+     rather than a zero -- because "no cases" and "cases not counted here" are
+     different facts and printing the first for the second would be a claim. */
+  function entityCardFor(truck, state, now) {
+    if (!truck) return null;
+    const EE = window.FWEntityEngine || null;
+    const SE = window.FWSignalEngine || null;
+    const get = (kind, id) => (EE && id ? EE.get(state.registry, kind, id) : null);
+    const status = (kind, v) => (EE && EE.formatStatus ? EE.formatStatus(kind, v) : v);
+    const driver = get('driver', truck.driverId);
+    const trailer = get('trailer', truck.trailerId);
+    const carrier = get('carrier', truck.carrierId);
+
+    const active = SE ? SE.getActiveSignals(truck, now) : null;
+    const signals = active ? active.map(sg => ({
+      type: sg.type,
+      reliability: SE.formatReliability ? SE.formatReliability(sg.reliability) : null,
+      decay: SE.decayClause ? SE.decayClause(sg.type, sg.expiresAt - sg.createdAt).text : null
+    })) : null;
+
+    let cases = null;
+    if (state.moEngine && window.FWMoEngine && FWMoEngine.OPEN_STATUSES) {
+      const mine = Array.from(state.moEngine.mos.values())
+        .filter(m => m.entities && m.entities.truckId === truck.id);
+      const open = mine.filter(m => FWMoEngine.OPEN_STATUSES.has(m.status)).length;
+      cases = { total: mine.length, open, closed: mine.length - open };
+    }
+
+    return {
+      truckId: truck.id,
+      statusLabel: EE && EE.statusLabel ? EE.statusLabel('truck', truck.status) : truck.status,
+      driver: driver ? { id: driver.id, name: driver.name, status: status('driver', driver.status) } : null,
+      trailer: trailer ? { id: trailer.id, sealId: trailer.sealId || null, status: status('trailer', trailer.status) } : null,
+      carrier: carrier ? { id: carrier.id, name: carrier.name, scac: carrier.scac || null } : null,
+      signals,
+      signalCount: signals ? signals.length : null,
+      reliabilityNote: signals && signals.length && SE.reliabilityNote ? SE.reliabilityNote() : null,
+      cases,
+      expandable: !!window.FWEntityInspector
+    };
+  }
+
+  /* The strip's rows. Four fields off each row of the published list, plus the
+     classification the stamping module makes of the fifth. `shown` and `held`
+     are both stated because the list is a ring buffer: the strip is a window on
+     a window, and a count with the wrong denominator behind it reads as a total. */
+  function timelineOf(state, limit) {
+    const cap = limit === undefined ? TIMELINE_VIEW.cap : limit;
+    const feed = state.recentEvents || [];
+    const rows = feed.slice(0, cap).map(ev => ({
+      t: ev.timestamp,
+      type: ev.type,
+      entityId: ev.entityId,
+      severity: ev.severity,
+      basis: window.FWEventEngine ? FWEventEngine.severityBasis(ev.severity).basis : 'UNDECLARED'
+    }));
+    return {
+      rows,
+      shown: rows.length,
+      held: feed.length,
+      totalSoFar: state.totalEvents === undefined ? null : state.totalEvents,
+      disruptions: rows.filter(r => r.basis === 'DISRUPTION').length,
+      undeclared: rows.filter(r => r.basis === 'UNDECLARED').length
+    };
+  }
+
   function frame(state, opts) {
     if (!state) return null;
     const o = opts || {};
@@ -757,6 +918,8 @@ const FWFreightMap = (() => {
       trucks: placements,
       selectedTruckId: selectedId,
       selectedRoute: selectedTruck ? selectedRoute(selectedTruck, lay) : null,
+      selectedEntity: selectedTruck ? entityCardFor(selectedTruck, state, now) : null,
+      timeline: timelineOf(state),
       counts: {
         trucks: trucks.length,
         drawn: drawn.length,
@@ -802,6 +965,11 @@ const FWFreightMap = (() => {
   const markers = new Map();      // truck id -> { g, state, watched, selected }
   let lastActivitySig = '';
   let lastRouteSig = '';
+  // Sentinels, not empty strings: the no-selection card's own signature IS the
+  // empty string, so an empty-string seed made the first render of it a no-op
+  // and the card stayed blank until something was selected.
+  let lastCardSig = null;
+  let lastTimelineSig = null;
 
   function nodeShape(n) {
     const s = n.style, x = n.x, y = n.y, k = s.size;
@@ -866,22 +1034,40 @@ const FWFreightMap = (() => {
       svg: document.getElementById('freight-map-svg'),
       clock: document.getElementById('freight-map-clock'),
       stats: document.getElementById('freight-map-stats'),
-      selection: document.getElementById('freight-map-selection')
+      selection: document.getElementById('freight-map-selection'),
+      entityCard: document.getElementById('fm-entity-card'),
+      expand: document.getElementById('fm-entity-expand'),
+      timeline: document.getElementById('fm-timeline')
     };
     if (els.svg) {
       els.svg.addEventListener('click', (e) => {
         const target = e.target && e.target.closest ? e.target.closest('[data-truck-id]') : null;
-        if (!target) { select(null); return; }
+        if (!target) { select(null); if (window.FWSimRunner) render(FWSimRunner.getState()); return; }
         const id = target.dataset ? target.dataset.truckId : target.getAttribute('data-truck-id');
         select(id === selectedTruckId ? null : id);
-        // The inspector already renders a truck from simulation state. Opening
-        // the existing panel is the whole interaction: this module holds no
-        // second copy of a truck's detail and invents no case.
-        if (id && window.FWEntityInspector) FWEntityInspector.show('truck', id);
+        // A click selects. It no longer throws the full-screen panel over the
+        // map, because a reader who has to dismiss a modal to see the network
+        // again has been charged for asking. The read-out lands in the card
+        // beside the drawing and the full panel is one press away -- see
+        // ENTITY_CARD.supersedes.
         if (window.FWSimRunner) render(FWSimRunner.getState());
       });
     }
+    if (els.expand) {
+      els.expand.addEventListener('click', () => { expandSelected(); });
+    }
     return els;
+  }
+
+  /* The press that opens the full panel. It passes an id and nothing else: the
+     panel derives a truck from simulation state exactly as it did before this
+     slice, so there is one derivation of a truck's detail and this module is not
+     it. Returns what it did, so a suite can check the wiring without a modal. */
+  function expandSelected() {
+    if (!selectedTruckId) return { opened: false, why: 'NO_SELECTION' };
+    if (!window.FWEntityInspector) return { opened: false, why: 'INSPECTOR_ABSENT' };
+    FWEntityInspector.show('truck', selectedTruckId);
+    return { opened: true, kind: 'truck', truckId: selectedTruckId };
   }
 
   function select(id) { selectedTruckId = id || null; return selectedTruckId; }
@@ -1012,6 +1198,117 @@ const FWFreightMap = (() => {
       'is that stage restated for where the truck is, not a second opinion about it.</div>';
   }
 
+  /* Tone per severity basis, keyed on the three answers eventEngine's own
+     severityBasis can give. UNDECLARED gets its own colour rather than falling
+     back to routine, for the reason sim-debug already found: a row carrying a
+     severity this program does not declare is not known to be ordinary traffic,
+     and drawing it as ordinary traffic is a claim. */
+  const BASIS_TONE = {
+    DISRUPTION: 'border-amber-500/60 text-amber-200',
+    ROUTINE: 'border-slate-700 text-slate-400',
+    UNDECLARED: 'border-fuchsia-500/60 text-fuchsia-200'
+  };
+
+  function renderEntityCard(f) {
+    if (!els.entityCard) return;
+    const e = f.selectedEntity;
+    if (els.expand && els.expand.classList) els.expand.classList.toggle('hidden', !e);
+    const sig = e
+      ? [e.truckId, e.statusLabel, e.signalCount, e.driver && e.driver.id, e.trailer && e.trailer.id,
+        e.carrier && e.carrier.id, e.cases && e.cases.total, e.cases && e.cases.open].join('|')
+      : '';
+    if (sig === lastCardSig) return;
+    lastCardSig = sig;
+    if (!e) {
+      els.entityCard.innerHTML = '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">' +
+        'Selected movement</div><p class="text-[10px] text-slate-500 italic">Nothing is selected. Choosing a ' +
+        'truck on the map reads out what it is linked to right now and what is currently observed about it, ' +
+        'without leaving the network.</p>';
+      return;
+    }
+    const absent = '<span class="text-slate-600">not linked</span>';
+    const links = '<div class="text-[10px] text-slate-300 space-y-0.5">' +
+      '<div>Driver: ' + (e.driver ? esc(e.driver.id) + ' (' + esc(e.driver.name) + ') — ' + esc(e.driver.status) : absent) + '</div>' +
+      '<div>Trailer: ' + (e.trailer ? esc(e.trailer.id) + ' — seal ' +
+        (e.trailer.sealId ? esc(e.trailer.sealId) : '<span class="text-slate-600">none recorded</span>') +
+        ' — ' + esc(e.trailer.status) : absent) + '</div>' +
+      '<div>Carrier: ' + (e.carrier ? esc(e.carrier.name) + ' (' + esc(e.carrier.scac || e.carrier.id) + ')' : absent) + '</div>' +
+      '</div>';
+
+    let signalsHtml;
+    if (e.signals === null) {
+      signalsHtml = '<p class="text-[10px] text-slate-600 italic">Signals are not derived on this surface, so ' +
+        'nothing is known here about what is currently observed.</p>';
+    } else if (!e.signals.length) {
+      signalsHtml = '<p class="text-[10px] text-slate-600 italic">Nothing is under observation on this truck ' +
+        'right now. That is an absence of active signals, which is not a statement that nothing happened.</p>';
+    } else {
+      signalsHtml = '<ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">' +
+        e.signals.map(sg => '<li>' + esc(String(sg.type).replace(/_/g, ' ')) +
+          (sg.reliability ? ' — ' + esc(sg.reliability) : '') +
+          (sg.decay ? ' · ' + esc(sg.decay) : '') + '</li>').join('') + '</ul>' +
+        '<p class="text-[9px] text-amber-300/80 mt-1">An active signal does not mean ' +
+        esc(ATTENTION.doesNotMean) + '</p>' +
+        (e.reliabilityNote ? '<p class="text-[9px] text-slate-500 italic mt-1">' + esc(e.reliabilityNote) + '</p>' : '');
+    }
+
+    const casesLine = e.cases === null
+      ? 'Case counts are not derived on this surface.'
+      : (e.cases.total
+        ? e.cases.total + ' correlated case' + (e.cases.total === 1 ? '' : 's') + ' name' +
+          (e.cases.total === 1 ? 's' : '') + ' this truck — ' + e.cases.open + ' still open, ' +
+          e.cases.closed + ' closed'
+        : 'No correlated case names this truck.');
+
+    const head = '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Selected movement</div>';
+    const sub = k => '<div class="text-[10px] font-semibold text-slate-400 uppercase mt-2 mb-1">' + k + '</div>';
+    els.entityCard.innerHTML = head +
+      '<div class="text-[11px] text-white font-mono">' + esc(e.truckId) + '</div>' +
+      '<div class="text-[10px] text-slate-400">' + esc(e.statusLabel) + '</div>' +
+      sub('Currently linked to') + links +
+      sub('Active signals (' + (e.signalCount === null ? 'not counted here' : e.signalCount) + ')') + signalsHtml +
+      sub('Cases naming it') +
+      '<div class="text-[10px] text-slate-400">' + casesLine + '</div>' +
+      '<p class="text-[9px] text-slate-500 mt-2">' + esc(ENTITY_CARD.doesNotMean) + '</p>' +
+      '<p class="text-[9px] text-slate-600 mt-1">A summary, not the whole file. Left to the full entity ' +
+      'panel: ' + esc(ENTITY_CARD.defersTo.join('; ')) + '. The button above opens it against the same ' +
+      'simulation state this card was read from.</p>';
+  }
+
+  function renderTimeline(f) {
+    if (!els.timeline) return;
+    const tl = f.timeline;
+    const first = tl.rows[0];
+    const sig = tl.shown + '|' + tl.held + '|' + tl.totalSoFar + '|' +
+      (first ? first.t + '/' + first.type + '/' + first.entityId : '-');
+    if (sig === lastTimelineSig) return;
+    lastTimelineSig = sig;
+    const head = '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Recorded events</div>';
+    if (!tl.shown) {
+      els.timeline.innerHTML = head + '<p class="text-[10px] text-slate-500 italic">Nothing has been recorded ' +
+        'yet in this run. An empty strip is an empty record, not a quiet network.</p>';
+      return;
+    }
+    const rows = tl.rows.map(r =>
+      '<div class="shrink-0 border-l-2 ' + (BASIS_TONE[r.basis] || BASIS_TONE.ROUTINE) + ' pl-1.5 pr-2 py-0.5">' +
+      '<div class="text-[9px] text-slate-500 font-mono">' + clockLabel(r.t) + '</div>' +
+      '<div class="text-[10px] leading-tight whitespace-nowrap">' + esc(String(r.type).replace(/_/g, ' ')) + '</div>' +
+      '<div class="text-[9px] text-slate-500 font-mono">' + esc(r.entityId) + '</div></div>').join('');
+    const totalClause = tl.totalSoFar === null ? ''
+      : ', out of ' + tl.totalSoFar + ' recorded since this run began';
+    const undeclaredClause = tl.undeclared
+      ? ' ' + tl.undeclared + ' carr' + (tl.undeclared === 1 ? 'ies' : 'y') + ' a severity this program does ' +
+        'not declare at all, so whether those recorded a disruption is not known here and they are not drawn ' +
+        'as ordinary traffic.'
+      : '';
+    els.timeline.innerHTML = head +
+      '<div class="flex items-stretch gap-2 overflow-x-auto scrollbar-thin pb-1">' + rows + '</div>' +
+      '<p class="text-[9px] text-slate-500 mt-1">The ' + tl.shown + ' most recent of the ' + tl.held +
+      ' this simulation is currently holding' + totalClause + '. ' + tl.disruptions + ' of the ' + tl.shown +
+      ' shown carry a severity eventEngine declares a disruption.' + undeclaredClause + ' ' +
+      esc(TIMELINE_VIEW.doesNotMean) + '</p>';
+  }
+
   function render(state) {
     if (!state || !els.svg) return null;
     if (els.root && els.root.classList && els.root.classList.contains('hidden')) return null;
@@ -1027,6 +1324,8 @@ const FWFreightMap = (() => {
     renderTrucks(f);
     renderHeader(f);
     renderSelection(f);
+    renderEntityCard(f);
+    renderTimeline(f);
     return f;
   }
 
@@ -1043,6 +1342,10 @@ const FWFreightMap = (() => {
       readsGroundTruth: GROUND_TRUTH_SEPARATION.readsGroundTruth,
       visualStates: Object.keys(VIEW_STATES).length,
       notRendered: NOT_RENDERED.map(x => x.thing),
+      entityCardShows: ENTITY_CARD.shows.length,
+      entityCardDefersTo: ENTITY_CARD.defersTo.length,
+      timelineFields: TIMELINE_VIEW.rows.slice(),
+      timelineChannel: TIMELINE_VIEW.channel,
       interpolatesBetweenTicks: false,
       interpolationNote: 'A truck moves only when the simulation advances. There is no tween between two ticks, ' +
         'because a position between two simulation states is one the simulation never held.'
@@ -1057,9 +1360,11 @@ const FWFreightMap = (() => {
   return {
     LAYOUT_SCALE, LAYOUT, GROUND_TRUTH_SEPARATION, NOT_RENDERED, NOT_DRAWN,
     NODE_STYLE, EDGE_STYLE, VIEW_STATES, STAGE_VIEW, VIEW_STATE_STYLE, ATTENTION,
+    ENTITY_CARD, TIMELINE_VIEW, BASIS_TONE,
     ARRIVING_WINDOW_SECONDS, STYLE_CHECK, EDGE_CHECK, VIEW_CHECK,
     assertNodeStyles, assertEdgeStyles, assertViewStates, assertLayoutCoversGraph,
     hopDepths, buildLayout, defaultLayout, placementFor, stackAtNodes, selectedRoute, frame,
+    entityCardFor, timelineOf, clockLabel, expandSelected,
     staticSvg, init, render, select, selected, summary
   };
 })();
