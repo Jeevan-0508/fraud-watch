@@ -206,6 +206,14 @@ const FWMoIntelligence = (() => {
       : `<br><span class="text-slate-400">Novelty ${n.value} on a 0-${FWMoEngine.RECURRENCE_NOVELTY.max} axis — ${n.note}.</span>`;
   }
 
+  /* The lifetime that decided whether this row still counts, stated on the row.
+     It was a hand-set constant in the catalog that nothing printed, while the
+     word "decayed" beside it carried the whole consequence. */
+  function decayClause(e) {
+    const secs = FWSignalEngine.decaySecondsFor(e.signalType);
+    return secs == null ? '' : ` · ${FWSignalEngine.formatDecay(secs)}`;
+  }
+
   function renderEvidenceList(mo) {
     if (!mo.evidence || !mo.evidence.length) return '';
     const active = new Set(mo.activeSignals || mo.signals || []);
@@ -214,7 +222,7 @@ const FWMoIntelligence = (() => {
     // nothing divided, printed per row as if it graded that row. One owner for
     // the string now, and the caveat is stated below rather than assumed.
     const rows = mo.evidence.map(e =>
-      `<li>${e.signalType.replace(/_/g, ' ')} — contributes ${e.contribution} ${decl.unit.split(',')[0]}, ${FWSignalEngine.formatReliability(e.reliability)} (${fmtSimTime(e.at)})${active.has(e.signalId) ? '' : ' <span class="text-slate-600">· decayed, no longer counting toward the index</span>'}</li>`
+      `<li>${e.signalType.replace(/_/g, ' ')} — contributes ${e.contribution} ${decl.unit.split(',')[0]}, ${FWSignalEngine.formatReliability(e.reliability)} (${fmtSimTime(e.at)})${decayClause(e)}${active.has(e.signalId) ? '' : ' <span class="text-slate-600">· decayed, no longer counting toward the index</span>'}</li>`
     ).join('');
     // Two sums of one quantity at two scopes, stated and reconciled rather
     // than left for the eye to add up into the index it will not match.
@@ -222,7 +230,8 @@ const FWMoIntelligence = (() => {
     return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Signals & evidence</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul>
       <div class="text-[9px] text-slate-500 italic mt-1">${scopes.note} A contribution is not ${decl.doesNotMean}</div>
       <div class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.reliabilityNote()}</div>
-      <div class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.effectiveSpan().note}</div></div>`;
+      <div class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.effectiveSpan().note}</div>
+      <div class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.decayInfluence().note}</div></div>`;
   }
 
   function renderTimeline(mo) {

@@ -26,8 +26,10 @@
    declares that, and nothing may print it with a % again. */
 const FWSignalEngine = (() => {
   // decaySeconds: how long the signal stays "active" before it stops
-  // counting toward anything — old, unexplained blips shouldn't haunt
-  // an entity forever, matching "some anomalies naturally disappear."
+  // counting toward anything. See DECAY_SCALE -- this constant decides
+  // which signals are still in the subset the correlation index is
+  // computed over, so it is the third undeclared number on this row and
+  // the one with the most reach.
   const SIGNAL_CATALOG = {
     UNEXPECTED_STOP:    { signalType: 'UNEXPECTED_STOP',    weight: 1, reliability: 0.6, decaySeconds: 1800 },
     ROUTE_DEVIATION:     { signalType: 'ROUTE_DEVIATION',     weight: 2, reliability: 0.7, decaySeconds: 3600 },
@@ -83,6 +85,29 @@ const FWSignalEngine = (() => {
     doesNotDiscriminate: 'The constant is attached from the type alone, with no reference to whether the underlying event had a legitimate explanation, so it carries no information about which of two signals of different types is the more innocent.'
   };
 
+  /* The third constant in the catalog, and the last one with no declaration.
+     It went unstated the longest and reaches the furthest: pruneExpired deletes
+     on it, getActiveSignals filters on it, and moEngine recomputes the
+     correlation index from the ACTIVE subset alone -- so this hand-set number
+     decides which evidence is still counted toward the app's most prominent
+     figure. It is not a measure of how strong a signal is, and the catalog
+     proves it is not: decayInfluence() finds 12 of 13 types change rank when
+     lifetime is taken into account, and stronger signals in this catalog decay
+     slightly FASTER, not slower. Both facts are stated on screen now instead of
+     being left inside a constant. */
+  const DECAY_SCALE = {
+    kind: 'PARAMETER',
+    unit: 'seconds of simulated time from the moment of observation',
+    scope: 'one signal TYPE in this catalog -- how long an observation of this kind stays in the set correlation is computed over',
+    min: 1800,
+    max: 10800,
+    source: 'ASSUMED -- hand-set per signal type. No measured half-life, retention rule or reference window stands behind any of these values.',
+    means: 'how long this engine is willing to keep treating an observation of this kind as still relevant to what is happening now.',
+    doesNotMean: 'that the observed event stopped happening, was retracted, was explained, or was ruled out; and it is not a second statement of how strong the signal is.',
+    decides: 'membership of the active subset, and therefore the correlation index, the case band, and whether a case would still clear the threshold it opened at.',
+    notAStrengthMeasure: 'A signal type\u0027s lifetime is set independently of its weight and reliability, so the active subset is not the strongest evidence a case holds; nor is it the most recent, since a long-lived weak signal outlives a newer short-lived strong one. It is whatever has not yet run out its own type\u0027s clock.'
+  };
+
   /* Measured from the catalog, not asserted in prose: what the declared weight
      scale would imply about opening a case, against what the summed quantity
      actually does. */
@@ -118,6 +143,76 @@ const FWSignalEngine = (() => {
       span.threshold + ' needed to open a case if weight were the summed quantity, and ' +
       span.pairsClearingOnSummedQuantity + ' actually do.';
     return span;
+  }
+
+  /* MEASURED from the catalog, because "lifetime is not strength" is a claim and
+     claims in this project get checked. Ranks every type by the per-signal term
+     the index sums (weight x reliability), then by that term times how long the
+     signal stays in the active subset, and reports the disagreement. */
+  function decayInfluence() {
+    const keys = Object.keys(SIGNAL_CATALOG);
+    const strength = (k) => SIGNAL_CATALOG[k].weight * SIGNAL_CATALOG[k].reliability;
+    const window_ = (k) => strength(k) * SIGNAL_CATALOG[k].decaySeconds;
+    const byStrength = keys.slice().sort((a, b) => strength(b) - strength(a) || a.localeCompare(b));
+    const byWindow = keys.slice().sort((a, b) => window_(b) - window_(a) || a.localeCompare(b));
+    let rankChanged = 0, largest = { type: null, places: 0 };
+    keys.forEach(k => {
+      const move = byStrength.indexOf(k) - byWindow.indexOf(k);
+      if (move !== 0) rankChanged += 1;
+      if (Math.abs(move) > Math.abs(largest.places)) largest = { type: k, places: move };
+    });
+    // Ordered pairs where the strictly stronger signal is the one that leaves the
+    // active subset sooner in strength-seconds. Each one is a case where reading
+    // the active subset as "the strong evidence" would be wrong.
+    let inversions = 0;
+    keys.forEach(a => keys.forEach(b => {
+      if (a !== b && strength(a) > strength(b) && window_(a) < window_(b)) inversions += 1;
+    }));
+    const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    const sVals = keys.map(strength), dVals = keys.map(k => SIGNAL_CATALOG[k].decaySeconds);
+    const ms = mean(sVals), md = mean(dVals);
+    const cov = sVals.reduce((acc, v, i) => acc + (v - ms) * (dVals[i] - md), 0);
+    const sd = (a, m) => Math.sqrt(a.reduce((acc, v) => acc + (v - m) * (v - m), 0));
+    const denom = sd(sVals, ms) * sd(dVals, md);
+    const out = {
+      types: keys.length,
+      rankChanged: rankChanged,
+      largestMove: largest,
+      inversions: inversions,
+      correlation: denom === 0 ? null : Math.round((cov / denom) * 1000) / 1000,
+      minHours: Math.round((DECAY_SCALE.min / 3600) * 100) / 100,
+      maxHours: Math.round((DECAY_SCALE.max / 3600) * 100) / 100
+    };
+    out.note = 'How long a signal keeps counting is a separate hand-set constant per type, from ' +
+      out.minHours + 'h to ' + out.maxHours + 'h, and it is not a second statement of strength: ranking the ' +
+      out.types + ' types by the term the index sums against ranking them by that term times how long it survives ' +
+      'moves ' + out.rankChanged + ' of ' + out.types + ' (' + out.largestMove.type + ' by ' +
+      Math.abs(out.largestMove.places) + ' places), and in ' + out.inversions +
+      ' ordered pairs the stronger signal is the one that leaves the active set sooner' +
+      (out.correlation == null ? '' : ' (strength against lifetime correlates ' + out.correlation.toFixed(3) +
+        ' over the ' + out.types + ' hand-set values, which describes this catalog and estimates nothing beyond it)') +
+      /* NOT "the most recent evidence": a long-lived weak signal outlives a newer
+         short-lived strong one, so the active subset is not sorted by age either.
+         The only true statement is the negative one. */
+      '. So the active subset is neither the strongest evidence a case holds nor simply its most recent: it is ' +
+      'whatever has not yet run out its own type\u0027s clock. A signal leaving it is that clock expiring, not ' +
+      'anything being ruled out.';
+    return out;
+  }
+
+  /* How long THIS type keeps counting, said at the point the row is drawn
+     rather than left inside the catalog. */
+  function formatDecay(seconds) {
+    if (typeof seconds !== 'number' || !isFinite(seconds) || seconds <= 0) {
+      throw new Error('signalEngine.formatDecay: lifetime is ' + seconds + '; a signal with no declared lifetime must not be rendered as if it had one');
+    }
+    const h = Math.round((seconds / 3600) * 100) / 100;
+    return 'counts for ' + h + 'h after it is observed';
+  }
+
+  function decaySecondsFor(signalType) {
+    const def = SIGNAL_CATALOG[signalType];
+    return def ? def.decaySeconds : null;
   }
 
   /* One owner for the display string, so the two panels that print this number
@@ -185,6 +280,33 @@ const FWSignalEngine = (() => {
     const span = effectiveSpan();
     if (span.effectiveMax >= WEIGHT_SCALE.max) {
       throw new Error('signalEngine: effective contribution reaches the declared weight maximum, so reliability is no longer a discount and the two scales are one');
+    }
+  })();
+
+  /* Both directions again: an entry outside the declared span is a bug, a
+     declared bound the catalog never reaches invents headroom, and -- the one
+     that matters -- if lifetime ever became a restatement of strength, then
+     DECAY_SCALE.notAStrengthMeasure would be a false sentence on screen, so that
+     throws too. */
+  (function assertDecayDeclared() {
+    const keys = Object.keys(SIGNAL_CATALOG);
+    const vals = keys.map(k => SIGNAL_CATALOG[k].decaySeconds);
+    vals.forEach((d, i) => {
+      if (typeof d !== 'number' || !isFinite(d) || d <= 0 || d !== Math.round(d)) {
+        throw new Error('signalEngine: ' + keys[i] + ' decaySeconds ' + d + ' is not a positive whole number of seconds');
+      }
+      if (d < DECAY_SCALE.min || d > DECAY_SCALE.max) {
+        throw new Error('signalEngine: ' + keys[i] + ' decaySeconds ' + d + ' is outside the declared span ' +
+          DECAY_SCALE.min + '-' + DECAY_SCALE.max + '; either the entry or the declaration is wrong');
+      }
+    });
+    if (Math.min.apply(null, vals) !== DECAY_SCALE.min || Math.max.apply(null, vals) !== DECAY_SCALE.max) {
+      throw new Error('signalEngine: DECAY_SCALE declares a span of ' + DECAY_SCALE.min + '-' + DECAY_SCALE.max +
+        ' that the catalog does not reach (' + Math.min.apply(null, vals) + '-' + Math.max.apply(null, vals) +
+        '); a declared bound no entry attains invents headroom');
+    }
+    if (/second statement of how strong/.test(DECAY_SCALE.doesNotMean) && decayInfluence().rankChanged === 0) {
+      throw new Error('signalEngine: DECAY_SCALE says lifetime is not a statement of strength, but the catalog now ranks identically either way; one of the two is wrong');
     }
   })();
 
@@ -256,5 +378,6 @@ const FWSignalEngine = (() => {
   }
 
   return { createEngine, deriveSignal, process, pruneExpired, getActiveSignals, SIGNAL_CATALOG, WEIGHT_SCALE,
-    RELIABILITY_SCALE, effectiveSpan, formatReliability, reliabilityNote };
+    RELIABILITY_SCALE, effectiveSpan, formatReliability, reliabilityNote,
+    DECAY_SCALE, decayInfluence, formatDecay, decaySecondsFor };
 })();

@@ -287,10 +287,11 @@ const FWEntityInspector = (() => {
     const signalsHtml = `<div>
       <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Active risk signals (${activeSignals.length})</div>
       ${activeSignals.length
-        ? `<ul class="list-disc list-inside text-[11px] text-slate-400 space-y-0.5">${activeSignals.map(s => `<li>${s.type.replace(/_/g, ' ')} — ${FWSignalEngine.formatReliability(s.reliability)}</li>`).join('')}</ul>`
+        ? `<ul class="list-disc list-inside text-[11px] text-slate-400 space-y-0.5">${activeSignals.map(s => `<li>${s.type.replace(/_/g, ' ')} — ${FWSignalEngine.formatReliability(s.reliability)} · ${FWSignalEngine.formatDecay(FWSignalEngine.decaySecondsFor(s.type) || (s.expiresAt - s.createdAt))}</li>`).join('')}</ul>`
         : '<p class="text-slate-600 italic text-[11px]">None right now.</p>'}
       ${activeSignals.length
-        ? `<p class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.reliabilityNote()}</p>`
+        ? `<p class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.reliabilityNote()}</p>
+           <p class="text-[9px] text-slate-500 italic mt-1">"Active" here means the type's clock has not run out, not that anything has been confirmed — and a signal dropping off this list stopped counting without stopping having happened. ${FWSignalEngine.decayInfluence().note}</p>`
         : ''}
     </div>`;
 
