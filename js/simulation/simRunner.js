@@ -28,6 +28,11 @@ const FWSimRunner = (() => {
     // Phase C: how far the trucks actually travelled, and how often the place
     // they were standing at disagreed with what their lifecycle stage said.
     const journeyTracker = window.FWJourneyEngine ? FWJourneyEngine.createTracker() : null;
+    /* Slice 74: three of the thirteen disruption primitives leave two records
+       instead of one, and how many companion records were actually written --
+       against how many composite acts happened -- is a number this build has to
+       be able to state with its denominator. */
+    const actTracker = window.FWActEngine ? FWActEngine.createTracker() : null;
     /* Phase F: SOME ACTORS HAVE A PLAN. Drawn once, here, from a stream offset
        from this seed (intentEngine.PLAN_SEED_OFFSET) so choosing the actors
        spends none of the randomness the run itself uses. The book is GROUND
@@ -40,7 +45,7 @@ const FWSimRunner = (() => {
       : null;
     state = {
       seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine,
-      shiftTracker, facilityTracker, journeyTracker, intentBook,
+      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;
@@ -51,7 +56,7 @@ const FWSimRunner = (() => {
   function stepOnce(dtSeconds) {
     if (!state || dtSeconds <= 0) return null;
     const { clock, registry, rng, eventEngine, signalEngine, moEngine,
-      shiftTracker, facilityTracker, journeyTracker, intentBook } = state;
+      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker } = state;
     const now = absoluteNow(clock);
     // Phase 37: the shift the port is actually in drives normal traffic
     // volume, which disruption types are plausible, and how much of what
@@ -62,7 +67,7 @@ const FWSimRunner = (() => {
     // Phase F: the plan book rides along with the trackers, because a plan is
     // a fact about who is driving that behaviorEngine has to consult when it
     // decides what a granted disruption opportunity is spent on.
-    const ctx = { shift, shiftTracker, facilityTracker, journeyTracker, intentBook };
+    const ctx = { shift, shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker };
 
     const normalEvents = FWEventEngine.step(eventEngine, registry, now, dtSeconds, ctx);
     const disruptions = FWBehaviorEngine.step(registry, rng, eventEngine, now, dtSeconds, ctx).filter(Boolean);

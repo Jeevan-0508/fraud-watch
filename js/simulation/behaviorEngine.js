@@ -223,6 +223,11 @@ const FWBehaviorEngine = (() => {
     const related = [truck.driverId, truck.trailerId, site ? site.id : null].filter(Boolean);
     const metadata = { summary: type.replace(/_/g, ' ').toLowerCase() };
     if (opts.shift) metadata.shift = opts.shift;
+    /* Slice 74: the second record of a composite act says which act it is the
+       second record OF. It is not a claim about fraud -- it is the same
+       provenance every other field here carries, and it is what lets a panel
+       show two records as one act instead of as two coincidences. */
+    if (opts.companionOf) { metadata.companionOf = opts.companionOf; metadata.actSeparationSeconds = opts.separationSeconds; }
     if (site) { metadata.facilityId = site.id; metadata.facilityName = site.name; metadata.facilityKind = site.kind; }
 
     if (type === 'DRIVER_CHANGED') {
@@ -301,7 +306,12 @@ const FWBehaviorEngine = (() => {
     const ev = FWEventEngine.emit(eventEngine, {
       type, entityId: truck.id, relatedEntities: related, severity: 'warn', metadata
     }, timestamp);
-    FWFalsePositiveEngine.annotate(ev, rng); // hidden ground truth for later case resolution
+    /* Slice 74: `opts.inheritGroundTruth` is the answer already drawn for the
+       FIRST record of this act, handed on so the second record of the same act
+       carries the same answer. Absent, the answer is drawn here as it always
+       was. See actEngine.GROUND_TRUTH_INHERITANCE for why one act may not hold
+       two answers. */
+    FWFalsePositiveEngine.annotate(ev, rng, opts.inheritGroundTruth); // hidden ground truth for later case resolution
     FWEntityEngine.recordHistory(truck, ev);
     // The site carries its own record of what was written down there. It
     // is a record of observation, not of blame -- a site with a long
@@ -431,7 +441,39 @@ const FWBehaviorEngine = (() => {
         if (window.FWFacilityEngine) {
           FWFacilityEngine.record(ctx.facilityTracker, truck.facilityId || null, type, !ev.unrecorded, shift);
         }
-        if (!ev.unrecorded) emitted.push(ev);
+        if (!ev.unrecorded) {
+          emitted.push(ev);
+          /* ONE ACT, MORE THAN ONE RECORD (Slice 74, Phase F). Three of the
+             thirteen primitives are described by their own provenance note as two
+             observable halves, and the engine recorded one of them. The second
+             record lands inside the same sampled interval, is guaranteed
+             co-active with the first by actEngine.CO_ACTIVITY, and inherits the
+             act's answer. It is keyed by TYPE, so it is identical for a planned
+             and an unplanned act -- a companion that appeared only for planned
+             acts would make the second record itself ground truth.
+
+             It is asked for only when the first record was actually written
+             down: an act nobody observed leaves no records at all, and half of
+             one would be worse than none. The act's own coverage decision is
+             reused rather than rolled again, because one act is either watched
+             or it is not. */
+          const companion = window.FWActEngine ? FWActEngine.companionFor(type, rng, dtSeconds) : null;
+          if (companion) {
+            const cev = applyDisruption(truck, companion.type, registry, rng, eventEngine,
+              timestamp - companion.separationSeconds,
+              { shift, observed: true, companionOf: type, separationSeconds: companion.separationSeconds,
+                inheritGroundTruth: ev.metadata.groundTruth });
+            FWActEngine.record(ctx.actTracker, type, companion, cev);
+            /* Deliberately NOT recorded in shiftTracker or facilityTracker. Both
+               of those count ACTS -- how many disruptions a shift saw, how many a
+               site saw -- and a companion is a second record of an act they have
+               already counted. Counting it there would double every composite act
+               in both denominators. The site's own event history does receive it,
+               inside applyDisruption, because that is a record of what was
+               written down at the site and two records were. */
+            if (cev && !cev.unrecorded) emitted.push(cev);
+          }
+        }
       }
     });
     return emitted;

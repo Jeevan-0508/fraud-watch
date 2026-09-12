@@ -51,12 +51,32 @@ const FWFalsePositiveEngine = (() => {
      mode is the exact one this project exists to refuse, and it would have been
      silent. A type with no innocent explanation on file is a gap in the model,
      not a finding about the load. */
-  function annotate(event, rng) {
+  /* `inherit` (Slice 74). Some acts leave two records -- actEngine.COMPOSITE_ACTS
+     -- and the second record must carry the SAME answer as the first, because one
+     act cannot be both benign and not benign. Passing the first record's
+     groundTruth here reuses its `legitimate` and draws only a cause, from THIS
+     type's own catalog, because a benign explanation for a stop is not a benign
+     explanation for a breakdown report.
+
+     LEGITIMATE_CHANCE is not touched and the number of draws PER ACT is still
+     one: an inherited annotation makes no chance() call at all. Absent
+     `inherit`, this function is exactly what it was. */
+  function annotate(event, rng, inherit) {
     const catalog = CAUSES[event.type];
     if (!catalog || !catalog.length) {
       throw new Error('FWFalsePositiveEngine.annotate: no innocent-cause catalog for disruption type "' +
         event.type + '". Falling through to { legitimate: false } would make every event of this type ' +
         'fraudulent by construction. Add the catalog, or stop annotating this type.');
+    }
+    if (inherit !== undefined && inherit !== null) {
+      if (typeof inherit.legitimate !== 'boolean') {
+        throw new Error('FWFalsePositiveEngine.annotate: asked to inherit an answer that does not state one. ' +
+          'Falling back to a fresh draw would give one act two contradictory answers in the answer key.');
+      }
+      event.metadata.groundTruth = inherit.legitimate
+        ? { legitimate: true, cause: rng.pick(catalog), inheritedFromSameAct: true }
+        : { legitimate: false, inheritedFromSameAct: true };
+      return event;
     }
     const isLegit = rng.chance(LEGITIMATE_CHANCE);
     event.metadata.groundTruth = isLegit
