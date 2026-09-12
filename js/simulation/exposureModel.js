@@ -212,6 +212,66 @@ const FWExposureModel = (() => {
     return { attached: true, consignments: bands, low, high, label: fmt(low) + ' – ' + fmt(high) };
   }
 
+  /* TWO BARE NUMBERS LEFT THIS MODULE WITH NO UNIT ON THEM, on a money panel.
+
+     `confidence: mo.confidence` copied moEngine's correlation index out of the
+     module that declares what it is, under the field name moEngine itself calls
+     historical and misleading, and dropped every part of the declaration on the
+     way: no unit, no scale, no statement that it is not a probability. It was
+     never rendered, which is the only reason it never wore a percent sign --
+     `exposure-view` reads `moId`, `exposure`, `checksRun` and `cost` and nothing
+     else. A field called `confidence` sitting on a per-case money sheet, already
+     stripped of its scale, is one careless template away from being printed as
+     `Confidence 78%` beside a euro band, which is the single claim this project
+     exists to refuse.
+
+     `costPerCheck` was the same shape one field down (look at the next field of
+     the same object): a currency-per-record-check rate with no unit, no basis
+     carried from the cost it divides, and its own denominator sitting
+     unmentioned in the field beside it.
+
+     Neither is deleted, because both are legitimate figures. Both now carry the
+     declaration they are derived from, sourced from the module that owns it
+     rather than restated here, so a template cannot get the value without the
+     unit. Note that `null` on `costPerCheck` is a zero BASE, not a cost of zero:
+     no check run means there is no per-check figure to report, and those are
+     different facts (Slice 50). */
+  function correlationIndexFor(mo) {
+    const decl = (typeof FWMoEngine !== 'undefined' && FWMoEngine && FWMoEngine.CONFIDENCE_INDEX) || null;
+    if (!decl) {
+      throw new Error('exposureModel.caseSheet: moEngine\'s correlation-index declaration is not available, so this ' +
+        'sheet cannot carry the index with its unit; a bare number on a money panel would be read as a percentage');
+    }
+    // A case with no index is a third state, not a zero and not an error: this
+    // sheet is built for constructed and partial cases too, and reporting 0
+    // index points for "the case carries none" would state support nobody
+    // derived (moEngine.confidenceFromScore refuses the same way).
+    if (typeof mo.confidence !== 'number' || !isFinite(mo.confidence)) {
+      return {
+        value: null,
+        label: 'no correlation index on this case',
+        unit: decl.unit,
+        displayLabel: decl.displayLabel,
+        doesNotMean: decl.doesNotMean,
+        declaredBy: 'moEngine.CONFIDENCE_INDEX',
+        note: 'This case carries no correlation index. That is the absence of the figure, not an index of zero, ' +
+          'and nothing here should be read as a weak correlation having been measured.'
+      };
+    }
+    return {
+      value: mo.confidence,
+      label: FWMoEngine.formatIndex(mo.confidence),
+      unit: decl.unit,
+      displayLabel: decl.displayLabel,
+      doesNotMean: decl.doesNotMean,
+      declaredBy: 'moEngine.CONFIDENCE_INDEX',
+      // Said again here rather than assumed, because this is the module whose
+      // other figures ARE money and whose readers are looking for money.
+      note: 'This is not a monetary figure and not a probability. It is ' + decl.displayLabel.toLowerCase() +
+        ' on the scale moEngine declares and owns, carried here only so a case can be listed beside its cost.'
+    };
+  }
+
   // Per-case cost sheet: what this case cost to work, and what it was
   // about. Never combines the two into one score.
   function caseSheet(state, mo) {
@@ -221,10 +281,31 @@ const FWExposureModel = (() => {
     return {
       moId: mo.id,
       status: mo.status,
-      confidence: mo.confidence,
+      // Renamed off `confidence`: the field name was the whole risk.
+      correlationIndex: correlationIndexFor(mo),
       checksRun: inv.checksRun,
       cost,
-      costPerCheck: inv.checksRun ? cost.cost / inv.checksRun : null,
+      costPerCheck: inv.checksRun
+        ? {
+            value: cost.cost / inv.checksRun,
+            label: fmt(cost.cost / inv.checksRun) + ' per record check',
+            unit: 'currency per record check',
+            divides: 'the case\'s process cost by the number of record checks run on it',
+            denominator: inv.checksRun,
+            basis: cost.basis,
+            note: 'Process cost divided by checks run. The cost is ' + cost.basis +
+              ', so this rate inherits the assumed hourly rate and is not an observed price of anything.'
+          }
+        : {
+            value: null,
+            label: 'no per-check figure',
+            unit: 'currency per record check',
+            divides: 'the case\'s process cost by the number of record checks run on it',
+            denominator: 0,
+            basis: cost.basis,
+            note: 'No record check has been run on this case, so there is no per-check figure. That is an absent ' +
+              'rate, not a cost of zero per check.'
+          },
       exposure
     };
   }
@@ -480,6 +561,6 @@ const FWExposureModel = (() => {
     CURRENCY, LOADED_ANALYST_HOUR, RATE_ASSUMPTION_NOTE, CARGO_BANDS, FALLBACK_CARGO,
     NOT_MODELLED, ASSUMPTIONS,
     fmt, fmtBand, bandForCargo, hours, processCost, effortReconciliation, effortByExamination,
-    consignmentsForMo, exposureForMo, caseSheet, portfolio
+    consignmentsForMo, exposureForMo, caseSheet, correlationIndexFor, portfolio
   };
 })();
