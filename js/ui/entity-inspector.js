@@ -8,10 +8,30 @@
    as guilt: a truck with three past cases that all closed
    FALSE_POSITIVE is not "riskier," it's just been investigated more --
    the panel lists outcomes plainly rather than compressing history
-   into a single score that would misrepresent that. */
+   into a single score that would misrepresent that.
+
+   SITES ARE INSPECTABLE TOO (Phase 5), and they need the opposite
+   treatment from a truck rather than the same one. For a truck, the cases
+   it appears in are cases ABOUT it. For a site they are not: a site
+   appears in a case because a record exists there, and every movement in
+   the port crosses a handful of gates and yards. A gatehouse accrues
+   cases the way a road accrues traffic. Slice 17 already had to mark
+   sites STRUCTURAL in the network graph for exactly this reason, and an
+   inspector that listed a site's cases as "case history" would
+   reintroduce the same artefact one entity at a time.
+
+   Worse, the count has no denominator. How many movements passed through
+   a site is not tracked anywhere in this simulation, so a site's case
+   count is a numerator on its own -- it cannot be turned into a rate, and
+   the coverage model refuses a per-site incident rate for a separate and
+   equally binding reason. The facility panel therefore states the count,
+   states the assumed coverage that produced it, and states plainly that
+   a site cannot be a subject of a case in this model: there is no such
+   entity role, so nothing here is an allegation about a site. */
 const FWEntityInspector = (() => {
   let els = {};
-  let openTruckId = null;
+  let openKind = null;   // 'truck' | 'facility'
+  let openId = null;
 
   function init() {
     els = {
@@ -20,7 +40,8 @@ const FWEntityInspector = (() => {
       close: document.getElementById('entity-inspector-close'),
       title: document.getElementById('entity-inspector-title'),
       body: document.getElementById('entity-inspector-body'),
-      entityTable: document.getElementById('sim-entity-table')
+      entityTable: document.getElementById('sim-entity-table'),
+      facilityTable: document.getElementById('facility-table')
     };
     if (els.close) els.close.addEventListener('click', hide);
     if (els.backdrop) els.backdrop.addEventListener('click', hide);
@@ -28,23 +49,36 @@ const FWEntityInspector = (() => {
       els.entityTable.addEventListener('click', (e) => {
         const row = e.target.closest('[data-truck-id]');
         if (!row) return;
-        show(row.dataset.truckId);
+        show('truck', row.dataset.truckId);
+      });
+    }
+    if (els.facilityTable) {
+      els.facilityTable.addEventListener('click', (e) => {
+        const row = e.target.closest('[data-facility-id]');
+        if (!row) return;
+        show('facility', row.dataset.facilityId);
       });
     }
   }
 
-  function show(truckId) {
-    openTruckId = truckId;
+  // Two-argument form. The single-argument call is kept working because
+  // network-view opens trucks by id, and silently changing that would
+  // break a working surface for no gain.
+  function show(kind, id) {
+    if (id === undefined) { id = kind; kind = 'truck'; }
+    openKind = kind;
+    openId = id;
     if (els.panel) els.panel.classList.remove('hidden');
     render(FWSimRunner.getState());
   }
 
   function hide() {
-    openTruckId = null;
+    openKind = null;
+    openId = null;
     if (els.panel) els.panel.classList.add('hidden');
   }
 
-  function isOpen() { return openTruckId != null; }
+  function isOpen() { return openId != null; }
 
   function statusBadgeClass(status) {
     const open = { NEW: 'bg-sky-900 text-sky-300', MONITORING: 'bg-slate-700 text-slate-200', INVESTIGATING: 'bg-amber-900 text-amber-300', ESCALATED: 'bg-orange-900 text-orange-300' };
@@ -59,9 +93,103 @@ const FWEntityInspector = (() => {
     return `Day ${day} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
+  /* A site's panel, and the three things it must not become.
+
+     It must not become a case history. A site is in a case because a
+     record exists there, so the heading says that instead, and every row
+     says whether the whole case was observed at this one site or whether
+     this site is one of several -- reusing the spread the case already
+     carries rather than inventing a location for it.
+
+     It must not become a ranking. The count here is a count of records at
+     an observation point. The site that watches hardest records the most,
+     which is stated with the count and not underneath it.
+
+     It must not become a rate. How many movements passed through a site is
+     not tracked anywhere in this simulation, so the count has no
+     denominator and cannot be given one honestly -- separately from the
+     coverage model's own refusal of a per-site incident rate. */
+  function renderFacility(state) {
+    const facility = FWEntityEngine.get(state.registry, 'facility', openId);
+    if (!facility) { hide(); return; }
+    const arch = FWFacilityEngine.archetype(facility.kind);
+    const summary = FWFacilityEngine.siteSummary(state.registry, state.facilityTracker);
+    const row = summary.rows.find(r => r.facilityId === facility.id) || {
+      recorded: 0, meanCoverage: 0, coverageAdjusted: null, rawRank: null, adjustedRank: null,
+      rankMoved: false, topType: null, topTypeCount: 0, byShift: {}
+    };
+
+    if (els.title) els.title.textContent = `${facility.name} — ${arch.label}`;
+
+    const whatHtml = `<div>
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">What this site is</div>
+      <div class="text-[11px] text-slate-300 space-y-0.5">
+        <div>Type: ${arch.label} · status ${facility.status.replace(/_/g, ' ').toLowerCase()}</div>
+        <div>Assumed oversight factor: ${arch.oversightFactor.toFixed(2)}× the shift's own coverage</div>
+        <div>Mean assumed coverage across the day: ${Math.round(row.meanCoverage * 100)}%</div>
+      </div>
+      <p class="text-[10px] text-slate-500 mt-1">${arch.rationale}</p>
+      <p class="text-[10px] text-slate-500 mt-1">Both figures are stated modeling assumptions, not measured detection rates for anything.</p>
+    </div>`;
+
+    const shiftRows = Object.keys(row.byShift || {})
+      .sort((a, b) => row.byShift[b] - row.byShift[a])
+      .map(k => `<li>${k} — ${row.byShift[k]}</li>`).join('');
+
+    const recordsHtml = `<div>
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Records at this site (${row.recorded})</div>
+      <div class="text-[11px] text-slate-300 space-y-0.5">
+        <div>Most recorded here: ${row.topType ? `${row.topType.replace(/_/g, ' ').toLowerCase()} (${row.topTypeCount}×)` : 'nothing recorded here yet'}</div>
+        <div>Rank by raw records: ${row.rawRank != null ? '#' + row.rawRank : '—'} · rank once grossed up by its own assumed coverage: ${row.adjustedRank != null ? '#' + row.adjustedRank : '—'}${row.rankMoved ? ' <span class="text-amber-300/80">(moves)</span>' : ''}</div>
+      </div>
+      ${shiftRows ? `<ul class="list-disc list-inside text-[11px] text-slate-400 space-y-0.5 mt-1">${shiftRows}</ul>` : ''}
+      <p class="text-[10px] text-amber-300/80 mt-1">Recording is work. A site that reconciles every movement produces records and a site that reconciles nothing produces silence, so this number measures observation at least as much as occurrence.</p>
+      <p class="text-[10px] text-slate-500 mt-1">How many movements passed through here is not tracked in this simulation, so this count has no denominator: it cannot be turned into a rate, and the coverage model separately refuses a per-site incident rate because dividing records by an assumed coverage returns the assumption.</p>
+    </div>`;
+
+    const cases = Array.from(state.moEngine.mos.values())
+      .filter(m => (m.sites || []).some(x => x.facilityId === facility.id))
+      .sort((a, b) => b.lastObserved - a.lastObserved);
+
+    const caseRows = cases.map(m => {
+      const here = (m.sites || []).find(x => x.facilityId === facility.id);
+      const sole = m.entities && m.entities.facilityId === facility.id;
+      const spreadNote = (FWMoEngine.SITE_SPREAD_NOTE && FWMoEngine.SITE_SPREAD_NOTE[m.siteSpread]) || '';
+      return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg px-2 py-1.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-mono text-[10px] text-slate-400">${m.id}</span>
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${statusBadgeClass(m.status)}">${m.status.replace(/_/g, ' ')}</span>
+        </div>
+        <div class="text-[11px] text-white">${m.title}</div>
+        <div class="text-[10px] text-slate-500">${here ? here.signalCount : 0} of this case's signals were observed here${sole ? ', and every signal in it was' : ', and it also has signals recorded elsewhere'}.</div>
+        <div class="text-[10px] text-slate-600">${spreadNote}</div>
+      </div>`;
+    }).join('');
+
+    const casesHtml = `<div>
+      <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Cases with a signal observed here (${cases.length})</div>
+      <p class="text-[10px] text-slate-500 mb-1">Not a case history for this site. A site appears in a case because a record exists here, and every movement in this port crosses a handful of gates and yards, so a busy gatehouse accumulates cases the way a road accumulates traffic.</p>
+      ${cases.length ? `<div class="space-y-1.5">${caseRows}</div>`
+        : '<p class="text-slate-600 italic text-[11px]">No case has a signal recorded here yet. That is an absence of records, which is not the same as an absence of events.</p>'}
+    </div>`;
+
+    const framingHtml = `<div class="bg-[#0e1520] border border-rose-900/40 rounded-xl p-2">
+      <div class="text-[10px] uppercase tracking-wide text-rose-400/80 mb-1">What this panel is not</div>
+      <p class="text-[10px] text-slate-400">A site cannot be the subject of a case in this model — there is no such entity role, and nothing on this panel is an allegation about a site or the people who run it. Everything above is either a stated assumption about how well this site is observed, or a count of records that exist here.</p>
+      <p class="text-[10px] text-slate-400 mt-1">The same limit applies here as everywhere else in the network view: a site connects to nearly everything whatever is happening, which is why sites are excluded from the structural analysis there rather than being read as unusually connected.</p>
+    </div>`;
+
+    els.body.innerHTML = whatHtml + recordsHtml + casesHtml + framingHtml;
+  }
+
   function render(state) {
-    if (!openTruckId || !state || !els.body) return;
-    const truck = FWEntityEngine.get(state.registry, 'truck', openTruckId);
+    if (!openId || !state || !els.body) return;
+    if (openKind === 'facility') return renderFacility(state);
+    return renderTruck(state);
+  }
+
+  function renderTruck(state) {
+    const truck = FWEntityEngine.get(state.registry, 'truck', openId);
     if (!truck) { hide(); return; }
 
     const driver = truck.driverId ? FWEntityEngine.get(state.registry, 'driver', truck.driverId) : null;

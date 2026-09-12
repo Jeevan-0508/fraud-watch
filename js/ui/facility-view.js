@@ -116,7 +116,7 @@ const FWFacilityView = (() => {
       const t = tint(r.kind);
       const val = r[key] || 0;
       const w = Math.round((val / max) * 100);
-      return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2 mb-1.5">
+      return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2 mb-1.5 cursor-pointer hover:border-slate-700" data-facility-id="${r.facilityId}" title="Open this site in the inspector">
         <div class="flex items-center justify-between mb-1">
           <span class="flex items-center gap-1.5 text-[11px] ${t.text}">
             <span class="w-2 h-2 rounded-full ${t.dot}"></span>${r.name}
@@ -137,7 +137,7 @@ const FWFacilityView = (() => {
 
     renderBias(summary);
     if (els.summary) {
-      els.summary.textContent = `${summary.totalRecorded} disruption${summary.totalRecorded === 1 ? '' : 's'} recorded across ${summary.rows.length} sites`;
+      els.summary.textContent = `${summary.totalRecorded} disruption${summary.totalRecorded === 1 ? '' : 's'} recorded across ${summary.rows.length} sites · click a site for its full record`;
     }
   }
 
