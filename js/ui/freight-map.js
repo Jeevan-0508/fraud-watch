@@ -989,6 +989,50 @@ const FWFreightMap = (() => {
       'states which of the two it counts.'
   };
 
+  /* THE DENOMINATOR AXES OF THIS PANEL, declared before the panel that uses
+     them. Every count on the occupancy panel is a count of trucks, and until
+     Slice 77b there were two things a truck count could be about: one named
+     place, or the whole network. The camera added a third -- what is inside the
+     rectangle currently on screen -- and that one is dangerous in a way the
+     other two are not, because it looks exactly like the others and changes
+     when a reader scrolls a wheel. So no figure below is printed without the
+     population it was counted over, and the three are never added together.
+
+     PER_ROAD is listed as its own axis rather than folded into PER_PLACE. Both
+     are "one named element of the network", but a truck standing at a place and
+     a truck part-way along a road are different facts, and one heading over
+     both would invite a reader to add 3 and 5 into a total that counts nothing. */
+  const HEALTH_SCOPES = {
+    PER_PLACE: {
+      counts: 'trucks standing at ONE named place, right now.',
+      doesNotMean: 'trucks that place has handled, trucks heading for it, or its capacity. It is an ' +
+        'occupancy at this instant and it changes on the next tick.'
+    },
+    PER_ROAD: {
+      counts: 'trucks part-way along ONE named road, right now.',
+      doesNotMean: 'traffic over that road, or how busy it usually is. Nothing here holds a history of a road.'
+    },
+    PER_NETWORK: {
+      counts: 'every truck the simulation is holding, wherever it is and whether or not it is on screen.',
+      doesNotMean: 'every truck that exists in the world being modelled. It is this run\'s registry.'
+    },
+    PER_VIEW: {
+      counts: 'only what falls inside the rectangle the camera is currently showing.',
+      doesNotMean: 'anything at all about the network. Scrolling the wheel changes every figure on this axis ' +
+        'and changes nothing in the simulation; a truck off screen is off the screen, not out of the run.'
+    }
+  };
+
+  /* The panel is called an occupancy panel and not a health score on purpose.
+     It grades nothing: there is no threshold in this file above which a place is
+     "congested" or a network is "unhealthy", because no module in this build
+     declares one, and a renderer inventing one would be inventing a finding. */
+  const OCCUPANCY = {
+    is: 'four counts of where trucks are right now, each stated against the population it was counted over.',
+    doesNotMean: 'a health score, a grade, a capacity or a congestion level. Nothing in this build declares a ' +
+      'threshold for any of those, so this panel has none to draw.'
+  };
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   let els = {};
@@ -1003,6 +1047,7 @@ const FWFreightMap = (() => {
   let lastCardSig = null;
   let lastTimelineSig = null;
   let lastCameraSig = null;
+  let lastHealthSig = null;
   /* cx/cy null means "the centre of the drawing", so an untouched camera holds no
      coordinate of its own that could drift out of step with the layout. */
   let camera = { scale: CAMERA.minScale, cx: null, cy: null };
@@ -1046,6 +1091,82 @@ const FWFreightMap = (() => {
       trucksDrawn: drawn.length, trucksInView: truckIds.length,
       trucksOffScreen: drawn.length - truckIds.length, truckIds: truckIds,
       places: (nodes || []).length, placesInView: placeIds.length, placeIds: placeIds
+    };
+  }
+
+  /* Trucks per road, keyed on the graph's OWN edge key so a road with no truck
+     on it appears as a zero rather than as an absent row -- "no truck on this
+     road" and "this road was not counted" are different facts, and a panel that
+     silently omitted the first would be reporting the second. */
+  function roadOccupancy(f) {
+    const lay = f.layout;
+    const on = {};
+    f.trucks.forEach(p => {
+      if (!p.drawn || p.kind !== 'ON_LEG') return;
+      const key = WG ? WG.edgeKey(p.from, p.to) : p.from + '->' + p.to;
+      on[key] = (on[key] || 0) + 1;
+    });
+    return lay.edges.map(e => ({
+      key: e.key,
+      scope: 'PER_ROAD',
+      fromLabel: lay.byId[e.from] ? lay.byId[e.from].label : e.from,
+      toLabel: lay.byId[e.to] ? lay.byId[e.to].label : e.to,
+      distanceKm: e.distanceKm,
+      speedClass: e.speedClass,
+      trucks: on[e.key] || 0
+    }));
+  }
+
+  /* The whole panel as a pure function of a frame and, optionally, the camera
+     rectangle. `view` is null when no rectangle was passed, and that is rendered
+     as a stated absence: a per-view figure with no view behind it would be a
+     figure about nothing. */
+  function healthOf(f, box) {
+    const places = f.nodes.map(n => ({
+      id: n.id, label: n.label, type: n.type, scope: 'PER_PLACE',
+      trucksHere: n.trucksHere, sited: n.sited
+    }));
+    const roads = roadOccupancy(f);
+    const occupiedPlaces = places.filter(pl => pl.trucksHere > 0);
+    const carryingRoads = roads.filter(r => r.trucks > 0);
+    const c = f.counts;
+    const network = {
+      scope: 'PER_NETWORK',
+      trucks: c.trucks,
+      placeable: c.drawn,
+      unplaceable: c.notDrawn,
+      atNode: c.atNode,
+      inTransit: c.inTransit,
+      places: places.length,
+      placesOccupied: occupiedPlaces.length,
+      placesEmpty: places.length - occupiedPlaces.length,
+      placesWithNoSite: c.nodesWithNoSite,
+      roads: roads.length,
+      roadsCarrying: carryingRoads.length,
+      roadsClear: roads.length - carryingRoads.length
+    };
+    /* Checked here rather than trusted: the two per-element axes must partition
+       the placeable trucks exactly, or one of them is counting something twice. */
+    const placedAtPlaces = occupiedPlaces.reduce((s, pl) => s + pl.trucksHere, 0);
+    const placedOnRoads = carryingRoads.reduce((s, r) => s + r.trucks, 0);
+    const reconciles = placedAtPlaces + placedOnRoads === network.placeable;
+    let view = null;
+    if (box) {
+      const v = inView(box, f.trucks, f.nodes);
+      view = {
+        scope: 'PER_VIEW',
+        wholeDrawing: box.wholeDrawing,
+        scale: box.scale,
+        placesInView: v.placesInView, places: v.places,
+        trucksInView: v.trucksInView, trucksDrawn: v.trucksDrawn,
+        trucksOffScreen: v.trucksOffScreen
+      };
+    }
+    return {
+      scopes: HEALTH_SCOPES,
+      places, roads, occupiedPlaces, carryingRoads, network, view,
+      placedAtPlaces, placedOnRoads, reconciles,
+      busiestPlace: occupiedPlaces.slice().sort((a, b) => b.trucksHere - a.trucksHere)[0] || null
     };
   }
 
@@ -1160,6 +1281,7 @@ const FWFreightMap = (() => {
       entityCard: document.getElementById('fm-entity-card'),
       expand: document.getElementById('fm-entity-expand'),
       timeline: document.getElementById('fm-timeline'),
+      health: document.getElementById('fm-health'),
       cameraLine: document.getElementById('fm-camera'),
       zoomIn: document.getElementById('fm-zoom-in'),
       zoomOut: document.getElementById('fm-zoom-out'),
@@ -1543,6 +1665,7 @@ const FWFreightMap = (() => {
     renderEntityCard(f);
     renderTimeline(f);
     renderCamera(f, box);
+    renderHealth(f, box);
     return f;
   }
 
@@ -1586,6 +1709,99 @@ const FWFreightMap = (() => {
       ' <span class="text-slate-600">' + esc(CAMERA.doesNotMean) + '</span>';
   }
 
+  /* The occupancy panel's DOM. Every line opens with the axis it is counted on,
+     as a visible label and not only as a field name, because the axis is the
+     only thing that makes the number mean anything. A place or a road with
+     nothing on it is summarised as a count of empties rather than printed as
+     eleven rows of zero -- the zero is still stated, it is just stated once. */
+  function renderHealth(f, box) {
+    if (!els.health) return;
+    const h = healthOf(f, box);
+    const n = h.network;
+    const sig = [n.placeable, n.atNode, n.inTransit, n.placesOccupied, n.roadsCarrying,
+      h.occupiedPlaces.map(p => p.id + ':' + p.trucksHere).join(','),
+      h.carryingRoads.map(r => r.key + ':' + r.trucks).join(','),
+      h.view ? h.view.scale + '/' + h.view.placesInView + '/' + h.view.trucksInView : '-'].join('|');
+    if (sig === lastHealthSig) return;
+    lastHealthSig = sig;
+
+    const axis = (k, text) => '<div class="text-[9px] font-semibold uppercase tracking-wide text-slate-500 ' +
+      'mt-1.5">' + k.replace(/_/g, ' ') + '</div><div class="text-[10px] text-slate-300">' + text + '</div>';
+    const plural = (v, one, many) => v + ' ' + (v === 1 ? one : many);
+
+    const netLine =
+      n.placeable + ' of ' + plural(n.trucks, 'truck', 'trucks') + ' in this run can be placed on the drawing' +
+      (n.unplaceable ? ', ' + n.unplaceable + ' cannot and is listed as such rather than drawn somewhere' : '') +
+      ' &mdash; ' + n.inTransit + ' part-way along a road, ' + n.atNode + ' standing at a place. ' +
+      n.placesOccupied + ' of the ' + n.places + ' places ' + (n.placesOccupied === 1 ? 'has' : 'have') +
+      ' a truck standing at ' + (n.placesOccupied === 1 ? 'it' : 'them') + ', ' + n.placesEmpty +
+      ' ' + (n.placesEmpty === 1 ? 'has' : 'have') + ' none. ' + n.roadsCarrying + ' of the ' + n.roads +
+      ' roads ' + (n.roadsCarrying === 1 ? 'is' : 'are') + ' carrying a truck, ' + n.roadsClear +
+      ' ' + (n.roadsClear === 1 ? 'is' : 'are') + ' clear.' +
+      /* Counted over all eleven places, not over the empty ones -- "3 of those"
+         after a sentence about the empty places would have read as 3 of THOSE. */
+      (n.placesWithNoSite ? ' Separately, ' + n.placesWithNoSite + ' of the ' + n.places + ' places seed no ' +
+        'facility in this build, so an occupancy of zero at one of them is also a place nothing observes.' : '');
+
+    const placeRows = h.occupiedPlaces.length
+      ? '<ul class="text-[10px] text-slate-300 space-y-0.5 mt-0.5">' +
+        h.occupiedPlaces.slice().sort((a, b) => b.trucksHere - a.trucksHere).map(pl =>
+          '<li><span class="font-mono text-slate-400">' + esc(pl.label) + '</span> &mdash; ' +
+          plural(pl.trucksHere, 'truck', 'trucks') + ' standing there' +
+          (pl.sited ? '' : ' <span class="text-amber-300/70">(no facility seeded here)</span>') +
+          '</li>').join('') + '</ul>' +
+        '<p class="text-[9px] text-slate-600">The other ' + n.placesEmpty + ' of ' + n.places +
+        ' places have no truck standing at them at this instant.</p>'
+      : '<p class="text-[10px] text-slate-500 italic">No truck is standing at any of the ' + n.places +
+        ' places right now; every placeable truck is on a road.</p>';
+
+    const roadRows = h.carryingRoads.length
+      ? '<ul class="text-[10px] text-slate-300 space-y-0.5 mt-0.5">' +
+        h.carryingRoads.slice().sort((a, b) => b.trucks - a.trucks).map(r =>
+          '<li><span class="font-mono text-slate-400">' + esc(r.fromLabel) + ' &rarr; ' + esc(r.toLabel) +
+          '</span> &mdash; ' + plural(r.trucks, 'truck', 'trucks') + ' on it, ' + r.distanceKm + ' km ' +
+          '(' + esc(EDGE_STYLE[r.speedClass] ? EDGE_STYLE[r.speedClass].label : r.speedClass) + ')</li>').join('') +
+        '</ul>' +
+        '<p class="text-[9px] text-slate-600">The other ' + n.roadsClear + ' of ' + n.roads +
+        ' roads are carrying nothing at this instant. The kilometre figure is the graph\u2019s own ' +
+        'declared distance, never the drawn length.</p>'
+      : '<p class="text-[10px] text-slate-500 italic">None of the ' + n.roads + ' roads is carrying a truck ' +
+        'right now; every placeable truck is standing at a place.</p>';
+
+    let viewLine;
+    if (!h.view) {
+      viewLine = '<p class="text-[10px] text-slate-500 italic">No camera rectangle was passed to this panel, so ' +
+        'nothing here is claimed about what is on screen.</p>';
+    } else if (h.view.wholeDrawing) {
+      viewLine = '<div class="text-[10px] text-slate-300">The whole drawing is on screen, so all ' +
+        h.view.places + ' places and all ' + h.view.trucksDrawn + ' placeable trucks are visible. On this axis ' +
+        'the figures happen to equal the per-network ones; that is a fact about the current magnification and ' +
+        'not a rule.</div>';
+    } else {
+      viewLine = '<div class="text-[10px] text-slate-300">Magnified ' + h.view.scale + 'x: ' +
+        h.view.placesInView + ' of ' + h.view.places + ' places and ' + h.view.trucksInView + ' of the ' +
+        h.view.trucksDrawn + ' placeable trucks are inside the view, ' + h.view.trucksOffScreen +
+        ' off screen and still on the network. Every figure above this line is unaffected by it.</div>';
+    }
+
+    const mismatch = h.reconciles ? '' :
+      '<p class="text-[9px] text-rose-300 mt-1">The per-place and per-road counts add to ' +
+      (h.placedAtPlaces + h.placedOnRoads) + ' and the network says ' + n.placeable + ' are placeable. Those ' +
+      'should be the same number; this line exists so a disagreement is visible instead of averaged away.</p>';
+
+    els.health.innerHTML =
+      '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Network occupancy</div>' +
+      axis('PER_NETWORK', netLine) +
+      axis('PER_PLACE', '') + placeRows +
+      axis('PER_ROAD', '') + roadRows +
+      axis('PER_VIEW (in camera)', '') + viewLine +
+      mismatch +
+      '<p class="text-[9px] text-slate-500 mt-1.5">This panel is ' + esc(OCCUPANCY.is) + ' It is not ' +
+      esc(OCCUPANCY.doesNotMean) + ' The last block is the one to be careful with: a per-view figure means ' +
+      esc(HEALTH_SCOPES.PER_VIEW.counts) + ' It says nothing about the network, which is why it is kept in its ' +
+      'own block and never added to the three above it.</p>';
+  }
+
   function summary() {
     const lay = defaultLayout();
     return {
@@ -1606,6 +1822,8 @@ const FWFreightMap = (() => {
       cameraIs: CAMERA.isA,
       cameraRange: CAMERA.minScale + 'x to ' + CAMERA.maxScale + 'x',
       cameraChangesPosition: false,
+      occupancyAxes: Object.keys(HEALTH_SCOPES),
+      occupancyIsAScore: false,
       interpolatesBetweenTicks: false,
       interpolationNote: 'A truck moves only when the simulation advances. There is no tween between two ticks, ' +
         'because a position between two simulation states is one the simulation never held.'
@@ -1625,6 +1843,7 @@ const FWFreightMap = (() => {
     assertNodeStyles, assertEdgeStyles, assertViewStates, assertLayoutCoversGraph,
     CAMERA, viewBoxFor, inView, zoomIn, zoomOut, zoomBy, panBy, resetCamera, follow, following,
     cameraState,
+    HEALTH_SCOPES, OCCUPANCY, roadOccupancy, healthOf,
     hopDepths, buildLayout, defaultLayout, placementFor, stackAtNodes, selectedRoute, frame,
     entityCardFor, timelineOf, clockLabel, expandSelected,
     staticSvg, init, render, select, selected, summary
