@@ -1151,6 +1151,17 @@ const FWMoEngine = (() => {
   /* The two sums of one quantity, disjoint and summed at the point of display
      rather than left to be read as one number twice (reconciled-totals
      discipline). */
+  /* The tolerance in contributionScopes, declared rather than left as a bare
+     0.011 in a comparison. Its unit is the contribution unit, inherited from
+     EVIDENCE_CONTRIBUTION and not restated. */
+  const CONTRIBUTION_SCOPE_DRIFT = {
+    tolerance: 0.011,
+    unit: 'inherited from EVIDENCE_CONTRIBUTION',
+    canDetect: 'a rounding step between the two rounded scope sums and the rounding of their unrounded total. One 0.01 step is the widest such gap arithmetically possible, so even that is outside this tolerance.',
+    cannotDetect: 'an evidence row counted in both scopes or in neither, which is the failure the message names. Both sides of the comparison are built from the same two addends.',
+    disjointnessBasis: 'STRUCTURAL: the loop assigns each row to the active scope or, in its only other branch, to the decayed one. Nothing is checked, and nothing needs to be.'
+  };
+
   function contributionScopes(mo) {
     const active = new Set(mo.activeSignals || mo.signals || []);
     const rows = mo.evidence || [];
@@ -1165,9 +1176,28 @@ const FWMoEngine = (() => {
       recordSum: round(activeSum + decayedSum),
       rows: rows.length
     };
-    if (Math.abs(scopes.activeSum + scopes.decayedSum - scopes.recordSum) > 0.011) {
+    /* THIS COMPARISON CANNOT FAIL, AND SAYING SO IS THE POINT.
+       `recordSum` is a rounding of the same two addends the left side is a
+       rounding of, so the widest disagreement possible is one 0.01 step --
+       and because buildEvidence already rounds every contribution to one
+       decimal, the sums are exact multiples of 0.1 and the drift is zero.
+       The undeclared 0.011 was therefore never a tolerance on anything
+       observed; it is now declared, with what it can and cannot detect.
+       The question it appears to ask -- is every evidence row counted in
+       exactly one scope -- is settled by the if/else above, which has no
+       third branch, and is not asked here. Presenting an identity as a
+       reconciliation is what FWReconcile.KINDS.ROUNDING_DRIFT_ONLY exists
+       to name. */
+    if (Math.abs(scopes.activeSum + scopes.decayedSum - scopes.recordSum) > CONTRIBUTION_SCOPE_DRIFT.tolerance) {
       throw new Error('moEngine.contributionScopes: the two scopes do not sum to the record total');
     }
+    scopes.reconciliation = {
+      kind: 'ROUNDING_DRIFT_ONLY',
+      tolerance: CONTRIBUTION_SCOPE_DRIFT.tolerance,
+      canDetect: CONTRIBUTION_SCOPE_DRIFT.canDetect,
+      cannotDetect: CONTRIBUTION_SCOPE_DRIFT.cannotDetect,
+      disjointnessBasis: CONTRIBUTION_SCOPE_DRIFT.disjointnessBasis
+    };
     scopes.note = 'Contributions listed for all ' + scopes.rows + ' signal' + (scopes.rows === 1 ? '' : 's') +
       ' this case holds sum to ' + scopes.recordSum.toFixed(2) + ' ' + EVIDENCE_CONTRIBUTION.unit +
       ', of which ' + scopes.activeSum.toFixed(2) + ' is still active and ' + scopes.decayedSum.toFixed(2) +
@@ -1706,14 +1736,35 @@ const FWMoEngine = (() => {
   /* Disjoint, exhaustive, and the sum is asserted rather than trusted. Returns
      the case lists as well as the counts so a caller never has to re-derive the
      membership with a filter of its own. */
-  function standingPartition(mos) {
+  /* An undeclared standing used to reach `buckets[k].push(m)` as an
+     undefined bucket, so the fault surfaced as "undefined is not an object"
+     and the refusal three lines down never ran. The key is now checked
+     against STANDING before it is used as an index, which makes the sum
+     comparison below an identity rather than the guard -- see
+     FWReconcile.KINDS.KEY_DECLARED_THEN_SUMMED. `standingOf` is the
+     injection point (convention 37); every app call site passes nothing and
+     gets this engine's own rule. */
+  function standingPartition(mos, standingOf) {
     const list = Array.isArray(mos) ? mos : Array.from((mos && mos.values && mos.values()) || []);
+    const standingFn = standingOf || ((m) => caseStanding(m).standing);
     const buckets = {};
     STANDING.forEach(k => { buckets[k] = []; });
-    list.forEach(m => { buckets[caseStanding(m).standing].push(m); });
+    list.forEach((m, i) => {
+      const k = standingFn(m, i);
+      if (!buckets[k]) {
+        throw new Error('moEngine.standingPartition: case ' + ((m && m.id) || '(no id)') + ' holds standing "' + k +
+          '", which is not one of ' + STANDING.join('/') + '. A case with no standing bucket sits in the ' +
+          'denominator of every rate and the numerator of none.');
+      }
+      buckets[k].push(m);
+    });
     const counts = {};
     let sum = 0;
     STANDING.forEach(k => { counts[k] = buckets[k].length; sum += counts[k]; });
+    /* Retained as the statement of the invariant, not as a check: every case
+       has already been proved to increment exactly one declared bucket, so
+       this cannot fail. Declared as such rather than left to read as a
+       second guard. */
     if (sum !== list.length) {
       throw new Error('moEngine.standingPartition: the ' + STANDING.length + ' buckets hold ' + sum +
         ' of ' + list.length + ' cases; a standing partition that does not cover the population is not one');
@@ -1779,7 +1830,7 @@ const FWMoEngine = (() => {
     DISCOVERY_THRESHOLDS, CLASSIFICATION_REASONS, CLASSIFICATION_REASON_KEYS,
     classificationReasonEntry, assertClassificationReasonsDeclared,
     classifyDiscoveryDetail, voteFloorEquivalence,
-    EVIDENCE_CONTRIBUTION, contributionScopes,
+    EVIDENCE_CONTRIBUTION, contributionScopes, CONTRIBUTION_SCOPE_DRIFT,
     CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
     CONFIDENCE_INDEX, indexNote, formatIndex, indexReach, indexBasis, assertIndexScaleDeclared,
     INDEX_MIN, INDEX_MAX, INDEX_MULTIPLIER,

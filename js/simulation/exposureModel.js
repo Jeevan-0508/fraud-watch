@@ -366,18 +366,37 @@ const FWExposureModel = (() => {
      model is only ever created by running a check.
 
      What must not be read out of it is a yield -- see NOT_MODELLED. */
-  function effortByExamination(state) {
+  /* `examineFn` and `declaredClasses` are the injection points (convention
+     37): every app call site passes neither and gets investigationEngine's
+     own classifier and class list, so shipped behaviour is unchanged, while a
+     test can plant an undeclared class and see the refusal above fire. */
+  function effortByExamination(state, examineFn, declaredClasses) {
     const mos = state && state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
-    const classes = FWInvestigationEngine.EXAMINATION_CLASSES;
+    const examine = examineFn || ((m) => FWInvestigationEngine.examination(m));
+    const classes = declaredClasses || FWInvestigationEngine.EXAMINATION_CLASSES;
     const acc = {};
     classes.forEach(k => { acc[k] = { seconds: 0, cases: 0 }; });
     let totalSeconds = 0, totalCases = 0;
+    /* An examination class this module does not declare used to reach
+       `acc[cls].seconds += seconds` as an undefined bucket, so the fault
+       arrived as "undefined is not an object" and the reconciliation message
+       below never ran. Checked against the declared classes first, with this
+       module's own sentence. That makes the sum comparison an identity
+       rather than a check -- see
+       FWReconcile.KINDS.KEY_DECLARED_THEN_SUMMED -- and it is kept as the
+       written invariant on that basis, not as a second guard. */
     mos.forEach(m => {
-      const ex = FWInvestigationEngine.examination(m);
+      const ex = examine(m);
+      const cls = ex.examinationClass;
+      if (!acc[cls]) {
+        throw new Error('exposureModel.effortByExamination: case ' + ((m && m.id) || '(no id)') +
+          ' holds examination class "' + cls + '", which is not one of ' + classes.join('/') +
+          '. Effort booked against no class is in the total and in no row of the cut.');
+      }
       const seconds = ex.effortSeconds || 0;
-      acc[ex.examinationClass].seconds += seconds;
+      acc[cls].seconds += seconds;
       totalSeconds += seconds;
-      if (seconds > 0) { acc[ex.examinationClass].cases += 1; totalCases += 1; }
+      if (seconds > 0) { acc[cls].cases += 1; totalCases += 1; }
     });
     const sum = classes.reduce((a, k) => a + acc[k].seconds, 0);
     if (Math.abs(sum - totalSeconds) >= 1) {

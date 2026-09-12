@@ -239,11 +239,16 @@ const FWMoIntelligence = (() => {
     const rows = mo.evidence.map(e =>
       `<li>${e.signalType.replace(/_/g, ' ')} — contributes ${e.contribution} ${decl.unit.split(',')[0]}, ${FWSignalEngine.formatReliability(e.reliability)} (${fmtSimTime(e.at)})${decayClause(e)}${active.has(e.signalId) ? '' : ' <span class="text-slate-600">· decayed, no longer counting toward the index</span>'}</li>`
     ).join('');
-    // Two sums of one quantity at two scopes, stated and reconciled rather
-    // than left for the eye to add up into the index it will not match.
+    /* Two sums of one quantity at two scopes, stated rather than left for the
+       eye to add up into the index it will not match. The word "reconciled"
+       used to be here and has been removed: both sums come off the same loop
+       over the same rows, so their agreeing is an arithmetic identity, not a
+       cross-check. Which rows are active and which decayed is guaranteed by
+       the loop having no third branch -- see scopes.reconciliation. */
     const scopes = FWMoEngine.contributionScopes(mo);
     return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Signals & evidence</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul>
       <div class="text-[9px] text-slate-500 italic mt-1">${scopes.note} A contribution is not ${decl.doesNotMean}</div>
+      <div class="text-[9px] text-slate-600 italic mt-1">The two figures above are the same sum cut in two, so that they add up is arithmetic rather than a check on it: ${scopes.reconciliation.cannotDetect} That each row is counted once is ${scopes.reconciliation.disjointnessBasis}</div>
       <div class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.reliabilityNote()}</div>
       <div class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.effectiveSpan().note}</div>
       <div class="text-[9px] text-slate-500 italic mt-1">${FWSignalEngine.decayInfluence().note}</div></div>`;

@@ -168,13 +168,23 @@ const FWShiftEngine = (() => {
      assumed: 24 hours, every shift non-empty, no hour claimed twice. */
   let hoursMemo = null;
 
-  function shiftHours() {
-    if (hoursMemo) return hoursMemo;
+  /* MEMOISED, WHICH MEANS THE TWO GUARDS BELOW CAN FIRE AT MOST ONCE.
+     After the first call this function returns the memo without consulting
+     the clock at all, so a clock that stopped partitioning the day would be
+     accepted silently for the rest of the run -- and a test that ran anything
+     else first could never trip either guard, which is how they came to be
+     undemonstrated. `clockFn` is the injection point and `opts.force`
+     bypasses the memo (convention 37); every app call site passes nothing and
+     gets the real clock and the memo, so shipped behaviour is unchanged. */
+  function shiftHours(clockFn, opts) {
+    const force = !!(opts && opts.force) || !!clockFn;
+    if (hoursMemo && !force) return hoursMemo;
+    const shiftFor = clockFn || ((h) => FWSimClock.shiftForHour(h));
     const tally = {};
     SHIFT_ORDER.forEach(s => { tally[s] = 0; });
     let unknown = 0;
     for (let h = 0; h < 24; h++) {
-      const s = FWSimClock.shiftForHour(h);
+      const s = shiftFor(h);
       if (tally[s] == null) unknown += 1; else tally[s] += 1;
     }
     const total = SHIFT_ORDER.reduce((a, s) => a + tally[s], 0);
@@ -191,7 +201,9 @@ const FWShiftEngine = (() => {
       throw new Error('shiftEngine: shift(s) with zero hours in the clock: ' + empty.join(', ') +
         '. A zero-hour shift carries no exposure and must not be weighted as if it did.');
     }
-    hoursMemo = tally;
+    // A forced recomputation over an injected clock must not overwrite the
+    // memo the rest of the run reads.
+    if (!clockFn) hoursMemo = tally;
     return tally;
   }
 

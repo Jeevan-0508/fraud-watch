@@ -296,12 +296,24 @@ const FWSimDebug = (() => {
     // actually opened.
     const floorSpan = (summary.voteFloorNote ? `<span class="basis-full text-slate-600 italic">${summary.voteFloorNote}</span>` : '') +
       (summary.observedVoteFloorNote ? `<span class="basis-full text-slate-600 italic">${summary.observedVoteFloorNote}</span>` : '');
+    /* The class and reason tallies above both end in a throw whose message
+       says the buckets must add to the base. Neither of those comparisons can
+       fail: the bucket key is checked against the declared list first, so the
+       sum is an identity. That is worth printing beside them, because a panel
+       that shows a tally and asserts it reconciles invites the reader to treat
+       the assertion as evidence the numbers are right. Counted over the
+       register as its own population, with the base named. */
+    const recon = window.FWReconcile ? FWReconcile.capability() : null;
+    const reconSpan = recon
+      ? `<span class="basis-full text-slate-600 italic">${recon.note}</span>`
+      : '';
     const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
       <span>${summary.totalSignatures} distinct behavior patterns seen</span>
       ${classSpans}
       ${reachSpan}
       ${reasonSpans}
       ${floorSpan}
+      ${reconSpan}
     </div>`;
 
     if (!mos.length) {
