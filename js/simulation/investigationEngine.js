@@ -367,6 +367,107 @@ const FWInvestigationEngine = (() => {
   const SUBSTANTIVE_OUTCOMES = ['EXCULPATORY', 'MIXED', 'CORROBORATING'];
   const LEARNED_NOTHING_OUTCOMES = ['NO_RECORD_EXISTS', 'INCONCLUSIVE'];
 
+  /* WAS THIS CASE EXAMINED, AND IF NOT, WHY NOT (Slice 26). Every panel
+     that lists a case by its status implies the status was arrived at.
+     Some were not: a case can close having had no check run against it at
+     all, or having had checks run that came back with nothing to fetch.
+     Those are three different facts about the analyst's own work and the
+     port's own records, and a status label hides all three.
+
+     The classes are ordered by what they say, not by severity. A case
+     with any answered check has been examined to some degree, whatever
+     else also failed. Of the two ways of learning nothing, nothing to
+     fetch takes precedence in the label because it is the stronger
+     statement -- it says the record was never written, where unreachable
+     says only that this attempt missed it. */
+  const EXAMINATION_CLASSES = ['ANSWERED', 'NOTHING_TO_FETCH', 'UNREACHABLE', 'NEVER_LOOKED'];
+
+  const EXAMINATION_NOTE = {
+    ANSWERED: 'at least one check answered on the signals it was run against',
+    NOTHING_TO_FETCH: 'checks were run and there was no record of that kind to fetch',
+    UNREACHABLE: 'checks were run and the source could not be reached or its records were incomplete',
+    NEVER_LOOKED: 'no check was ever run against it'
+  };
+
+  function examination(mo) {
+    const record = (mo && mo.investigation) || { findings: [], effortSeconds: 0 };
+    const findings = record.findings || [];
+    let answered = 0, noRecord = 0, inconclusive = 0;
+    const answeredTypes = new Set();
+    findings.forEach(f => {
+      if (SUBSTANTIVE_OUTCOMES.indexOf(f.outcome) >= 0) {
+        answered++;
+        (f.spokenToTypes || f.signalTypes || []).forEach(t => answeredTypes.add(t));
+      } else if (f.outcome === 'NO_RECORD_EXISTS') noRecord++;
+      else inconclusive++;
+    });
+    const cls = answered ? 'ANSWERED'
+      : noRecord ? 'NOTHING_TO_FETCH'
+      : inconclusive ? 'UNREACHABLE'
+      : 'NEVER_LOOKED';
+    return {
+      checksRun: findings.length,
+      answeredChecks: answered,
+      noRecordChecks: noRecord,
+      inconclusiveChecks: inconclusive,
+      answeredTypeCount: answeredTypes.size,
+      effortSeconds: record.effortSeconds || 0,
+      everLooked: findings.length > 0,
+      everAnswered: answered > 0,
+      examinationClass: cls,
+      note: EXAMINATION_NOTE[cls]
+    };
+  }
+
+  /* A set of cases sorted into the four classes, asserted to sum to the
+     set's own size (reconciled-totals discipline). Deliberately counts
+     only: a share of an entity's two or three cases would be a rate on a
+     sample the analytics model's own small-sample floor would withhold. */
+  function examinationRollup(mos) {
+    const list = Array.from(mos || []);
+    const byClass = {};
+    EXAMINATION_CLASSES.forEach(k => { byClass[k] = 0; });
+    let effortSeconds = 0;
+    list.forEach(mo => {
+      const ex = examination(mo);
+      byClass[ex.examinationClass] += 1;
+      effortSeconds += ex.effortSeconds;
+    });
+    const sorted = EXAMINATION_CLASSES.reduce((a, k) => a + byClass[k], 0);
+    if (sorted !== list.length) {
+      throw new Error(
+        'investigationEngine: examination rollup does not reconcile (' + sorted + ' sorted vs ' +
+        list.length + ' cases). Every case was answered on, run against with nothing to fetch, ' +
+        'run against and unreachable, or never looked at.'
+      );
+    }
+    return { total: list.length, byClass, effortSeconds, classes: EXAMINATION_CLASSES, notes: EXAMINATION_NOTE };
+  }
+
+  /* What the site-record checks touching one site actually came back with.
+     A real measured count with a real denominator -- the checks run --
+     and NOT a measurement of that site's coverage, which is the reading it
+     invites. The empty results were generated FROM the site's stated
+     coverage parameter, so treating the observed empty share as evidence
+     about coverage would be reading the assumption back out of its own
+     output, which is the circular arithmetic the facility model already
+     refuses. It is a fact about the analyst's own checks here. */
+  function siteCheckOutcomes(mos, facilityId) {
+    const byOutcome = { EXCULPATORY: 0, MIXED: 0, CORROBORATING: 0, INCONCLUSIVE: 0, NO_RECORD_EXISTS: 0 };
+    let checks = 0, cases = 0;
+    Array.from(mos || []).forEach(mo => {
+      const findings = (mo.investigation && mo.investigation.findings) || [];
+      let touched = false;
+      findings.forEach(f => {
+        if (!(f.sites || []).some(s => s.facilityId === facilityId)) return;
+        checks += 1; touched = true;
+        if (byOutcome[f.outcome] != null) byOutcome[f.outcome] += 1;
+      });
+      if (touched) cases += 1;
+    });
+    return { checks, cases, byOutcome, noRecord: byOutcome.NO_RECORD_EXISTS };
+  }
+
   const OUTCOME_NOTE = {
     EXCULPATORY: 'A documented explanation was found on record. Records are verifiable, so this weighs heavily.',
     MIXED: 'Part of what was checked has a documented explanation and part does not. The remainder is unexplained, which is not the same as suspicious.',
@@ -376,7 +477,9 @@ const FWInvestigationEngine = (() => {
   };
 
   return {
-    ACTION_CATALOG, OUTCOME_NOTE, SUBSTANTIVE_OUTCOMES, LEARNED_NOTHING_OUTCOMES, availableActions, performAction, summary, isInvestigable,
+    ACTION_CATALOG, OUTCOME_NOTE, SUBSTANTIVE_OUTCOMES, LEARNED_NOTHING_OUTCOMES,
+    EXAMINATION_CLASSES, EXAMINATION_NOTE, examination, examinationRollup, siteCheckOutcomes,
+    availableActions, performAction, summary, isInvestigable,
     signalsForMo, sitedSignals, siteRecordChance, narrateSiteUnavailable,
     MAX_UPWARD_ADJUSTMENT, MAX_DOWNWARD_ADJUSTMENT
   };

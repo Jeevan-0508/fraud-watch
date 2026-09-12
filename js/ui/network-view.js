@@ -9,7 +9,17 @@
    debug/analyst view, not a puzzle game, and a stable layout is more
    readable across ticks than nodes jittering as a naive force-layout
    would. Reputation/frequency is shown but framed the same way
-   entity-inspector.js frames it: informational, never a verdict. */
+   entity-inspector.js frames it: informational, never a verdict.
+
+   A NODE'S CASE COUNT DOES NOT SAY THE CASES WERE LOOKED AT (Slice 26).
+   This panel predated the distinction, so an entity in four cases read
+   as four times examined. It may be four times unexamined. The selected
+   node now states how far its cases were actually taken, and the repeat
+   list is deliberately NOT reordered by that: ranking entities by how
+   examined their cases were would put the well-observed at the top of a
+   list the analyst reads as "look here", which is the same bias Slice 22
+   refused when it declined to exclude uncoverable cases from the
+   calibration rates. */
 const FWNetworkView = (() => {
   let els = {};
   let selectedKey = null;
@@ -231,6 +241,22 @@ const FWNetworkView = (() => {
     SINGLE_CASE_ARTEFACT: 'border-slate-800'
   };
 
+  /* How far this entity's cases were taken. Counts only, and the reason
+     is the same one the Entity Inspector gives: two or three cases is
+     below any sample size that would justify a share. */
+  function renderExamination(node, state) {
+    if (!state || node.structural) return '';
+    const mos = (node.moIds || []).map(id => state.moEngine.mos.get(id)).filter(Boolean);
+    if (!mos.length) return '';
+    const rollup = FWInvestigationEngine.examinationRollup(mos);
+    const rows = FWInvestigationEngine.EXAMINATION_CLASSES
+      .filter(k => rollup.byClass[k] > 0)
+      .map(k => `<li>${rollup.byClass[k]} — ${rollup.notes[k]}</li>`).join('');
+    return `<div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">How far those cases were taken</div>
+      <ul class="text-[10px] text-slate-400 space-y-0.5 list-disc list-inside mb-1">${rows}</ul>
+      <p class="text-[10px] text-slate-500 mb-2">A case count is a count of correlations, not of examinations. Appearing in more cases that nobody pulled records on says nothing more than appearing in fewer.</p>`;
+  }
+
   function renderStructures(graph) {
     const list = FWNetworkEngine.structures(graph);
     if (!list.length) return '';
@@ -277,7 +303,8 @@ const FWNetworkView = (() => {
       const rows = repeats.slice(0, 8).map(n =>
         `<li><span class="font-mono">${esc(n.id)}</span> <span class="text-slate-500">(${FWNetworkEngine.KIND_LABELS[n.kind]})</span> — ${n.caseCount} cases${n.openCaseCount ? `, <span class="text-amber-400">${n.openCaseCount} open</span>` : ''}</li>`
       ).join('');
-      return trace + `<p class="text-[11px] text-slate-500 mb-1">Click a node for detail. Entities appearing in 2+ cases:</p><ul class="text-[11px] text-slate-300 space-y-0.5 list-disc list-inside">${rows}</ul>` + renderStructures(graph);
+      return trace + `<p class="text-[11px] text-slate-500 mb-1">Click a node for detail. Entities appearing in 2+ cases:</p><ul class="text-[11px] text-slate-300 space-y-0.5 list-disc list-inside">${rows}</ul>
+        <p class="text-[10px] text-slate-500 mt-1">Ordered by case count, which is a count of correlations and not of examinations &mdash; some of these cases had no check run against them at all. The order is deliberately left alone: putting the entities whose cases were examined at the top would rank this list by where the port happens to look, and the analyst reads the top of it as where to look next.</p>` + renderStructures(graph);
     }
 
     const node = graph.nodes.find(n => n.key === selectedKey);
@@ -300,6 +327,7 @@ const FWNetworkView = (() => {
       <div class="text-xs text-white font-semibold mb-1">${esc(node.id)} <span class="text-slate-500 font-normal">(${FWNetworkEngine.KIND_LABELS[node.kind]})</span></div>
       <div class="text-[11px] text-slate-400 mb-2">${node.caseCount} case${node.caseCount === 1 ? '' : 's'}${node.openCaseCount ? `, ${node.openCaseCount} currently open` : ', none currently open'}</div>
       ${structuralNote}
+      ${renderExamination(node, state)}
       <div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">Linked entities (${neigh.length})</div>
       <ul class="text-[11px] text-slate-300 space-y-0.5 list-disc list-inside mb-1">${neighRows || '<li class="text-slate-600 list-none">none</li>'}</ul>
       <button data-trace-from="${esc(node.key)}" class="mt-2 mr-1 text-[11px] px-2 py-1 rounded bg-fuchsia-800 hover:bg-fuchsia-700 text-white">Trace path from here</button>

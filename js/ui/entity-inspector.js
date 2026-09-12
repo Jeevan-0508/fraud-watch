@@ -27,7 +27,18 @@
    equally binding reason. The facility panel therefore states the count,
    states the assumed coverage that produced it, and states plainly that
    a site cannot be a subject of a case in this model: there is no such
-   entity role, so nothing here is an allegation about a site. */
+   entity role, so nothing here is an allegation about a site.
+
+   WHETHER A CASE WAS EXAMINED AT ALL (Slice 26). This panel predated the
+   distinction between a check that answered, a check that found nothing
+   to fetch, and no check at all, so it listed a truck's cases by status
+   as though every status had been arrived at by looking. Some were not.
+   A case that faded and closed with no check ever run against it is not
+   the same fact as one dismissed after the records were pulled, and
+   compressing both into "1 dismissed" hid the more useful half. Both
+   panels now state which, in counts, and both say the same thing about
+   what those counts are: an unexamined case is a fact about what was
+   looked at, never a fact about the truck. */
 const FWEntityInspector = (() => {
   let els = {};
   let openKind = null;   // 'truck' | 'facility'
@@ -173,13 +184,34 @@ const FWEntityInspector = (() => {
         : '<p class="text-slate-600 italic text-[11px]">No case has a signal recorded here yet. That is an absence of records, which is not the same as an absence of events.</p>'}
     </div>`;
 
+    /* What the site-record checks touching this site came back with. The
+       count is measured and the denominator is real -- the checks run --
+       and it is still not a measurement of this site's coverage, because
+       the empty results were generated from the stated coverage parameter
+       printed a few lines above. Reading the observed empty share as
+       evidence about coverage would be taking the assumption back out of
+       its own output. */
+    const checks = FWInvestigationEngine.siteCheckOutcomes(Array.from(state.moEngine.mos.values()), facility.id);
+    const checksHtml = checks.checks
+      ? `<div>
+          <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Record checks pulled against this site (${checks.checks})</div>
+          <div class="text-[11px] text-slate-300 space-y-0.5">
+            <div>Across ${checks.cases} case${checks.cases === 1 ? '' : 's'}, ${checks.noRecord} came back with no record of that kind to fetch and ${checks.checks - checks.noRecord} returned something to read.</div>
+          </div>
+          <p class="text-[10px] text-amber-300/80 mt-1">This is a count of what the analyst's own checks here returned. It is not a measured coverage rate for this site: those empty results are produced by the assumed coverage figure stated above, so reading them back as evidence about coverage would be returning the assumption to itself.</p>
+        </div>`
+      : `<div>
+          <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Record checks pulled against this site (0)</div>
+          <p class="text-[11px] text-slate-600 italic">No case with a signal here has had its site record pulled yet. Nothing is known about what this site would have returned, which is not the same as it having nothing.</p>
+        </div>`;
+
     const framingHtml = `<div class="bg-[#0e1520] border border-rose-900/40 rounded-xl p-2">
       <div class="text-[10px] uppercase tracking-wide text-rose-400/80 mb-1">What this panel is not</div>
       <p class="text-[10px] text-slate-400">A site cannot be the subject of a case in this model — there is no such entity role, and nothing on this panel is an allegation about a site or the people who run it. Everything above is either a stated assumption about how well this site is observed, or a count of records that exist here.</p>
       <p class="text-[10px] text-slate-400 mt-1">The same limit applies here as everywhere else in the network view: a site connects to nearly everything whatever is happening, which is why sites are excluded from the structural analysis there rather than being read as unusually connected.</p>
     </div>`;
 
-    els.body.innerHTML = whatHtml + recordsHtml + casesHtml + framingHtml;
+    els.body.innerHTML = whatHtml + recordsHtml + checksHtml + casesHtml + framingHtml;
   }
 
   function render(state) {
@@ -229,21 +261,43 @@ const FWEntityInspector = (() => {
         : '<p class="text-slate-600 italic text-[11px]">No recorded events yet.</p>'}
     </div>`;
 
+    const rollup = FWInvestigationEngine.examinationRollup(allCases);
+    const rollupRows = rollup.total
+      ? FWInvestigationEngine.EXAMINATION_CLASSES
+        .filter(k => rollup.byClass[k] > 0)
+        .map(k => `<li>${rollup.byClass[k]} — ${rollup.notes[k]}</li>`).join('')
+      : '';
+    const rollupHtml = rollup.total
+      ? `<div class="bg-[#0e1520] border border-slate-800 rounded-lg px-2 py-1.5 mb-1.5">
+          <div class="text-[10px] text-slate-400">Of these ${rollup.total} case${rollup.total === 1 ? '' : 's'}, how far each was actually examined:</div>
+          <ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mt-0.5">${rollupRows}</ul>
+          ${rollup.effortSeconds ? `<div class="text-[10px] text-slate-500 mt-0.5">${(rollup.effortSeconds / 3600).toFixed(1)} measured hours of analyst effort across them.</div>` : ''}
+          <p class="text-[10px] text-slate-500 mt-1">Counts, not shares. A handful of cases is below the sample size the analytics model requires before it will show a rate, and a percentage over two cases would read as a pattern.</p>
+          <p class="text-[10px] text-amber-300/80 mt-1">A case nobody looked at, and a case where the records did not exist to look at, are facts about this port's coverage and this analyst's time. Neither is a fact about this truck, in either direction: it is not evidence it was involved in something, and it is not evidence it was not.</p>
+        </div>`
+      : '';
+
     const outcomeSummary = Object.keys(outcomeCounts).length
       ? Object.entries(outcomeCounts).map(([k, v]) => `${v} ${k.replace(/_/g, ' ').toLowerCase()}`).join(' · ')
       : 'no prior cases';
 
     const casesHtml = `<div>
       <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Case history (${allCases.length}) — ${outcomeSummary}</div>
+      ${rollupHtml}
       ${allCases.length
-        ? `<div class="space-y-1.5">${allCases.sort((a, b) => b.lastObserved - a.lastObserved).map(m => `
+        ? `<div class="space-y-1.5">${allCases.sort((a, b) => b.lastObserved - a.lastObserved).map(m => {
+            const ex = FWInvestigationEngine.examination(m);
+            return `
             <div class="bg-[#0e1520] border border-slate-800 rounded-lg px-2 py-1.5">
               <div class="flex items-center justify-between gap-2">
                 <span class="font-mono text-[10px] text-slate-400">${m.id}</span>
                 <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${statusBadgeClass(m.status)}">${m.status.replace(/_/g, ' ')}</span>
               </div>
               <div class="text-[11px] text-white">${m.title}</div>
-            </div>`).join('')}</div>`
+              <div class="text-[10px] ${ex.everAnswered ? 'text-slate-500' : 'text-sky-300/80'}">${ex.checksRun
+                ? `${ex.checksRun} check${ex.checksRun === 1 ? '' : 's'} run — ${ex.note}`
+                : 'No check was ever run against this case.'}</div>
+            </div>`; }).join('')}</div>`
         : '<p class="text-slate-600 italic text-[11px]">This truck has never triggered a correlated case. History and reputation here are informational only -- they never decide the next case on their own (Phase 33).</p>'}
     </div>`;
 
