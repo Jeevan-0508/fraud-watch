@@ -117,11 +117,21 @@ const FWAnalyticsView = (() => {
   function groupBlock(g) {
     const expanded = openGroup === g.id;
     const tiles = g.metrics.map(m => metricTile(m, expanded)).join('');
+    // Sharing a base and adding up to it are separate facts (Slice 33), so
+    // the second is only claimed where the group declared it and the audit
+    // arithmetically checked it. Where it is not claimed, the shared-base
+    // line says so, rather than letting the reader assume the rows add up.
+    const part = g.denominators.partition;
+    const partLine = part
+      ? `<div class="text-[10px] text-emerald-300/80 mt-1">${part.note}</div>`
+      : (g.denominators.shared && g.denominators.bases.length === 1
+        ? `<div class="text-[10px] text-slate-500 mt-1">Sharing that base does not make these rows add up to it: they can overlap, nest, or leave part of the base in no row at all. This group does not declare that they add up, so they are not to be summed.</div>`
+        : '');
     const basesLine = g.denominators.shared
       ? (g.denominators.bases.length === 1
-        ? `<div class="text-[10px] text-slate-500 mt-1.5">All percentages in this group are over the same base: ${g.denominators.bases[0]}.</div>`
+        ? `<div class="text-[10px] text-slate-500 mt-1.5">All percentages in this group are over the same base: ${g.denominators.bases[0]}.</div>${partLine}`
         : '')
-      : `<div class="text-[10px] text-amber-300/80 mt-1.5">${g.denominators.note}</div>`;
+      : `<div class="text-[10px] text-amber-300/80 mt-1.5">${g.denominators.note}</div>${partLine}`;
     const trendRefusal = g.id === 'discovery'
       ? `<div class="mt-2 bg-[#0e1520] border border-rose-900/40 rounded-lg p-2">
            <div class="text-[10px] uppercase tracking-wide text-rose-400/80 mb-1">Where the discovery-rate chart would be</div>

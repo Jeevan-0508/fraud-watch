@@ -108,27 +108,73 @@ const FWAnalyticsEngine = (() => {
     };
   }
 
-  // Within one group, are the metrics computed over the same base? If
-  // not, the group has to say so out loud, because side-by-side
-  // percentages imply a shared base whether or not one exists.
-  function denominatorAudit(metrics) {
+  /* Within one group, are the metrics computed over the same base? If not,
+     the group has to say so out loud, because side-by-side percentages imply
+     a shared base whether or not one exists.
+
+     Slice 33: a shared base was only half the audit. Rows sharing one base
+     either partition it or they do not, and "all percentages here are over
+     the same base" is read as "so they add up to it". The Record checks
+     group was a partition of the five check outcomes with one class -- the
+     partly-explained one -- simply absent from the panel, and because the
+     four rows that were there did share a base, the audit reported them as
+     clean. The shortfall was invisible: the missing checks were in the
+     denominator of every row and in no row.
+
+     So a group now DECLARES whether its shared-base rates partition that
+     base. A declared partition that does not add up throws, the same way
+     every other reconciliation in this project does -- it is a coding error,
+     not a finding to render. Groups whose rates legitimately overlap or
+     nest (calibration) declare nothing and keep saying so in their blurb. */
+  function denominatorAudit(metrics, partition) {
     const bases = [];
     metrics.forEach(m => {
       if (m.kind !== KIND.RATE) return;
       if (bases.indexOf(m.of) < 0) bases.push(m.of);
     });
-    return {
+    const audit = {
       bases,
       shared: bases.length <= 1,
       note: bases.length <= 1
         ? null
         : 'The percentages in this group are taken over ' + bases.length +
-          ' different bases (' + bases.join('; ') + '). They are not comparable with each other and do not sum to anything.'
+          ' different bases (' + bases.join('; ') + '). They are not comparable with each other and do not sum to anything.',
+      partition: null
     };
+    if (!partition) return audit;
+
+    const rows = metrics.filter(m => m.kind === KIND.RATE && m.of === partition.base);
+    const sum = rows.reduce((a, m) => a + m.numerator, 0);
+    const total = partition.total;
+    if (sum !== total) {
+      throw new Error(
+        'analyticsEngine: group declares its rates partition "' + partition.base + '" but ' +
+        rows.length + ' rows sum to ' + sum + ' of ' + total + ' (' + (total - sum) +
+        ' unaccounted). Every one of those is inside the denominator of every row and inside ' +
+        'no row, so the panel would show a shortfall a reader cannot see.'
+      );
+    }
+    audit.partition = {
+      base: partition.base,
+      total: total,
+      rows: rows.length,
+      sum: sum,
+      complete: true,
+      label: partition.label || null,
+      note: 'These ' + rows.length + ' rows are disjoint and account for all ' + total + ' ' +
+        partition.base + ', so they do sum to their base — checked here, not asserted in prose. ' +
+        'That is unusual on this panel and it is why it is stated.'
+    };
+    return audit;
   }
 
-  function group(id, title, blurb, metrics) {
-    return { id, title, blurb, metrics, denominators: denominatorAudit(metrics) };
+  function group(id, title, blurb, metrics, opts) {
+    const partition = (opts && opts.partition) || null;
+    return {
+      id, title, blurb, metrics,
+      denominators: denominatorAudit(metrics, partition),
+      partitioned: !!partition
+    };
   }
 
   function caseloadGroup(state) {
@@ -198,19 +244,24 @@ const FWAnalyticsEngine = (() => {
 
   function investigationGroup(state) {
     const mos = state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
-    let checks = 0, noRecord = 0, corroborating = 0, exculpatory = 0, inconclusive = 0, effort = 0;
+    // Every outcome investigationEngine can return, summed by its own key
+    // list rather than by five named locals. The bug this replaces was one
+    // missing local: MIXED existed in the engine, in the site panel and in
+    // the examination vocabulary, and never reached this group.
+    const byOutcome = {};
+    let checks = 0, effort = 0;
     mos.forEach(m => {
       const inv = FWInvestigationEngine.summary(m);
       checks += inv.checksRun;
       effort += inv.effortSeconds;
-      noRecord += inv.byOutcome.NO_RECORD_EXISTS || 0;
-      corroborating += inv.byOutcome.CORROBORATING || 0;
-      exculpatory += inv.byOutcome.EXCULPATORY || 0;
-      inconclusive += inv.byOutcome.INCONCLUSIVE || 0;
+      Object.keys(inv.byOutcome).forEach(k => {
+        byOutcome[k] = (byOutcome[k] || 0) + inv.byOutcome[k];
+      });
     });
     const of = 'record checks actually run across all cases';
+    const note = FWInvestigationEngine.OUTCOME_NOTE || {};
     return group('investigation', 'Record checks',
-      'What the record sources returned when they were pulled. Corroborating and exculpatory are outcomes of looking; the last two rows are what happened when looking did not work, and they are kept apart from each other on purpose.',
+      'What the record sources returned when they were pulled. The first three rows are outcomes of looking — including the partly-explained one, where some of what was checked has a documented explanation and the remainder simply does not, which is not the same as suspicious. The last two are what happened when looking did not work, kept apart from each other on purpose. These five are every outcome a check can return, so unlike most of this panel they do add up to the checks run.',
       [
         metric({ id: 'inv-checks', label: 'Checks run', kind: KIND.COUNT, numerator: checks, of: of }),
         metric({
@@ -219,17 +270,24 @@ const FWAnalyticsEngine = (() => {
           of: 'hours of analyst effort the simulation measured across every case, open and closed, priced only in the exposure panel',
           note: 'The exposure panel\'s cost-of-process figure is the closed subset of this, because effort can only be booked against an outcome once one exists. It reconciles the two there rather than leaving the difference to look like an error.'
         }),
-        metric({ id: 'inv-corrob', label: 'Came back corroborating', numerator: corroborating, denominator: checks, of: of }),
-        metric({ id: 'inv-excul', label: 'Came back exculpatory', numerator: exculpatory, denominator: checks, of: of }),
+        metric({ id: 'inv-corrob', label: 'Came back corroborating', numerator: byOutcome.CORROBORATING || 0, denominator: checks, of: of }),
+        metric({ id: 'inv-excul', label: 'Came back exculpatory', numerator: byOutcome.EXCULPATORY || 0, denominator: checks, of: of }),
         metric({
-          id: 'inv-inconclusive', label: 'Attempt failed, record may exist', numerator: inconclusive, denominator: checks, of: of,
+          id: 'inv-mixed', label: 'Came back partly explained', numerator: byOutcome.MIXED || 0, denominator: checks, of: of,
+          note: note.MIXED || 'Part of what was checked has a documented explanation and part does not.'
+        }),
+        metric({
+          id: 'inv-inconclusive', label: 'Attempt failed, record may exist', numerator: byOutcome.INCONCLUSIVE || 0, denominator: checks, of: of,
           note: 'A contingent failure. The record probably exists; this pull did not get it.'
         }),
         metric({
-          id: 'inv-norecord', label: 'Nothing there to look at', numerator: noRecord, denominator: checks, of: of,
+          id: 'inv-norecord', label: 'Nothing there to look at', numerator: byOutcome.NO_RECORD_EXISTS || 0, denominator: checks, of: of,
           note: 'Structural, not a failed attempt: that site does not produce that record at that hour. Counted apart from the row above so a coverage gap in the port never gets averaged in as evidence about a carrier.'
         })
-      ]);
+      ],
+      // The five outcome rows are every outcome a check can return, so they
+      // do partition the checks run. Declared, and therefore checked.
+      { partition: { base: of, total: checks, label: 'what the pulls returned' } });
   }
 
   /* HOW FAR THE CASELOAD WAS TAKEN (Slice 27). The Record checks group
@@ -284,7 +342,11 @@ const FWAnalyticsEngine = (() => {
           of: 'closed cases, whether closed by a verdict or by process',
           note: 'A different base from the four rows above, on purpose: the question is about closures, not about the caseload. Includes cases where the records did not exist to pull as well as cases nobody pulled, because both closed on the correlation alone.'
         })
-      ]);
+      ],
+      // The four class rows partition the caseload. Until Slice 33 that was
+      // a sentence in ASSUMPTIONS; now it is checked on every render, and the
+      // fifth row above is excluded from the check by having its own base.
+      { partition: { base: of, total: roll.total, label: 'how far each case was taken' } });
   }
 
   // Almost every figure in this group is a PARAMETER: not a measurement,
@@ -418,7 +480,8 @@ const FWAnalyticsEngine = (() => {
     'Percentages come in two kinds that look identical. A rate is a numerator over observations. A parameter is a number stated in a model file. The coverage group is entirely the second kind and is separated for that reason.',
     'Populations are stated before rates, because the bases are the part of a dashboard that is normally left implicit and is where the misreading happens.',
     'No figure here is compared with a target, a benchmark or its own past value.',
-    'The examination group is the one place where the rates on screen do sum to their base, because its four classes are disjoint and every case falls in exactly one. That is stated rather than left to be noticed, since everywhere else on this panel side-by-side percentages do not sum to anything.'
+    'Two groups on this panel do have rates that sum to their base: the check-outcome rows, which are every outcome a pull can return, and the examination rows, whose four classes are disjoint with every case in exactly one. Both declare it and both are checked arithmetically on every render rather than claimed here in prose — a declared group whose rows do not add up stops the panel instead of printing a shortfall. Everywhere else, side-by-side percentages do not sum to anything, and the group says so.',
+    'Sharing a base and adding up to it are two different things, and the second was unaudited until Slice 33. The check-outcome group was missing one of the five outcomes a pull can return, and because the four rows that were present did share a base, the audit called it clean while the absent checks sat in every denominator and in no row.'
   ];
 
   function dashboard(state) {
