@@ -142,16 +142,47 @@ const FWAdviceEngine = (() => {
     }
   ];
 
-  // Why a signal type a check was run against still has no answer on it.
-  // Three different facts, and merging them would hide the one that
-  // matters most: a structural gap in what this port records is not a
-  // failed attempt, and neither is a source being asked about ground it
-  // cannot read.
+  /* Why a signal type a check was run against still has no answer on it.
+     Three different facts, and merging them would hide the one that matters
+     most: a structural gap in what this port records is not a failed attempt,
+     and neither is a source being asked about ground it cannot read.
+
+     Two of the three keys are check OUTCOMES, owned by investigationEngine.
+     This map is therefore a second surface for that vocabulary, and the load
+     check below is what stops it becoming a second COPY: if that engine gains
+     a way of learning nothing, this module fails loudly at load rather than
+     quietly reporting it as one of the two it happens to know. The third key
+     is this module's own, and is not an outcome at all -- the check came back
+     with something, just not about this type. */
+  const OWN_UNREAD_REASON = 'OUT_OF_SOURCE_SCOPE';
   const UNREAD_REASON_NOTE = {
     NO_RECORD_EXISTS: 'a check was run and there was no record of that kind to fetch',
     INCONCLUSIVE: 'a check was run and the source could not be reached or its records were incomplete',
     OUT_OF_SOURCE_SCOPE: 'a check was run against it but that source can only read signals observed at a site, and this one was not'
   };
+
+  // Both directions, at load, against the engine that owns the vocabulary.
+  (function checkUnreadReasons() {
+    if (typeof FWInvestigationEngine === 'undefined') return;
+    FWInvestigationEngine.LEARNED_NOTHING_OUTCOMES.forEach(k => {
+      if (!UNREAD_REASON_NOTE[k]) {
+        throw new Error(
+          'adviceEngine: check outcome ' + k + ' is a way of learning nothing and has no ' +
+          'unread-reason note. Reporting it as one of the others would state a fact about ' +
+          'the record that nobody established.'
+        );
+      }
+    });
+    Object.keys(UNREAD_REASON_NOTE).forEach(k => {
+      if (k === OWN_UNREAD_REASON) return;
+      if (FWInvestigationEngine.LEARNED_NOTHING_OUTCOMES.indexOf(k) < 0) {
+        throw new Error(
+          'adviceEngine: unread reason ' + k + ' is neither a learned-nothing outcome nor ' +
+          'this module\'s own ' + OWN_UNREAD_REASON + ', so nothing produces it.'
+        );
+      }
+    });
+  })();
 
   // Per signal type: has a completed check ANSWERED on it, and if not,
   // which ways of not answering are on the record. Keyed by signal type
@@ -174,7 +205,23 @@ const FWAdviceEngine = (() => {
       (f.signalTypes || []).forEach(t => {
         const e = entry(t);
         if (answered.indexOf(t) >= 0) { e.spokenTo = true; return; }
-        const reason = substantive ? 'OUT_OF_SOURCE_SCOPE' : (UNREAD_REASON_NOTE[f.outcome] ? f.outcome : 'INCONCLUSIVE');
+        /* The fallback here used to be `: 'INCONCLUSIVE'`, so any outcome this
+           map did not recognise was reported as "the source could not be
+           reached or its records were incomplete" -- a specific claim about
+           what happened, made about an outcome nobody had classified. The two
+           ways of learning nothing are exactly what Slice 35 separated. An
+           unclassified one is a third thing and is not guessed at. */
+        let reason = OWN_UNREAD_REASON;
+        if (!substantive) {
+          if (!UNREAD_REASON_NOTE[f.outcome]) {
+            throw new Error(
+              'adviceEngine.typeLedger: check outcome "' + f.outcome + '" has no unread ' +
+              'reason. It is neither substantive nor a known way of learning nothing, and ' +
+              'reporting it as unreachable would invent the reason.'
+            );
+          }
+          reason = f.outcome;
+        }
         if (e.reasons.indexOf(reason) < 0) e.reasons.push(reason);
       });
     });
@@ -357,6 +404,7 @@ const FWAdviceEngine = (() => {
 
   return {
     RANK_INPUTS, FORBIDDEN_INPUT, ASSUMPTIONS, NOT_MODELLED, UNREAD_REASON_NOTE,
+    OWN_UNREAD_REASON,
     scoreInputs, scoreOf, typeLedger, checkedTypes, typePartition, uncheckableTypes, advise
   };
 })();
