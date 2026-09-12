@@ -127,7 +127,14 @@ const FWCoreGame = (() => {
         if (hit) {
           this.revealed[action] = { text: hit.signal, isClue: true };
           if (!hit.isDecoy) this.revealedIndicatorObjects.push(hit);
-          FWPortUI.pushRadio(`${data.id}: ${hit.signal}`, hit.isDecoy ? 'warn' : 'bad');
+          /* The tone used to be `hit.isDecoy ? 'warn' : 'bad'` — amber for a
+             clue with an innocent explanation, red for a real indicator. That
+             is the ground truth of the case, printed on the screen at the
+             moment the check comes back, before the player has established
+             anything. Whether the two are distinguishable is the whole
+             question being asked; colouring them differently answers it.
+             Both are observations and both read the same. */
+          FWPortUI.pushRadio(`${data.id}: ${hit.signal}`, 'warn');
         } else {
           this.revealed[action] = { text: 'Nothing unusual.', isClue: false };
         }

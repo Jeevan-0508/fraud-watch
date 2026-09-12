@@ -112,19 +112,33 @@ const FW = (() => {
     return p[Math.floor(Math.random() * p.length)];
   }
 
-  // Pick n indicators from a pattern. `bias` 'strong' favours high-weight
-  // (easier) signals, 'subtle' favours low-weight ones (harder/later levels).
+  /* Pick n indicators from a pattern. `bias` 'strong' favours high-weight
+     (easier) signals, 'subtle' favours low-weight ones (harder/later levels).
+
+     THE LOOP BOUND USED TO SHRINK AS THE LOOP RAN. It was
+     `while (chosen.length < Math.min(n, top.length))` with a
+     `top.splice(...)` inside, so every item taken removed one from the
+     target as well as one from the pool: the condition met itself at roughly
+     half of n and the function returned about ceil(n/2) instead of n. Every
+     pattern in the taxonomy carries 6 to 9 indicators, so min(n, pool.length)
+     is n for every n this app asks for — and yet asking for 6 returned 3 or
+     4, and asking for 3 and asking for 4 both returned 3.
+
+     What that broke: scenario.js ramps its indicator budget 3 -> 6 with
+     level, and the ramp was almost entirely inert. Level 1 and level 20
+     showed the same three clues. The target is now computed once, before
+     anything is consumed. */
   function pickIndicators(pattern, n, bias = 'strong') {
     const pool = [...pattern.indicators];
     pool.sort((a, b) => bias === 'subtle' ? a.weight - b.weight : b.weight - a.weight);
     // take a slightly randomised slice so the same pattern doesn't always
     // show the identical clue set
     const top = pool.slice(0, Math.min(pool.length, n + 2));
+    const want = Math.min(n, top.length);
     const chosen = [];
-    while (chosen.length < Math.min(n, top.length)) {
+    while (chosen.length < want && top.length) {
       const idx = Math.floor(Math.random() * top.length);
-      const item = top.splice(idx, 1)[0];
-      if (item) chosen.push(item);
+      chosen.push(top.splice(idx, 1)[0]);
     }
     return chosen;
   }
