@@ -45,6 +45,7 @@ const FWCoreGame = (() => {
         this.phase = 'none';      // none | idle | investigating | fleeing | resolved
         this.revealed = {};
         this.revealedIndicatorObjects = [];
+        this.lastCaseVehicle = null;
 
         this.time.delayedCall(1200, () => this.startCase());
       }
@@ -77,9 +78,18 @@ const FWCoreGame = (() => {
         }
       }
 
+      /* This used to exclude `this.caseVehicle`, which resolveOutcome had
+         already set to null before the next case was scheduled — so the
+         filter kept all six vehicles on every call and the same truck could
+         carry two cases in a row. Reuse matters here: the case vehicle is the
+         one truck wearing a tag, and a truck that is tagged twice running
+         looks like a repeat offender when the generator was only rolling
+         dice. The exclusion is now against the vehicle that actually carried
+         the last case, and it says what it excludes and why. */
       pickCaseVehicle() {
-        const free = this.vehicles.filter(v => v !== this.caseVehicle);
-        return free[Math.floor(Math.random() * free.length)];
+        const free = this.vehicles.filter(v => v !== this.lastCaseVehicle);
+        const pool = free.length ? free : this.vehicles;
+        return pool[Math.floor(Math.random() * pool.length)];
       }
 
       startCase() {
@@ -174,7 +184,7 @@ const FWCoreGame = (() => {
         this.fleeOrigin = origin;
         const v = this.caseVehicle;
         v.setPaused(false);
-        v.speed = 130;
+        v.setSpeed(FWVehicle.FLEE_SPEED);
         v.setRoute(FWVehicle.escapeRoute(FWWorld.ZONE, { x: v.body.x, y: v.body.y }), false);
         v.onArrive = () => {
           if (this.phase !== 'fleeing') return;
@@ -205,6 +215,13 @@ const FWCoreGame = (() => {
         v.highlight(false);
         v.setPaused(false);
         v.onArrive = null;
+        /* The tag and the highlight were always cleared here; the chase speed
+           was not, and nothing else ever reset it. Only a fraud case flees, so
+           every vehicle left at FLEE_SPEED was a fraud case — measured over
+           twelve cases, the set of faster trucks was exactly the set that had
+           carried one, and the marks never decayed. The world is not allowed
+           to remember that. */
+        v.restoreBaseSpeed();
 
         const before = this.scoring;
         const severity = data.pattern ? data.pattern.severity : 'medium';
@@ -218,9 +235,11 @@ const FWCoreGame = (() => {
         const routes = FWVehicle.ambientRoutes(FWWorld.ZONE);
         v.setRoute(routes[Math.floor(Math.random() * routes.length)], true);
         v.clearTag();
+        this.lastCaseVehicle = v;
         this.caseVehicle = null;
         this.activeCase = null;
         this.phase = 'none';
+        FWVehicle.assertNoCaseResidue(this.vehicles, null);
 
         this.time.delayedCall(1500, () => this.startCase());
       }
@@ -242,8 +261,21 @@ const FWCoreGame = (() => {
 
         let body;
         if (data.type === 'fraud') {
-          const shown = this.revealedIndicatorObjects.length ? this.revealedIndicatorObjects : data.indicators;
-          const cm = FW.bestCountermeasure(data.pattern, shown);
+          /* `shown` used to fall back to `data.indicators` when the player had
+             surfaced nothing, and the list was still headed "Clues you
+             surfaced". A player who decided cold was shown the full clue set
+             under a heading crediting them with finding it, the honest
+             "None — you decided cold" branch below could therefore never
+             render, and the countermeasure was derived from evidence the
+             player never obtained. Measured: a cold decision listed three
+             clues as surfaced and the empty branch never appeared once.
+             Surfaced and not-surfaced are two claims, so they are two lists,
+             each carrying its count against the case total. */
+          const all = data.indicators || [];
+          const surfaced = this.revealedIndicatorObjects;
+          const surfacedSignals = new Set(surfaced.map(i => i.signal));
+          const notSurfaced = all.filter(i => !surfacedSignals.has(i.signal));
+          const cm = FW.bestCountermeasure(data.pattern, surfaced);
           body = `
             <div class="flex items-center gap-2 mb-2">
               <span class="badge" style="background:${FW.categoryColor(data.pattern.category)}22;color:${FW.categoryColor(data.pattern.category)}">${data.pattern.category.replace('_', ' ')}</span>
@@ -251,10 +283,13 @@ const FWCoreGame = (() => {
             </div>
             <h3 class="text-lg font-bold text-white mb-1">${data.pattern.name}</h3>
             <p class="text-sm text-slate-400 mb-3">${data.pattern.summary}</p>
-            <p class="text-xs text-slate-500 uppercase mb-1">Clues you surfaced</p>
-            <ul class="text-sm text-slate-300 space-y-1 mb-3">${shown.map(i => `<li>• ${i.signal}</li>`).join('') || '<li class="text-slate-500">None — you decided cold.</li>'}</ul>
-            <p class="text-xs text-slate-500 uppercase mb-1">Would have caught it (${cm.bucket})</p>
-            <p class="text-sm text-sky-300">${cm.text}</p>`;
+            <p class="text-xs text-slate-500 uppercase mb-1">Clues you surfaced (${surfaced.length} of ${all.length} this case carried)</p>
+            <ul class="text-sm text-slate-300 space-y-1 mb-3">${surfaced.map(i => `<li>• ${i.signal}</li>`).join('') || '<li class="text-slate-500">None — you decided cold.</li>'}</ul>
+            ${notSurfaced.length ? `<p class="text-xs text-slate-500 uppercase mb-1">Clues you did not surface (${notSurfaced.length} of ${all.length})</p>
+            <ul class="text-sm text-slate-400 space-y-1 mb-3">${notSurfaced.map(i => `<li>• ${i.signal}</li>`).join('')}</ul>` : ''}
+            <p class="text-xs text-slate-500 uppercase mb-1">${cm.derived ? `Would have caught it (${cm.bucket} countermeasure)` : `A ${cm.bucket} countermeasure for this pattern`}</p>
+            <p class="text-sm text-sky-300">${cm.text}</p>
+            <p class="text-[11px] text-slate-500 mt-1">${cm.basis}</p>`;
         } else if (!data.decoy) {
           body = `<p class="text-sm text-slate-400">No pattern in the generator's script for this one, and no borrowed clue either. Nothing to compare a call against.</p>`;
         } else {

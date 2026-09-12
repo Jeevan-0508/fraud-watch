@@ -153,16 +153,47 @@ const FW = (() => {
     return { pattern: p, fp };
   }
 
-  // Countermeasure that "would have caught it": prefer the phase of the
-  // highest-weight indicator actually shown to the player (pre_award ->
-  // preventive, in_transit -> detective, post_event -> responsive).
+  /* Countermeasure keyed to the phase of the heaviest clue the player actually
+     surfaced (pre_award -> preventive, in_transit -> detective, post_event ->
+     responsive). The bucket is picked from the heaviest clue the player actually surfaced.
+     With nothing surfaced, `byWeight` is undefined and the bucket silently
+     falls back to 'detective' — a default, not a reading of anything. The
+     caller was rendering it either way as "Would have caught it (detective)",
+     so a fallback read as a finding. The returned object now declares which of
+     the two it is, and how much it was derived from. */
+  const CM_DEFAULT_BUCKET = 'detective';
+
   function bestCountermeasure(pattern, shownIndicators) {
     const phaseMap = { pre_award: 'preventive', in_transit: 'detective', post_event: 'responsive' };
-    const byWeight = [...shownIndicators].sort((a, b) => b.weight - a.weight)[0];
-    const bucket = phaseMap[byWeight?.phase] || 'detective';
-    const list = pattern.countermeasures[bucket] && pattern.countermeasures[bucket].length
-      ? pattern.countermeasures[bucket] : pattern.countermeasures.detective;
-    return { bucket, text: list[Math.floor(Math.random() * list.length)] };
+    const shown = shownIndicators || [];
+    const byWeight = [...shown].sort((a, b) => b.weight - a.weight)[0];
+    const derived = !!(byWeight && phaseMap[byWeight.phase]);
+    /* If the derived bucket has no entries for this pattern the text is taken
+       from the default bucket, and `bucket` used to keep naming the bucket the
+       text did NOT come from. No pattern in the shipped taxonomy is missing a
+       bucket today, so this has never fired — but a label that can name the
+       wrong source is a defect whether or not it is reachable. `bucket` now
+       always names where the text came from and `requestedBucket` keeps the
+       derivation visible. */
+    const requestedBucket = derived ? phaseMap[byWeight.phase] : CM_DEFAULT_BUCKET;
+    const requested = pattern.countermeasures[requestedBucket];
+    const substituted = !(requested && requested.length);
+    const list = substituted ? pattern.countermeasures[CM_DEFAULT_BUCKET] : requested;
+    return {
+      bucket: substituted ? CM_DEFAULT_BUCKET : requestedBucket,
+      requestedBucket,
+      text: list[Math.floor(Math.random() * list.length)],
+      derived,
+      substituted,
+      basedOn: shown.length,
+      basis: derived
+        ? 'Chosen from the heaviest of the ' + shown.length + ' clue' + (shown.length === 1 ? '' : 's') + ' you surfaced.'
+        : (shown.length
+            ? 'No clue you surfaced carries a phase, so this is the default ' + CM_DEFAULT_BUCKET + ' bucket, not a reading of your checks.'
+            : 'You surfaced no clues, so this is the default ' + CM_DEFAULT_BUCKET + ' bucket. It is not derived from anything you found.')
+        + (substituted ? ' This pattern lists no ' + requestedBucket + ' countermeasure, so the text below is a ' + CM_DEFAULT_BUCKET + ' one.' : ''),
+      DEFAULT_BUCKET: CM_DEFAULT_BUCKET
+    };
   }
 
   function categoryColor(cat) { return CATEGORY_COLOR[cat] || '#94a3b8'; }
