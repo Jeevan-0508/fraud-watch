@@ -293,7 +293,7 @@ const FWEntityInspector = (() => {
       </div>
       <p class="text-[10px] text-amber-300/80 mt-1">${FWEntityEngine.statusNote('trailer')}</p>
       <p class="text-[10px] text-amber-300/80 mt-1">${FWEntityEngine.statusNote('carrier')}</p>
-      <p class="text-[10px] text-slate-500 mt-1">The stage in the title is the one status field whose whole vocabulary is reachable: ${vocab.rows.filter(r => r.kind === 'truck')[0].held.length} of ${FWEntityEngine.declaredStatuses('truck').length} stages are held by some movement right now, which is a stage nothing is in at the moment and not a stage that cannot happen. Across all six entity kinds ${vocab.writableTotal} of ${vocab.declaredTotal} declared status values are reachable at all.</p>
+      <p class="text-[10px] text-slate-500 mt-1">The stage in the title is the one status field whose whole vocabulary is reachable: ${vocab.rows.filter(r => r.kind === 'truck')[0].held.length} of ${FWEntityEngine.declaredStatuses('truck').length} stages are held by some movement right now, which is a stage nothing is in at the moment and not a stage that cannot happen. Across all six entity kinds ${vocab.writableTotal} of ${vocab.declaredTotal} declared status values are reachable at all, ${vocab.namedNowhereTotal} are assigned by no line of this program and ${vocab.namedAtAWriteSiteTotal} named at a write site and never produced. Reachability is read out of a declaration about this program's own source, and ${FWEntityEngine.writableCheckState().state === 'CHECKED' ? 'that declaration has been compared to the source in this session' : 'nothing here has compared that declaration to the source in this session'}.</p>
     </div>`;
 
     const signalsHtml = `<div>

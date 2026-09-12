@@ -316,6 +316,16 @@ const FWSimDebug = (() => {
     const guardSpan = guards
       ? `<span class="basis-full text-slate-600 italic">${guards.note}</span>`
       : '';
+    /* And the register those reachability figures are read out of. `writable`
+       is a claim about the source code and nothing in a page can read the
+       source tree, so in a browser this line always reports the check as not
+       run -- which is the point: the figures are derived from a declaration,
+       and whether that declaration has been compared to a line of the codebase
+       is a separate fact the reader is entitled to. */
+    const wstate = window.FWEntityEngine ? FWEntityEngine.writableCheckState() : null;
+    const writableSpan = wstate
+      ? `<span class="basis-full text-slate-600 italic">${wstate.note}</span>`
+      : '';
     const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
       <span>${summary.totalSignatures} distinct behavior patterns seen</span>
       ${classSpans}
@@ -324,6 +334,7 @@ const FWSimDebug = (() => {
       ${floorSpan}
       ${reconSpan}
       ${guardSpan}
+      ${writableSpan}
     </div>`;
 
     if (!mos.length) {

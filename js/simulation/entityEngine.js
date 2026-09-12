@@ -32,7 +32,12 @@ const FWEntityEngine = (() => {
 
      Three different facts, deliberately kept apart:
        declared -- values the vocabulary permits
-       writable -- values some line of this codebase actually assigns
+       writable -- values an entity in this simulation can end up HOLDING.
+                   Not "values a line names": the shipment factory names
+                   BOOKED and no consignment is ever BOOKED, because the one
+                   construction site passes ASSIGNED. reconcileWritable()
+                   below measures the difference against the source instead
+                   of leaving it to this sentence.
        held     -- values entities in a given registry carry right now
      declared is a superset of writable, which is a superset of held. A
      status is only an observation about the world inside `writable`.
@@ -92,6 +97,315 @@ const FWEntityEngine = (() => {
       doesNotMean: 'anything about risk. This is the one status field whose whole declared vocabulary is reachable -- behaviorEngine walks the list in order -- so a stage not present in a registry is a stage nothing is in right now, not a stage that cannot happen.'
     }
   };
+
+  /* ======================================================================
+     CONVENTIONS 42 AND 43, TURNED ON THIS MODULE'S OWN REGISTER.
+
+     `writable` above is a claim about the SOURCE CODE, and for fifteen slices
+     nothing had ever compared it to a line of the codebase. Every check on it
+     was internal and passes unchanged if it names a value nothing writes or
+     omits one something does: assertLifecycleVocabulary holds `writable`
+     inside `declared` and the spawn value inside `writable`; heldStatuses
+     holds `held` inside `declared`. Meanwhile three modules make a decision
+     off it -- facilityEngine.siteEligibility, exposureModel's
+     consignmentStatusIsReachableOnly, behaviorEngine's carrierClauseNarrows --
+     and formatStatus prints "the only reachable of 3 declared" on screen.
+
+     Measured by scanStatusWrites() over all 50 source files:
+       facility / carrier / driver / trailer -- the scan agrees exactly.
+       shipment -- the scan finds BOOKED at a write site (the factory default)
+         and `writable` does not list it. Both were right about different
+         things and both were being said in one sentence: no line PRODUCES a
+         BOOKED consignment, because the one construction site passes
+         ASSIGNED, but a line does NAME it, so "declared and never issued by
+         any code path" was false as written. LOADED, DELIVERED, DELAYED and
+         CANCELLED are named nowhere but in the declaration above. Two
+         different absences; this register keeps them apart.
+       truck -- writableIsWholeVocabulary claims all 9 values are reachable and
+         the scan resolves exactly ONE of them, the factory default. The other
+         two write sites are `truck.status = LIFECYCLE[0]` and
+         `truck.status = to`, both variables. The one kind that claims full
+         reachability is the kind a source scan can say almost nothing about,
+         so it is reported UNRESOLVED_BY_SCAN rather than as agreement, and the
+         claim rests where it already did -- on the mirror check against
+         FWBehaviorEngine.LIFECYCLE below, which is a real check of a
+         different thing.
+
+     What the scan REFUSES to do: attribute a write to an entity kind by the
+     VALUE written. moEngine writes `status` on a case with DISMISSED and NEW
+     and mo-intelligence names seven more; those are a different vocabulary
+     that shares token shape with this one, and the identity between the two
+     spaces does not exist. Attribution is by the target identifier naming a
+     kind, or by the enclosing create<Kind> call -- never by the token. Sites
+     that resolve to no kind are COUNTED as unattributed, not dropped, because
+     "the scan found these values" reads as coverage either way.
+
+     Reads are NOT re-derived here. A declared value that some filter compares
+     against while nothing can ever write it is a real and worse fault, and it
+     already has an owner: assertStatusLiteral (this module) checks the literal
+     is declared, and facilityEngine.siteEligibility reports the count it
+     therefore excludes. Duplicating that here would put two answers to one
+     question in two modules. Where a value has such a reader, this register
+     cites it rather than deriving it.
+     ====================================================================== */
+  const ABSENCE_KINDS = {
+    NAMED_NOWHERE: 'The value appears in no source file except the declaration above. Nothing assigns it and ' +
+      'nothing compares against it: it is vocabulary the codebase carries and does not use.',
+    NAMED_AT_A_WRITE_SITE: 'A line of this codebase names the value at a real write expression, and no entity ' +
+      'ever holds it, because every caller of that write supplies a different value. The write site is not dead ' +
+      'code and the value is not reachable, so neither "never issued" nor "writable" is true of it on its own.'
+  };
+
+  /* Declared, then checked against the source both directions by
+     reconcileWritable(). 13 entries, one for every value in the derived
+     neverWritten() sets -- the reconciliation asserts that count, so a value
+     that becomes reachable or unreachable cannot leave this register stale. */
+  const STATUS_ABSENCE = {
+    facility: {
+      REDUCED: { kind: 'NAMED_NOWHERE' },
+      CLOSED: { kind: 'NAMED_NOWHERE',
+        readBy: 'facilityEngine.SITE_INELIGIBLE_STATUSES -- a site-eligibility filter tests for this value, so it ' +
+          'excludes nothing while reading as a rule. siteEligibility() reports that as a count; it is not re-derived here.' }
+    },
+    carrier: {
+      SUSPENDED: { kind: 'NAMED_NOWHERE' },
+      UNDER_REVIEW: { kind: 'NAMED_NOWHERE' }
+    },
+    driver: { CHECKED_OUT: { kind: 'NAMED_NOWHERE' } },
+    trailer: {
+      IN_TRANSIT: { kind: 'NAMED_NOWHERE' },
+      SWAPPED: { kind: 'NAMED_NOWHERE' }
+    },
+    shipment: {
+      BOOKED: { kind: 'NAMED_AT_A_WRITE_SITE', site: 'simulation/entities/shipment.js',
+        why: 'the factory default. entityEngine.seedPort is the only construction site and it passes ASSIGNED, so ' +
+          'the default is evaluated and never produced.' },
+      LOADED: { kind: 'NAMED_NOWHERE' },
+      IN_TRANSIT: { kind: 'NAMED_NOWHERE' },
+      DELIVERED: { kind: 'NAMED_NOWHERE' },
+      DELAYED: { kind: 'NAMED_NOWHERE' },
+      CANCELLED: { kind: 'NAMED_NOWHERE' }
+    },
+    truck: {}
+  };
+
+  // Not a throw: a doctored table can produce an absence this register has
+  // never seen, and the caller (statusNote) has to be able to say so.
+  function absenceKind(kind, status) {
+    const row = (STATUS_ABSENCE[kind] || {})[status];
+    return row ? row.kind : 'UNDECLARED_ABSENCE';
+  }
+
+  /* The four ways a status value gets written in this codebase. A scan that
+     reported only the ones it can resolve would read as a complete list. */
+  const WRITE_CHANNELS = {
+    FACTORY_DEFAULT: 'status: opts.status || \'X\' inside simulation/entities/<kind>.js. Kind comes from the file ' +
+      'name. Names a value; produces it only when the caller passes nothing.',
+    FACTORY_OPTION: 'a status: property in an object literal, attributed to the kind of the nearest enclosing ' +
+      'create<Kind>( call within 12 lines. Unattributed if there is none.',
+    DIRECT_LITERAL: 'target.status = \'X\'. Kind comes from the target identifier containing a kind name ' +
+      '(oldDriver, newTrailer). Unattributed if it names none.',
+    DIRECT_UNRESOLVED: 'target.status = someVariable. The scan cannot resolve the value at all. Counted, never ' +
+      'read as writing nothing.'
+  };
+
+  /* A token scan over source text, which cannot tell code from a comment or
+     from a template literal rendering the word `status:` into a paragraph. So
+     comment content is blanked (line counts preserved) and the number of sites
+     that disappeared with it is REPORTED; anything left whose value will not
+     resolve is counted as unresolved rather than guessed at.
+     `sources` is a plain object of path -> text, handed in, because a module
+     in a browser cannot read its own source tree. */
+  function scanStatusWrites(sources) {
+    if (!sources || typeof sources !== 'object' || !Object.keys(sources).length) {
+      throw new Error('entityEngine.scanStatusWrites: no sources given. This check reads the codebase; with no ' +
+        'source text it would report every declared writable value as unconfirmed and nothing as wrong');
+    }
+    const decomment = (src) => {
+      let out = String(src).replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '));
+      return out.split(/\r?\n/).map(L => {
+        const i = L.indexOf('//');
+        if (i < 0) return L;
+        const before = L.slice(0, i);
+        const odd = (ch) => ((before.split(ch).length - 1) % 2) === 1;
+        return (odd('\'') || odd('"') || odd('`')) ? L : before;
+      }).join('\n');
+    };
+    const SITE_RE = /(?:^|[{,(\s])status:\s*([^,\n}]+)|([A-Za-z_$][\w$]*)\.status\s*=\s*([^=;]+);/g;
+    const sites = [];
+    let droppedWithComments = 0;
+    Object.keys(sources).forEach(file => {
+      const rawCount = (String(sources[file]).match(SITE_RE) || []).length;
+      const lines = decomment(sources[file]).split(/\n/);
+      let kept = 0;
+      const factoryKind = (file.match(/entities\/(\w+)\.js$/) || [])[1];
+      lines.forEach((line, i) => {
+        let m;
+        SITE_RE.lastIndex = 0;
+        while ((m = SITE_RE.exec(line))) {
+          kept++;
+          const isDirect = m[2] !== undefined;
+          const raw = (isDirect ? m[3] : m[1]).trim();
+          const lit = (raw.match(/^'([A-Z_]+)'$/) || raw.match(/^opts\.status\s*\|\|\s*'([A-Z_]+)'$/) || [])[1] || null;
+          let kind = null, channel;
+          if (isDirect) {
+            const t = m[2].toLowerCase();
+            kind = KINDS.filter(k => t.indexOf(k) >= 0)[0] || null;
+            channel = lit ? 'DIRECT_LITERAL' : 'DIRECT_UNRESOLVED';
+          } else if (factoryKind && KINDS.indexOf(factoryKind) >= 0) {
+            kind = factoryKind;
+            channel = 'FACTORY_DEFAULT';
+          } else {
+            channel = 'FACTORY_OPTION';
+            for (let b = i; b >= Math.max(0, i - 12); b--) {
+              const mm = lines[b].match(/create([A-Z]\w+)\s*\(/);
+              if (mm) {
+                const k = mm[1].toLowerCase();
+                if (KINDS.indexOf(k) >= 0) kind = k;
+                break;
+              }
+            }
+          }
+          sites.push({ file, line: i + 1, channel, kind, value: lit, expression: raw });
+        }
+      });
+      droppedWithComments += rawCount - kept;
+    });
+    const byKind = {};
+    KINDS.forEach(k => {
+      const mine = sites.filter(x => x.kind === k);
+      byKind[k] = {
+        kind: k,
+        sites: mine.length,
+        resolvedValues: Array.from(new Set(mine.filter(x => x.value).map(x => x.value))).sort(),
+        unresolvedSites: mine.filter(x => !x.value).map(x => x.file + ':' + x.line + ' -> ' + x.expression)
+      };
+    });
+    return {
+      files: Object.keys(sources).length,
+      sites: sites.length,
+      byKind,
+      unattributed: sites.filter(x => !x.kind).length,
+      unresolvedValues: sites.filter(x => !x.value).length,
+      droppedWithComments,
+      allSites: sites,
+      note: sites.length + ' write sites over ' + Object.keys(sources).length + ' files; ' +
+        sites.filter(x => !x.kind).length + ' name no entity kind and are attributed to none, ' +
+        sites.filter(x => !x.value).length + ' write a value this scan cannot resolve, and ' +
+        droppedWithComments + ' more were inside comments and dropped.'
+    };
+  }
+
+  const WRITABLE_AGREEMENT = {
+    AGREES: 'Every value the scan resolves for this kind is listed writable, and every writable value was found.',
+    NAMED_NOT_PRODUCED: 'The scan found a value at a write site that is not listed writable, and the difference is ' +
+      'declared in STATUS_ABSENCE as NAMED_AT_A_WRITE_SITE.',
+    UNRESOLVED_BY_SCAN: 'The scan resolved fewer values than this kind claims writable and the remaining write ' +
+      'sites write variables, so the scan neither confirms nor contradicts the claim. This is not agreement.'
+  };
+
+  let writableChecked = null;
+
+  /* Both directions, and every branch reachable from a caller: `sources` and
+     `table` are both injectable, so a doctored register or a doctored codebase
+     can be handed in to show this guard can fire. */
+  function reconcileWritable(sources, table) {
+    const scan = scanStatusWrites(sources);
+    const rows = KINDS.map(kind => {
+      const writable = writableStatuses(kind, table);
+      const found = scan.byKind[kind].resolvedValues;
+      const notListed = found.filter(v => writable.indexOf(v) < 0);
+      const notFound = writable.filter(v => found.indexOf(v) < 0);
+      const unresolved = scan.byKind[kind].unresolvedSites;
+      notListed.forEach(v => {
+        if (absenceKind(kind, v) !== 'NAMED_AT_A_WRITE_SITE') {
+          throw new Error('entityEngine.reconcileWritable: a line of this codebase writes ' + v + ' to a ' + kind +
+            '.status and the vocabulary neither lists it writable nor declares it in STATUS_ABSENCE as named at a ' +
+            'write site. Every figure derived from writable is wrong by one value and reads as a measurement');
+        }
+        if (declaredStatuses(kind, table).indexOf(v) < 0) {
+          throw new Error('entityEngine.reconcileWritable: a line of this codebase writes ' + v + ' to a ' + kind +
+            '.status and it is not a declared ' + kind + ' status at all');
+        }
+      });
+      if (notFound.length && !unresolved.length) {
+        throw new Error('entityEngine.reconcileWritable: ' + kind + ' lists ' + notFound.join(', ') + ' as writable ' +
+          'and the scan found no write site naming ' + (notFound.length === 1 ? 'it' : 'them') + ' and no ' +
+          'unresolved write site that could. A value nothing assigns is being counted as reachable');
+      }
+      return {
+        kind,
+        agreement: notFound.length ? 'UNRESOLVED_BY_SCAN' : (notListed.length ? 'NAMED_NOT_PRODUCED' : 'AGREES'),
+        writable, found, notListed, notFound,
+        unresolvedSites: unresolved,
+        resolvedOfWritable: writable.filter(v => found.indexOf(v) >= 0).length + ' of ' + writable.length
+      };
+    });
+
+    // The absence register against the derived sets, both directions.
+    KINDS.forEach(kind => {
+      const gap = neverWritten(kind, table);
+      const declaredRows = Object.keys(STATUS_ABSENCE[kind] || {});
+      const undeclared = gap.filter(v => declaredRows.indexOf(v) < 0);
+      if (undeclared.length) {
+        throw new Error('entityEngine.reconcileWritable: ' + kind + ' status ' + undeclared.join(', ') +
+          ' is unreachable and STATUS_ABSENCE does not say which kind of absence it is; a value nothing writes and ' +
+          'a value a line names and never produces are different facts and were reported in one sentence');
+      }
+      const stale = declaredRows.filter(v => gap.indexOf(v) < 0);
+      if (stale.length) {
+        throw new Error('entityEngine.reconcileWritable: STATUS_ABSENCE declares ' + kind + ' status ' +
+          stale.join(', ') + ' unreachable and it is reachable now; a stale absence reads as a measurement');
+      }
+      declaredRows.forEach(v => {
+        const row = STATUS_ABSENCE[kind][v];
+        if (!ABSENCE_KINDS[row.kind]) {
+          throw new Error('entityEngine.reconcileWritable: ' + kind + '.' + v + ' declares absence kind ' +
+            row.kind + ', which is not one of ' + Object.keys(ABSENCE_KINDS).join('|'));
+        }
+        const namedSomewhere = scan.allSites.some(x => x.value === v && x.kind === kind);
+        if (row.kind === 'NAMED_AT_A_WRITE_SITE' && !namedSomewhere) {
+          throw new Error('entityEngine.reconcileWritable: ' + kind + '.' + v + ' is declared as named at a write ' +
+            'site and the scan found no write site naming it. The declaration is the only evidence for it');
+        }
+        /* The opposite direction -- declared NAMED_NOWHERE while a write site
+           names it -- was written here as a second check and cannot fire: to
+           reach this loop the value has to be in neverWritten (so not writable)
+           and named at a write site, which is precisely the case the throw in
+           the rows loop above refuses, and it refuses it whatever this register
+           says. One fault, one owner; the check that could not fire was removed
+           rather than left in to read as a second layer of protection. */
+      });
+    });
+
+    const state = {
+      state: 'CHECKED',
+      scan,
+      rows,
+      agreementCounts: ['AGREES', 'NAMED_NOT_PRODUCED', 'UNRESOLVED_BY_SCAN']
+        .reduce((a, k) => Object.assign(a, { [k]: rows.filter(r => r.agreement === k).length }), {}),
+      absenceRows: KINDS.reduce((a, k) => a + Object.keys(STATUS_ABSENCE[k] || {}).length, 0),
+      tableChecked: table ? 'SUPPLIED' : 'THE MODULE\'S OWN',
+      note: rows.filter(r => r.agreement === 'AGREES').length + ' of ' + KINDS.length + ' kinds have every writable ' +
+        'value confirmed at a write site in the source. ' +
+        rows.filter(r => r.agreement === 'UNRESOLVED_BY_SCAN').map(r => r.kind + ' resolves ' + r.resolvedOfWritable +
+          ' and writes the rest through a variable, so its claim is neither confirmed nor contradicted here').join('; ') + '.'
+    };
+    if (!table) writableChecked = state;
+    return state;
+  }
+
+  /* Convention 42: this check cannot run at load, because a module in a page
+     cannot read the source tree it was parsed from. So whether it has EVER run
+     is a fact about this build and is readable, rather than being assumed by
+     anyone reading the register. */
+  function writableCheckState() {
+    return writableChecked
+      ? { state: 'CHECKED', note: 'The writable lists were reconciled against the source: ' + writableChecked.note }
+      : { state: 'NOT_CHECKED_SOURCES_ABSENT', note: 'The writable lists have NOT been reconciled against the ' +
+          'source in this process. Nothing here has been shown to name a value a line of this codebase writes. ' +
+          'That is the absence of a check, not a clean one.' };
+  }
 
   /* `table` exists so this vocabulary can be checked against a DOCTORED copy of
      itself. The guard below reads nothing but these helpers, so with no way to
@@ -166,11 +480,20 @@ const FWEntityEngine = (() => {
     const declaredTotal = rows.reduce((a, r) => a + r.declared.length, 0);
     const writableTotal = rows.reduce((a, r) => a + r.writable.length, 0);
     const neverWrittenTotal = rows.reduce((a, r) => a + r.neverWritten.length, 0);
+    const namedAtAWriteSite = rows.reduce((a, r) =>
+      a + r.neverWritten.filter(st => absenceKind(r.kind, st) === 'NAMED_AT_A_WRITE_SITE').length, 0);
     return {
       rows, declaredTotal, writableTotal, neverWrittenTotal,
       heldTotal: rows.reduce((a, r) => a + r.held.length, 0),
+      namedAtAWriteSiteTotal: namedAtAWriteSite,
+      namedNowhereTotal: neverWrittenTotal - namedAtAWriteSite,
+      /* Two counts, not one. `neverWrittenTotal` used to be reported as
+         'declared and never issued by any code path', which is false of the
+         one value a line does name and never produces. */
       note: writableTotal + ' of ' + declaredTotal + ' declared status values are reachable in this build; ' +
-        neverWrittenTotal + ' of ' + declaredTotal + ' are declared and never issued by any code path, so a status reading one of the reachable values is not evidence the unreachable ones were ruled out.'
+        (neverWrittenTotal - namedAtAWriteSite) + ' of ' + declaredTotal + ' are assigned by no line of this codebase and ' +
+        namedAtAWriteSite + ' more ' + (namedAtAWriteSite === 1 ? 'is named' : 'are named') + ' at a write site and never produced, so a status ' +
+        'reading one of the reachable values is not evidence the unreachable ones were ruled out.'
     };
   }
 
@@ -196,9 +519,24 @@ const FWEntityEngine = (() => {
 
   function statusNote(kind, table) {
     const v = statusVocabulary(kind, table);
-    const gap = v.neverWritten.length
-      ? 'Declared and never issued: ' + v.neverWritten.join(', ') + '. '
-      : 'Every declared value is reachable. ';
+    /* Both absences are enumerated, and they are not the same absence: a value
+       no line of this codebase assigns, and a value a line does name at a write
+       site that no construction ever produces. The second one was being
+       reported in the first one's words. Every unreachable value still appears
+       by name -- assertLifecycleVocabulary checks that against this output. */
+    const named = v.neverWritten.filter(st => absenceKind(kind, st) === 'NAMED_AT_A_WRITE_SITE');
+    const nowhere = v.neverWritten.filter(st => named.indexOf(st) < 0);
+    let gap;
+    if (!v.neverWritten.length) {
+      gap = 'Every declared value is reachable. ';
+    } else {
+      gap = '';
+      if (nowhere.length) gap += 'Declared and assigned by no line of this codebase: ' + nowhere.join(', ') + '. ';
+      if (named.length) {
+        gap += 'Named at a write site and never produced: ' + named.join(', ') +
+          ' -- the factory default, overridden at every construction site, so no ' + kind + ' ever holds it. ';
+      }
+    }
     return gap + 'This field means ' + v.means + '. It does not mean ' + v.doesNotMean;
   }
 
@@ -429,5 +767,7 @@ const FWEntityEngine = (() => {
   return { createRegistry, nextId, add, get, all, recordHistory, seedPort, plural, KINDS, PLURALS,
     LIFECYCLE_VOCABULARY, declaredStatuses, writableStatuses, neverWritten, statusVocabulary,
     heldStatuses, vocabularyCoverage, formatStatus, statusNote, assertStatusLiteral,
-    assertLifecycleVocabulary };
+    assertLifecycleVocabulary,
+    ABSENCE_KINDS, STATUS_ABSENCE, absenceKind, WRITE_CHANNELS, WRITABLE_AGREEMENT,
+    scanStatusWrites, reconcileWritable, writableCheckState };
 })();
