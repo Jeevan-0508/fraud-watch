@@ -147,18 +147,80 @@ const FWFalsePositiveEngine = (() => {
   }
   assertObservableBasisDeclared();
 
-  /* Two different claims live under the word "separable" and only the first was
-     ever measured. They are not the same claim and the weaker one is the one
-     the doc-comment above is written in. */
+  /* THREE different claims live under the word "separable" and for a long time
+     only the first was measured. They are not the same claim, they fail
+     independently, and the doc-comment above is written in the weakest of them.
+     Each one names the field that measures it and the form that throws on it,
+     and assertClaimsAreMeasured() checks that pairing in both directions at
+     load -- because a claim that exists only in the sentence explaining what
+     another claim does not cover is exactly how the third one went unmeasured. */
   const SEPARABILITY_CLAIMS = {
     TOTAL: {
       means: 'no value of this observable appears in both classes, so reading it classifies EVERY annotated event.',
-      doesNotMean: 'that reading it tells you nothing. It is the only claim `separable` and `separableBy` measure, and the only one that throws.'
+      doesNotMean: 'that reading it tells you nothing. This is the strongest of the three claims and the weakest test: it is defeated by a single event of the other class carrying the value.',
+      measuredBy: 'separable',
+      throwsVia: 'assertGroundTruthNotSeparable'
     },
     ONE_SIDED: {
       means: 'some value of this observable appears in one class only, so an event carrying that value is classified with certainty by shape alone.',
-      doesNotMean: 'that the generator leaks. At a small n, values seen in one class only are expected by chance: measured over 1,077 annotated events this is ZERO for all five observables, and over the 54 a live event log holds it is present in three of them. It is reported with its denominator and never thrown on, because the sample is the finding, not the generator.'
+      doesNotMean: 'that the generator leaks. At a small n, values seen in one class only are expected by chance: measured over 1,077 annotated events this is ZERO for all five observables, and over the 54 a live event log holds it is present in three of them. It is reported with its denominator and never thrown on, because the sample is the finding, not the generator.',
+      measuredBy: 'oneSidedFraudValues / oneSidedLegitValues',
+      throwsVia: null
+    },
+    /* THE THIRD CLAIM, AND THE ONE THE SENTENCE ABOVE ALREADY NAMED (Slice 68).
+       TOTAL's own `doesNotMean` said, in words, that its failing does not mean
+       reading the observable tells you nothing — and then nothing here measured
+       what it does tell you. Both claims above are claims about which VALUES a
+       class carries. Neither is a claim about how OFTEN. So a generator whose two
+       classes draw from exactly the same value set in wildly different proportions
+       satisfies both, and the throwing form passes it.
+
+       Measured, in a suite, on a set built to leak: 1,000 annotated events, two
+       values of `metadataKeys`, each carried by both classes, one 95% legitimate
+       and the other 95% fraudulent. `separableBy` came back EMPTY, `oneSidedBy`
+       came back EMPTY, the verdict came back NOT_SEPARABLE, and
+       assertGroundTruthNotSeparable did not throw -- on a set where reading that
+       one observable and guessing its majority class classifies 950 of the 1,000
+       events correctly. A guard never shown to catch the fault it is named for
+       had not been shown to work, and this is the case it missed.
+
+       This claim is about the majority-class classifier, which is the thing a
+       player actually does: see a shape, guess the class it usually is. It is
+       reported as a LIFT over the accuracy of ignoring the observable entirely
+       and always guessing the commoner class, because a set that is 65%
+       legitimate is already 65% classifiable by guessing "legitimate" every
+       time, and calling that a leak would charge the generator for its own
+       declared base rate. */
+    PREDICTIVE: {
+      means: 'reading this observable and guessing the class it is usually paired with classifies more of the set than ignoring it and always guessing the commoner class. The excess is the lift.',
+      doesNotMean: 'that any single event is classified with certainty, which is what TOTAL and ONE_SIDED are about. A lift of zero is the claim holding; a lift near the maximum possible is the answer key being readable off the shape most of the time without ever being certain once.',
+      measuredBy: 'predictiveAccuracy / baseRateAccuracy / predictiveLift',
+      throwsVia: 'assertGroundTruthNotPredictable'
     }
+  };
+
+  /* The threshold, and what kind of number it is. ASSUMED: nothing measured
+     this against a real dataset and nothing could -- it is a tolerance for
+     sampling noise in a simulation's own generator, not an estimate of
+     anything. Stated as a constant with a declared basis rather than left as a
+     literal inside the throwing form, which is where a number that decides
+     whether a claim may be made should not live (the same fault Slice 66 found
+     with the sample floor immediately below it). */
+  const MAX_PREDICTIVE_LIFT = 0.08;
+  const PREDICTIVE_LIFT_BASIS = {
+    basis: 'ASSUMED',
+    why: 'A design-intent tolerance for sampling noise, not a measured quantity. With five observables and a few hundred events, a majority-class classifier picks up a few points of lift from noise alone; a real leak of the kind this exists to catch measured 0.45 in the suite\'s own control. Nothing in the taxonomy or in any real dataset speaks to this number.',
+    appliesTo: 'the lift of a single shape observable over the base rate.',
+    // The floor is the same one the total-separability claim uses and is owned by
+    // MIN_ANNOTATED_FOR_SEPARABILITY, declared below this block. Named rather
+    // than interpolated: a second copy of a sample floor is how two floors happen.
+    sampleFloorOwner: 'MIN_ANNOTATED_FOR_SEPARABILITY'
+  };
+
+  const PREDICTIVE_VERDICTS = {
+    NOT_PREDICTIVE: 'the sample is large enough to read and no observable classifies more of it than the base rate by more than the declared tolerance.',
+    PREDICTIVE_BY: 'at least one observable classifies materially more of the set than always guessing the commoner class.',
+    NOT_READABLE_SAMPLE_TOO_SMALL: 'fewer annotated events than the declared minimum, so no lift is being claimed either way. This is a refusal, not a pass.'
   };
 
   const SEPARABILITY_VERDICTS = {
@@ -214,7 +276,26 @@ const FWFalsePositiveEngine = (() => {
         if (lc[v] === undefined) { osFv++; osFe += fc[v]; }
         if (fc[v] === undefined) { osLv++; osLe += lc[v]; }
       });
+      /* SEPARABILITY_CLAIMS.PREDICTIVE. The classifier is: read this
+         observable, answer with whichever class that value is commoner in.
+         Its accuracy is therefore the sum of the larger of the two counts at
+         each value. The comparison is against ignoring the observable and
+         always answering the commoner class overall -- anything less would
+         report the generator's own declared base rate as a leak. */
+      let bestSum = 0;
+      distinct.forEach(v => { bestSum += Math.max(lc[v] || 0, fc[v] || 0); });
+      const annN = legit.length + fraud.length;
+      const predictiveAccuracy = annN ? bestSum / annN : null;
+      const baseRateAccuracy = annN ? Math.max(legit.length, fraud.length) / annN : null;
+      const lift = predictiveAccuracy === null ? null : predictiveAccuracy - baseRateAccuracy;
       per[k] = { legitValues: a.length, fraudValues: b.length, overlap: overlap.length,
+        predictiveAccuracy: predictiveAccuracy, baseRateAccuracy: baseRateAccuracy,
+        predictiveLift: lift,
+        // Only an observable that can vary can carry the claim, same as above:
+        // a constant has one value, so its classifier IS the base rate and its
+        // lift is exactly zero by construction rather than by measurement.
+        predictive: lift !== null && OBSERVABLE_BASIS[k].varies === 'VARIES' && lift > MAX_PREDICTIVE_LIFT,
+        eventsClassified: bestSum, predictiveDenominator: annN,
         // `separable` is the TOTAL claim only (SEPARABILITY_CLAIMS.TOTAL). It is a
         // measurement, not a conclusion: read `verdict` for that.
         separable: a.length > 0 && b.length > 0 && overlap.length === 0,
@@ -230,6 +311,15 @@ const FWFalsePositiveEngine = (() => {
         fraudDenominator: fraud.length, legitDenominator: legit.length };
     });
     const separableBy = Object.keys(per).filter(k => per[k].separable);
+    const predictiveBy = Object.keys(per).filter(k => per[k].predictive);
+    /* The worst lift is reported whether or not it clears the tolerance, over
+       the observables that can carry the claim. A verdict of NOT_PREDICTIVE
+       with nothing beside it invites the reading that the lift was zero. */
+    let worstLift = null, worstObs = null;
+    Object.keys(per).forEach(k => {
+      if (!per[k].canSeparate || per[k].predictiveLift === null) return;
+      if (worstLift === null || per[k].predictiveLift > worstLift) { worstLift = per[k].predictiveLift; worstObs = k; }
+    });
     const readable = annotated.length >= MIN_ANNOTATED_FOR_SEPARABILITY;
     const oneSidedBy = Object.keys(per).filter(k => per[k].oneSidedFraudValues || per[k].oneSidedLegitValues);
     return {
@@ -246,6 +336,21 @@ const FWFalsePositiveEngine = (() => {
       minAnnotated: MIN_ANNOTATED_FOR_SEPARABILITY,
       verdict: !readable ? 'NOT_READABLE_SAMPLE_TOO_SMALL'
         : (separableBy.length ? 'SEPARABLE_BY' : 'NOT_SEPARABLE'),
+      /* The third claim gets its own verdict rather than being folded into the
+         one above, because the two can disagree and the interesting case is
+         exactly the one where they do: NOT_SEPARABLE with PREDICTIVE_BY is a
+         generator that classifies most of its own output without ever being
+         certain about one event of it. Gated on the same floor -- a lift read
+         off a handful of events is noise, and reporting it as a pass would be
+         the refusal-shaped-as-a-zero this module already refuses elsewhere. */
+      predictiveBy: predictiveBy,
+      maxPredictiveLift: MAX_PREDICTIVE_LIFT,
+      predictiveLiftBasis: PREDICTIVE_LIFT_BASIS.basis,
+      predictiveIsReadable: readable,
+      worstPredictiveLift: worstLift,
+      worstPredictiveObservable: worstObs,
+      predictiveVerdict: !readable ? 'NOT_READABLE_SAMPLE_TOO_SMALL'
+        : (predictiveBy.length ? 'PREDICTIVE_BY' : 'NOT_PREDICTIVE'),
       // The claim rests on three observables, not five. Declared count and
       // measured count are both reported, because a varying observable can
       // still come back constant in one sample.
@@ -308,6 +413,67 @@ const FWFalsePositiveEngine = (() => {
     return { state, note: notes[state], ceiling: c };
   }
 
+  /* Both directions, at load: a claim declared here with no field measuring it
+     is the fault this slice found -- PREDICTIVE was described in TOTAL's own
+     `doesNotMean` and measured nowhere for four slices. `measuredBy` names the
+     fields, and every field it names has to exist on a measured observable.
+     Runs against a synthetic pair of events rather than a live log, because
+     this module loads before anything has emitted one. */
+  function assertClaimsAreMeasured() {
+    const probe = shapeSeparability([
+      { type: 'GPS_SIGNAL_LOST', severity: 'warn', metadata: { groundTruth: { legitimate: true } } },
+      { type: 'ROUTE_DEVIATION', severity: 'warn', metadata: { groundTruth: { legitimate: false } } }
+    ]);
+    const anyObs = probe.observables[Object.keys(probe.observables)[0]] || {};
+    const missing = [];
+    Object.keys(SEPARABILITY_CLAIMS).forEach(name => {
+      const c = SEPARABILITY_CLAIMS[name];
+      if (!c.measuredBy) { missing.push(name + ' declares no measuring field'); return; }
+      c.measuredBy.split('/').map(f => f.trim()).forEach(f => {
+        if (!(f in anyObs)) missing.push(name + ' says it is measured by "' + f + '", which no observable carries');
+      });
+      if (c.throwsVia && typeof api[c.throwsVia] !== 'function') {
+        missing.push(name + ' says it throws via ' + c.throwsVia + ', which this module does not export');
+      }
+    });
+    if (missing.length) {
+      throw new Error('FWFalsePositiveEngine.assertClaimsAreMeasured: ' + missing.join('; ') +
+        '. A separability claim stated in prose and measured by nothing is how this module came to pass a set ' +
+        'it classified 95% of: the claim existed only in the sentence saying the other claim did not cover it.');
+    }
+    return { claims: Object.keys(SEPARABILITY_CLAIMS).length };
+  }
+
+  /* SEPARABILITY_CLAIMS.PREDICTIVE, throwing. Deliberately a separate function
+     from the one below rather than an extra branch inside it: the two claims
+     fail independently and a caller has to be able to say which one it is
+     asserting. Both refuse a sample below the floor rather than passing on it. */
+  function assertGroundTruthNotPredictable(events) {
+    const r = shapeSeparability(events);
+    if (r.annotated < MIN_ANNOTATED_FOR_SEPARABILITY) {
+      throw new Error('FWFalsePositiveEngine.assertGroundTruthNotPredictable: only ' + r.annotated +
+        ' annotated events — too few to read a lift off. A majority-class classifier on a handful of ' +
+        'events is fitted to the handful, so no lift is claimed either way.');
+    }
+    if (r.legitimate === 0 || r.fraudulent === 0) {
+      throw new Error('FWFalsePositiveEngine.assertGroundTruthNotPredictable: one class is empty (' +
+        r.legitimate + ' legitimate, ' + r.fraudulent + ' fraudulent), so the base rate is 1 and there is ' +
+        'no lift to have.');
+    }
+    if (r.predictiveBy.length) {
+      const worst = r.predictiveBy.map(k => k + ' (classifies ' + r.observables[k].eventsClassified + '/' +
+        r.observables[k].predictiveDenominator + ' = ' + (r.observables[k].predictiveAccuracy * 100).toFixed(1) +
+        '%, against ' + (r.observables[k].baseRateAccuracy * 100).toFixed(1) + '% for always guessing the ' +
+        'commoner class, lift ' + (r.observables[k].predictiveLift * 100).toFixed(1) + ' points)').join('; ');
+      throw new Error('FWFalsePositiveEngine.assertGroundTruthNotPredictable: the hidden answer key is ' +
+        'readable off event shape MOST OF THE TIME via ' + worst + ', over the declared tolerance of ' +
+        (MAX_PREDICTIVE_LIFT * 100).toFixed(1) + ' points. Every value may still be shared by both classes, ' +
+        'so the total-separability check passes this — reading the shape and guessing its usual class is what ' +
+        'a player would actually do, and here it works.');
+    }
+    return r;
+  }
+
   function assertGroundTruthNotSeparable(events) {
     const r = shapeSeparability(events);
     if (r.annotated < MIN_ANNOTATED_FOR_SEPARABILITY) {
@@ -328,9 +494,13 @@ const FWFalsePositiveEngine = (() => {
     return r;
   }
 
-  return { annotate, LEGITIMATE_CHANCE, CAUSES, assertCausesCoverTypes,
+  const api = { annotate, LEGITIMATE_CHANCE, CAUSES, assertCausesCoverTypes,
     shapeSeparability, assertGroundTruthNotSeparable, SHAPE_OBSERVABLES,
     OBSERVABLE_BASIS, OBSERVABLE_VARIABILITY, assertObservableBasisDeclared,
     SEPARABILITY_CLAIMS, SEPARABILITY_VERDICTS, MIN_ANNOTATED_FOR_SEPARABILITY,
-    POPULATIONS, annotatedCeiling, separabilityCheckState };
+    POPULATIONS, annotatedCeiling, separabilityCheckState,
+    MAX_PREDICTIVE_LIFT, PREDICTIVE_LIFT_BASIS, PREDICTIVE_VERDICTS,
+    assertGroundTruthNotPredictable, assertClaimsAreMeasured };
+  assertClaimsAreMeasured();
+  return api;
 })();

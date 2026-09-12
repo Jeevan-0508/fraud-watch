@@ -208,6 +208,35 @@ const FWCalibrationView = (() => {
     </div>`;
   }
 
+  /* WHICH CASES THESE PERCENTAGES CAN BE ABOUT (Slice 68). The line below this
+     block used to say only how many cases were excluded for having a mixed
+     record. That count is true and it is not the fact a reader needs: the
+     exclusion is decided by how many signals a case carries and by nothing
+     else, so it runs hardest against the biggest cases and the percentages
+     above are taken over the smallest ones. Rendered at the same weight as the
+     count it replaces, with the per-row denominators, and a share withheld on
+     any row too thin to carry one. */
+  function ambiguityBlock(cal) {
+    const a = cal.ambiguity;
+    if (!a) return '';
+    const rows = a.rows.filter(r => r.closures > 0).map(r => {
+      const share = r.decisiveShare === null
+        ? 'share withheld'
+        : Math.round(r.decisiveShare * 100) + '% counted';
+      return `<div class="flex justify-between gap-2"><span class="text-slate-400">${r.signals} signal${r.signals === 1 ? '' : 's'}</span>` +
+        `<span class="text-slate-500">${r.decisive} of ${r.closures} counted · ${r.ambiguous} left out · ${share}</span></div>`;
+    }).join('');
+    const arithmetic = a.chanceDeclared
+      ? `<div class="text-[10px] text-slate-500 mt-1">Expected chance of being left out, from the per-signal chance the simulation declares: ${[2, 3, 4, 6].map(n => n + ' signals ' + Math.round(FWOutcomeEngine.ambiguityChance(n) * 100) + '%').join(' · ')}. This is a property of the model, not of this run.</div>`
+      : `<div class="text-[10px] text-slate-500 mt-1">${a.note}</div>`;
+    return `<div class="mt-2 rounded border border-slate-700 bg-slate-900/60 p-2 space-y-1">
+      <div class="text-[11px] text-slate-300">Excluded from the ${cal.rates ? 'percentages' : 'counts'} above: ${cal.counts.AMBIGUOUS} case${cal.counts.AMBIGUOUS === 1 ? '' : 's'} whose record was mixed.</div>
+      <div class="text-[10px] text-slate-400">${a.sentence}</div>
+      ${a.state === 'MEASURED' ? `<div class="text-[10px] space-y-0.5 mt-1">${rows}</div>` : `<div class="text-[10px] text-slate-500">${a.note}</div>`}
+      ${arithmetic}
+    </div>`;
+  }
+
   function renderBody(cal) {
     if (!cal.totalClosed) {
       return `<p class="text-slate-600 text-xs italic">No cases closed yet. Close one as Confirm Fraud or Mark False Positive in the MO Intelligence Center and it will be checked against the simulation's record here.</p>`;
@@ -223,7 +252,7 @@ const FWCalibrationView = (() => {
         In line with the record: ${cal.counts.ALIGNED} · went past it: ${cal.counts.OVERCALLED} · stopped short: ${cal.counts.UNDERCALLED} · mixed record: ${cal.counts.AMBIGUOUS}
       </div>
       <div class="text-[10px] text-slate-500 italic">Percentages are withheld until ${cal.minSample} cases with an unmixed record have been decided — below that a rate would be noise dressed up as a measurement.</div>`
-      + examinationBlock(cal) + refusalsBlock();
+      + ambiguityBlock(cal) + examinationBlock(cal) + refusalsBlock();
     }
 
     const t = cal.decisiveCount;
@@ -231,7 +260,7 @@ const FWCalibrationView = (() => {
       bar('In line with the record', cal.counts.ALIGNED, t, 'bg-emerald-500') +
       bar('Went past the record (escalated something explained)', cal.counts.OVERCALLED, t, 'bg-orange-500') +
       bar('Stopped short of the record (cleared something unexplained)', cal.counts.UNDERCALLED, t, 'bg-amber-500') +
-      `<div class="text-[10px] text-slate-400 mt-2">Excluded from the rates above: ${cal.counts.AMBIGUOUS} case${cal.counts.AMBIGUOUS === 1 ? '' : 's'} whose record was mixed.</div>` +
+      ambiguityBlock(cal) +
       examinationBlock(cal) + refusalsBlock();
   }
 
