@@ -12,7 +12,7 @@
    whose name/category/aliases best resemble the kinds of signals
    observed. It never invents a new pattern and never claims the
    simulated signal literally IS a documented indicator -- the MO's
-   falsePositivePossibilities and patternCountermeasures are always pulled
+   falsePositives and patternCountermeasures are always pulled
    verbatim from that matched pattern's real taxonomy data, and are scoped on
    screen as facts about the pattern rather than recommendations about the
    case. If nothing shares a keyword, that is stated as a gap in the
@@ -548,6 +548,79 @@ const FWMoEngine = (() => {
     return notes;
   }
 
+  /* THE ONE LIST IN THIS APP THAT MUST NOT BE TRUNCATED, AND IT WAS.
+     `pattern.false_positives.slice(0, 2)` dropped a documented legitimate
+     explanation on 8 of the taxonomy's 12 patterns and said nothing -- while
+     the countermeasures beside it were also truncated, so the case showed two
+     reasons to act and two reasons to doubt from unequal pools, with neither
+     pool's size stated. This project's whole position is that a false positive
+     is first-class content, weighted equally, not a caveat: silently keeping
+     the first two is the equal-weighting rule failing quietly. Nothing is
+     dropped now, and the count is stated either way.
+
+     A pattern documenting none is a gap in the taxonomy's coverage, not a
+     finding that there are no innocent explanations -- the Slice 40 wording,
+     owed here too. */
+  const FALSE_POSITIVE_SCOPE = {
+    kind: 'PARAMETER',
+    scope: 'legitimate explanations the taxonomy documents for the resembled pattern',
+    means: 'ways this pattern is known to be mistaken for fraud, quoted verbatim, all of them.',
+    doesNotMean: 'an exhaustive list of every innocent explanation, a ranking, and not a finding that this case is or is not one of them.',
+    neverTruncated: true
+  };
+
+  function falsePositivesFor(pattern) {
+    if (!pattern) {
+      return {
+        patternId: null, patternName: null, items: [], documented: 0,
+        note: 'This case resembles no documented pattern, so no documented legitimate explanations are quoted here. ' +
+          'That is an absence of a documented pattern, not a finding that there is no innocent explanation \u2014 ' +
+          'a case nothing in the taxonomy matches is the one an innocent explanation is hardest to look up.'
+      };
+    }
+    const items = (pattern.false_positives || []).slice();
+    if (!items.length) {
+      return {
+        patternId: pattern.id, patternName: pattern.name, items: [], documented: 0,
+        note: 'The taxonomy documents no legitimate explanations for ' + pattern.name +
+          '. That is a gap in its coverage, not a finding that there are none.'
+      };
+    }
+    return {
+      patternId: pattern.id,
+      patternName: pattern.name,
+      items: items,
+      documented: items.length,
+      note: 'All ' + items.length + ' legitimate explanation' + (items.length === 1 ? '' : 's') +
+        ' the taxonomy documents for ' + pattern.name + ', none withheld. ' +
+        'They are ' + FALSE_POSITIVE_SCOPE.means + ' They are not ' + FALSE_POSITIVE_SCOPE.doesNotMean
+    };
+  }
+
+  /* The panel credited each vote to "indicator-keyword" matching. rankPatterns
+     votes over a pattern's name, category and aliases and never reads an
+     indicator -- the same false attribution to indicator data that Slice 40
+     found in signalEngine's header. And only the top 3 of however many patterns
+     scored were kept, with the number dropped never stated. */
+  const RESEMBLANCE_SHOWN = 3;
+
+  function resemblanceCoverage(ranked) {
+    const voted = (ranked || []).length;
+    const shown = Math.min(voted, RESEMBLANCE_SHOWN);
+    return {
+      voted: voted,
+      shown: shown,
+      withheld: voted - shown,
+      votedOver: 'each pattern\'s name, category and aliases',
+      note: voted === 0
+        ? 'No documented pattern shares a keyword with this signal combination.'
+        : 'Showing the ' + shown + ' strongest of ' + voted + ' documented pattern' + (voted === 1 ? ' that shares' : 's that share') +
+          ' a keyword with this combination' + (voted - shown > 0 ? ' (' + (voted - shown) + ' not shown)' : '') +
+          '. Votes are counted over ' + 'each pattern\'s name, category and aliases' +
+          ' \u2014 not over its documented indicators, which this engine never reads.'
+    };
+  }
+
   /* Printed as a bare "contribution 1.7" on every evidence row. It is the
      per-signal term of the sum the index is built from -- weight * reliability
      -- so once the index declared its unit (Slice 43) this number was the same
@@ -779,9 +852,10 @@ const FWMoEngine = (() => {
       activeSignals: signals.map(s => s.id),
       timeline: buildEvidence(signals).map(e => ({ t: e.at, type: e.signalType })),
       relatedPattern: pattern ? pattern.id : null,
-      relatedHistoricalPatterns: ranked.slice(0, 3).map(r => ({ id: r.pattern.id, name: r.pattern.name, votes: r.votes })),
+      relatedHistoricalPatterns: ranked.slice(0, RESEMBLANCE_SHOWN).map(r => ({ id: r.pattern.id, name: r.pattern.name, votes: r.votes })),
+      resemblanceCoverage: resemblanceCoverage(ranked),
       resemblanceNotes: resemblanceNotes(ranked, classification),
-      falsePositivePossibilities: pattern ? pattern.false_positives.slice(0, 2) : [],
+      falsePositives: falsePositivesFor(pattern),
       patternCountermeasures: recommendedActionsFor(pattern),
       evidence: buildEvidence(signals),
       firstObserved: Math.min(...signals.map(s => s.createdAt)),
@@ -934,6 +1008,7 @@ const FWMoEngine = (() => {
     siteBreakdown, applySites, SITE_SPREAD_NOTE,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
     RESEMBLANCE_NOTES, resemblanceNotes, COUNTERMEASURE_SCOPE, COUNTERMEASURE_BUCKETS,
+    FALSE_POSITIVE_SCOPE, falsePositivesFor, RESEMBLANCE_SHOWN, resemblanceCoverage,
     EVIDENCE_CONTRIBUTION, contributionScopes,
     CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
     CONFIDENCE_INDEX, indexNote, formatIndex, indexReach, indexBasis, assertIndexScaleDeclared,

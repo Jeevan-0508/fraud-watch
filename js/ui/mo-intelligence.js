@@ -12,9 +12,13 @@
    discovery classification, and nothing disappears just because its
    evidence faded or a status changed.
 
-   No fake intelligence (Phase 67): "historical pattern match" below is
-   explicitly labeled as an indicator-keyword vote count, not a
-   statistical/ML similarity score, because that's what it actually is. */
+   No fake intelligence (Phase 67): the pattern list below is explicitly
+   labelled a keyword vote count, not a statistical/ML similarity score,
+   because that is what it actually is. It said "indicator-keyword" for a
+   long time, which credited the count to the taxonomy's documented
+   indicators -- data rankPatterns never reads. The votes are counted over a
+   pattern's name, category and aliases, and that is now what is stated, next
+   to how many scoring patterns are not shown. */
 const FWMoIntelligence = (() => {
   let els = {};
   let statusFilter = 'ALL';
@@ -226,10 +230,15 @@ const FWMoIntelligence = (() => {
     if (!mo.relatedHistoricalPatterns || !mo.relatedHistoricalPatterns.length) {
       return `<div class="mb-2 text-[10px] text-slate-500 italic">No taxonomy pattern shares any keyword with this signal combination.</div>`;
     }
+    // "indicator-keyword vote" credited the count to indicator data this engine
+    // never reads. The vote is over name, category and aliases, and the number
+    // of patterns that scored but are not shown is now stated.
+    const cov = mo.resemblanceCoverage;
     const rows = mo.relatedHistoricalPatterns.map(p =>
-      `<li>${p.name} — ${p.votes} indicator-keyword vote${p.votes === 1 ? '' : 's'} (heuristic keyword match, not a statistical similarity score)</li>`
+      `<li>${p.name} — ${p.votes} keyword vote${p.votes === 1 ? '' : 's'} (heuristic keyword match, not a statistical similarity score)</li>`
     ).join('');
-    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Historical pattern match</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
+    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Documented patterns sharing vocabulary</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul>
+      ${cov ? `<div class="text-[9px] text-slate-500 italic mt-1">${cov.note}</div>` : ''}</div>`;
   }
 
   /* The heading used to read "What makes this different" over a list of
@@ -266,13 +275,21 @@ const FWMoIntelligence = (() => {
     </div>`;
   }
 
+  /* This section used to show the first two of however many the taxonomy
+     documented, drop the rest silently, and vanish altogether when there were
+     none. All of them now, the count stated, and an empty set stated as a gap
+     in the taxonomy's coverage rather than rendered as an absence of innocent
+     explanations. */
   function renderFalsePositives(mo) {
-    if (!mo.falsePositivePossibilities || !mo.falsePositivePossibilities.length) return '';
-    const rows = mo.falsePositivePossibilities.map(f => {
+    const fp = mo.falsePositives;
+    if (!fp) return '';
+    const rows = (fp.items || []).map(f => {
       if (typeof f === 'string') return `<li>${f}</li>`;
       return `<li><b>${f.looks_like || ''}</b> — actually: ${f.actually || ''} <i>(rule out: ${f.how_to_rule_out || ''})</i></li>`;
     }).join('');
-    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Possible legitimate explanations</div><ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul></div>`;
+    return `<div class="mb-2"><div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Possible legitimate explanations${fp.documented ? ` (${fp.documented})` : ''}</div>
+      ${rows ? `<ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5">${rows}</ul>` : ''}
+      <div class="text-[9px] text-slate-500 italic mt-1">${fp.note}</div></div>`;
   }
 
   function fmtEffort(seconds) {

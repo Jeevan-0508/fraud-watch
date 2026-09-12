@@ -292,7 +292,8 @@ const FWSimDebug = (() => {
       return;
     }
     els.moList.innerHTML = summaryHtml + mos.slice(0, 12).map(mo => {
-      const fp = (mo.falsePositivePossibilities || []).slice(0, 2)
+      const fpScope = mo.falsePositives || { items: [], note: '' };
+      const fp = (fpScope.items || [])
         .map(f => `<li>${typeof f === 'string' ? f : (f.looks_like || JSON.stringify(f))}</li>`).join('');
       const cm = mo.patternCountermeasures || { picks: [], note: '' };
       const actions = (cm.picks || []).map(a => `<li><span class="uppercase text-[9px] text-slate-600">${a.bucket}</span> ${a.text}</li>`).join('');
@@ -313,7 +314,8 @@ const FWSimDebug = (() => {
         <div class="text-[10px] text-slate-500 mb-1">${examinationLine(mo)}</div>
         ${related ? `<div class="text-[10px] text-slate-500 mb-1">Closest known patterns: ${related}</div>` : ''}
         ${diffs ? `<div class="text-[10px] text-slate-500">${diffs.replace(/<li>/g, '').replace(/<\/li>/g, ' ')}</div>` : ''}
-        ${fp ? `<div class="text-[10px] text-slate-500">Could be innocent: <ul class="list-disc list-inside">${fp}</ul></div>` : ''}
+        ${fp ? `<div class="text-[10px] text-slate-500">Could be innocent: <ul class="list-disc list-inside">${fp}</ul>${fpScope.note}</div>` : ''}
+        ${!fp && fpScope.note ? `<div class="text-[10px] text-slate-500">${fpScope.note}</div>` : ''}
         ${actions ? `<div class="text-[10px] text-slate-500">Countermeasures documented for ${cm.patternName}: <ul class="list-disc list-inside">${actions}</ul>${cm.note}</div>` : ''}
         ${!actions && cm.note ? `<div class="text-[10px] text-slate-500">${cm.note}</div>` : ''}
       </div>`;
