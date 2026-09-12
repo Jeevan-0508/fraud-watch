@@ -71,32 +71,60 @@ const FWBehaviorEngine = (() => {
     };
   }
 
-  function attachBehavior(truck, rng, registry) {
+  function attachBehavior(truck, rng, registry, ctx) {
     truck.behavior = {
       stageIndex: 0,
       stageElapsed: 0,
       stageDuration: rng.int(STAGE_DURATION_RANGE.min, STAGE_DURATION_RANGE.max)
     };
     truck.status = LIFECYCLE[0];
-    if (registry && window.FWFacilityEngine) {
-      const site = FWFacilityEngine.assignForStage(registry, truck.status, rng);
-      truck.facilityId = site ? site.id : null;
+    /* Slice 71: a truck starts its life ON a route, at that route's first
+       node, instead of at a site drawn from the stage table. The start is not
+       chosen to agree with DISPATCHED -- see journeyEngine.stageAgreement,
+       which counts how often it does not. */
+    if (window.FWJourneyEngine) {
+      const journey = FWJourneyEngine.assign(truck, rng);
+      if (ctx) FWJourneyEngine.recordAssignment(ctx.journeyTracker, journey);
     }
+    if (registry && window.FWFacilityEngine) relocate(truck, registry, rng, ctx);
     return truck.behavior;
   }
 
-  // Where the truck physically is for its current stage (Phase 5). Some
-  // stages are on a public road and belong to no site: null is the
-  // correct answer there, not a missing value to be filled in with the
-  // last site it touched.
-  function relocate(truck, registry, rng) {
+  /* WHERE THE TRUCK PHYSICALLY IS (Phase 5, rewritten by Slice 71).
+
+     This used to be `FWFacilityEngine.assignForStage(registry, status, rng)`:
+     a random eligible site for the stage, redrawn on every stage advance, so
+     two consecutive stages could put one truck at two sites with no road
+     between them. It is now resolved from the truck's journey -- the node it
+     is standing at, and the facility placed there.
+
+     null still happens, and now says which of four things it means
+     (journeyEngine.SITE_RESOLUTION): mid-leg on a public road, a node this
+     build seeds no facility at, a node whose facilities are all ineligible,
+     or a registry with no facilities. Callers must keep treating null as "no
+     site", never as "the last site it touched" -- see applyDisruption and
+     facilityEngine.record, both of which already do.
+
+     There is no fallback to the random draw. A fallback would be the second
+     position model this slice exists to remove, and the fallback is the branch
+     that ships when the load order is wrong. */
+  function relocate(truck, registry, rng, ctx) {
     if (!registry || !window.FWFacilityEngine) return null;
-    const site = FWFacilityEngine.assignForStage(registry, truck.status, rng);
-    truck.facilityId = site ? site.id : null;
-    return site;
+    if (!window.FWJourneyEngine) {
+      throw new Error('behaviorEngine.relocate: FWJourneyEngine is not loaded, so where a truck is cannot be ' +
+        'resolved. Drawing a random eligible site instead would be the teleporting position model Slice 71 removed.');
+    }
+    if (!truck.journey) {
+      const journey = FWJourneyEngine.assign(truck, rng);
+      if (ctx) FWJourneyEngine.recordAssignment(ctx.journeyTracker, journey);
+    }
+    const resolved = FWJourneyEngine.resolveSite(registry, truck, rng);
+    truck.facilityId = resolved.site ? resolved.site.id : null;
+    if (ctx) FWJourneyEngine.recordSite(ctx.journeyTracker, resolved.reason);
+    return resolved.site;
   }
 
-  function advanceStage(truck, rng, eventEngine, timestamp, registry) {
+  function advanceStage(truck, rng, eventEngine, timestamp, registry, ctx) {
     const b = truck.behavior;
     b.stageIndex = (b.stageIndex + 1) % LIFECYCLE.length; // loops: COMPLETED -> DISPATCHED (new trip)
     b.stageElapsed = 0;
@@ -104,7 +132,25 @@ const FWBehaviorEngine = (() => {
     const to = LIFECYCLE[b.stageIndex];
     const from = truck.status;
     truck.status = to;
-    const site = relocate(truck, registry, rng);
+    /* Slice 71: a stage advance is the only dispatch decision this build has,
+       so entering a stage worldGraph declares happens on a public road is what
+       makes a standing truck leave the node it is standing at. Without this a
+       node would be an instant rather than a place: a leg is 90-5920
+       sim-seconds and a stage is 300-900, so a truck would be mid-leg for
+       essentially its whole life (measured: 338 of 350 recorded disruptions
+       unsited, 5 of 9 sites ever seen). */
+    if (window.FWJourneyEngine && truck.journey && FWJourneyEngine.isRoadStage(to)) {
+      FWJourneyEngine.depart(truck, ctx ? ctx.journeyTracker : null);
+    }
+    const site = relocate(truck, registry, rng, ctx);
+    /* Slice 71 measures, rather than corrects, the drift between the lifecycle
+       and the journey: this stage advance may have landed the truck at a node
+       its new stage does not declare itself eligible at. The modulo cycle is
+       deliberately untouched here, so the disagreement is real and counted. */
+    if (ctx && window.FWJourneyEngine && truck.journey) {
+      FWJourneyEngine.recordAgreement(ctx.journeyTracker,
+        FWJourneyEngine.stageAgreement(truck.status, truck.journey));
+    }
     const metadata = { from, to, summary: `${from} -> ${to}` };
     if (site) { metadata.facilityId = site.id; metadata.facilityName = site.name; }
     const ev = FWEventEngine.emit(eventEngine, {
@@ -225,10 +271,21 @@ const FWBehaviorEngine = (() => {
 
     const trucks = FWEntityEngine.all(registry, 'truck');
     trucks.forEach(truck => {
-      if (!truck.behavior) attachBehavior(truck, rng, registry);
+      if (!truck.behavior) attachBehavior(truck, rng, registry, ctx);
       truck.behavior.stageElapsed += dtSeconds;
+      /* Slice 71: movement is driven by sim-time and the leg's own derived
+         duration, not by the stage cycle -- once dispatched (see advanceStage)
+         a truck keeps travelling until it reaches the next node, however many
+         stages that takes. A dwelling truck consumes no distance here.
+         Nothing in this slice reads or writes LIFECYCLE or the modulo cycle
+         that walks it. */
+      if (window.FWJourneyEngine && truck.journey) {
+        const moved = FWJourneyEngine.advance(truck, dtSeconds, rng, ctx.journeyTracker);
+        if (moved.journeysCompleted) FWJourneyEngine.recordAssignment(ctx.journeyTracker, truck.journey);
+        if (moved.nodeChanged) relocate(truck, registry, rng, ctx);
+      }
       if (truck.behavior.stageElapsed >= truck.behavior.stageDuration) {
-        emitted.push(advanceStage(truck, rng, eventEngine, timestamp, registry));
+        emitted.push(advanceStage(truck, rng, eventEngine, timestamp, registry, ctx));
       }
       if (DISRUPTION_ELIGIBLE_STAGES.has(truck.status) && rng.chance(chance)) {
         const type = hasShiftModel

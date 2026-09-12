@@ -25,8 +25,12 @@ const FWSimRunner = (() => {
     const outcomeEngine = FWOutcomeEngine.createEngine();
     const shiftTracker = window.FWShiftEngine ? FWShiftEngine.createTracker() : null;
     const facilityTracker = window.FWFacilityEngine ? FWFacilityEngine.createTracker() : null;
+    // Phase C: how far the trucks actually travelled, and how often the place
+    // they were standing at disagreed with what their lifecycle stage said.
+    const journeyTracker = window.FWJourneyEngine ? FWJourneyEngine.createTracker() : null;
     state = {
-      seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine, shiftTracker, facilityTracker,
+      seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine,
+      shiftTracker, facilityTracker, journeyTracker,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;
@@ -36,7 +40,8 @@ const FWSimRunner = (() => {
   // the real-time loop and fast-forward so both paths behave identically.
   function stepOnce(dtSeconds) {
     if (!state || dtSeconds <= 0) return null;
-    const { clock, registry, rng, eventEngine, signalEngine, moEngine, shiftTracker, facilityTracker } = state;
+    const { clock, registry, rng, eventEngine, signalEngine, moEngine,
+      shiftTracker, facilityTracker, journeyTracker } = state;
     const now = absoluteNow(clock);
     // Phase 37: the shift the port is actually in drives normal traffic
     // volume, which disruption types are plausible, and how much of what
@@ -44,7 +49,7 @@ const FWSimRunner = (() => {
     const shift = clock.shift();
     // Phase 5: where a movement is also drives whether what happens to
     // it gets recorded, so the site tracker rides along with the shift one.
-    const ctx = { shift, shiftTracker, facilityTracker };
+    const ctx = { shift, shiftTracker, facilityTracker, journeyTracker };
 
     const normalEvents = FWEventEngine.step(eventEngine, registry, now, dtSeconds, ctx);
     const disruptions = FWBehaviorEngine.step(registry, rng, eventEngine, now, dtSeconds, ctx).filter(Boolean);

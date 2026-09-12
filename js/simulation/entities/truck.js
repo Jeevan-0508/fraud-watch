@@ -14,10 +14,18 @@ const FWEntityTruck = (() => {
       driverId: opts.driverId || null,
       trailerId: opts.trailerId || null,
       assignedShipmentId: opts.assignedShipmentId || null,
-      location: opts.location || 'gate',
+      /* Slice 71: these four are written by journeyEngine.syncFields from the
+         truck's journey, and were written by nothing at all before it.
+         `location` used to default to 'gate' -- a place in no graph, no
+         registry and no vocabulary, which every truck reported for the whole
+         life of this project. It is now a worldGraph node id, or null while a
+         leg is in progress, which is the same fact null facilityId already
+         carries. Unknown stays unknown. */
+      location: opts.location || null,   // worldGraph node id, or null mid-leg
       facilityId: opts.facilityId || null, // which site it is standing in, null on a public road
-      route: opts.route || null,
-      destination: opts.destination || null,
+      route: opts.route || null,         // the ordered node ids of the current journey
+      destination: opts.destination || null, // the last node id of that route
+      journey: opts.journey || null,     // { routeId, direction, legIndex, legElapsed }
       status: opts.status || 'DISPATCHED',
       speed: opts.speed || 0,
       lastCheckpoint: null,

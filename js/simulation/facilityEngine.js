@@ -380,13 +380,18 @@ const FWFacilityEngine = (() => {
       .filter(f => kinds.indexOf(f.kind) >= 0 && siteEligible(f));
   }
 
-  // Where a truck is when it enters `stage`. Returns null for road
-  // stages, which is a real answer and not a failure.
-  function assignForStage(registry, stage, rng) {
-    const candidates = sitesForStage(registry, stage);
-    if (!candidates.length) return null;
-    return rng ? rng.pick(candidates) : candidates[0];
-  }
+  /* assignForStage() USED TO LIVE HERE, and Slice 71 deleted it rather than
+     leaving it exported and unused.
+
+     It answered "where is this truck" with a random eligible site for the
+     stage, redrawn on every stage advance, which is why a truck teleported
+     between unrelated places. journeyEngine now answers that from the truck's
+     position on the world graph, and nothing in the app calls this any more.
+     An unused random-position draw left in place is the old model waiting for
+     the next caller, and it would read like a supported way to place a
+     vehicle. sitesForStage() stays: it is the projection of worldGraph's
+     stage-eligibility table, which journeyEngine.stageAgreement now measures
+     the journey against. */
 
   function createTracker() {
     return { bySite: {}, unsited: { recorded: 0, unrecorded: 0, byType: {} }, totalRecorded: 0, totalUnrecorded: 0 };
@@ -529,7 +534,7 @@ const FWFacilityEngine = (() => {
     SITE_INELIGIBLE_STATUSES, siteEligible, siteEligibility, assertSiteStatusLiterals,
     archetype, clampCoverage, coverage, meanCoverage, unweightedMeanCoverage,
     coverageBasis, shiftMissRange,
-    sitesForStage, assignForStage,
+    sitesForStage,
     createTracker, record, siteSummary, hiddenLedger
   };
 })();

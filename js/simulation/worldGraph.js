@@ -216,15 +216,15 @@ const FWWorldGraph = (() => {
     },
     {
       figure: 'How long a traverse actually took',
-      why: 'Nothing traverses anything yet. This slice adds structure only: no truck, shipment, driver or trailer moves along an edge, and no status advances because of one. Movement is Phase C. traverseSeconds is an expected cost attached to an edge, and no run has yet produced a single observed one.'
+      why: 'Since Slice 71 a truck does traverse these edges (journeyEngine), and it spends exactly traverseSeconds on each one. Nothing varies it, so an observed traverse duration in this build carries no information the declared one does not, and it must not be read as a measurement. A delay cannot be derived from it.'
     },
     {
       figure: 'Congestion, queueing, weather, driver hours, or any other reason a leg would be slow',
       why: 'Duration is distance divided by a constant speed class. There is no variability of any kind in it, seeded or otherwise, so it cannot be read as a distribution and a delay cannot be derived from it.'
     },
     {
-      figure: 'Which route a truck is on',
-      why: 'Routes exist here as declared node sequences. Nothing assigns one to a vehicle, so route deviation remains undefined in this build -- ROUTE_DEVIATION is still a disruption type drawn from behaviorEngine\'s probability table and is not, and must not be read as, a departure from any route in this graph.'
+      figure: 'Whether a truck departed from the route it is on',
+      why: 'Slice 71 does assign a route to a truck (journeyEngine), but nothing compares where the truck went with where its route said: advance() walks the legs in order and can neither skip nor stray. So ROUTE_DEVIATION is still a disruption type drawn from behaviorEngine\'s probability table and is not, and must not be read as, a departure from any route in this graph.'
     },
     {
       figure: 'Whether this topology is the one the shipped Port Meridian screen draws',
@@ -633,7 +633,8 @@ const FWWorldGraph = (() => {
       durationUnit: DURATION_SCALE.unit,
       speedClasses: Object.keys(SPEED_CLASSES).map(k => k + ' ' + SPEED_CLASSES[k].kmh + ' km/h'),
       movesAnything: false,
-      movesAnythingNote: 'This module is structure only. Nothing traverses an edge in this build; movement is Phase C.'
+      movesAnythingNote: 'This module is structure only: it moves nothing itself and holds no vehicle state. Since Slice 71 journeyEngine moves trucks over these edges, so \'nothing traverses an edge in this build\' is no longer true of the simulation -- only of this file.',
+      traversedBy: 'FWJourneyEngine'
     };
   }
 
