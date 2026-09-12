@@ -382,6 +382,20 @@ const FWInvestigationEngine = (() => {
      says only that this attempt missed it. */
   const EXAMINATION_CLASSES = ['ANSWERED', 'NOTHING_TO_FETCH', 'UNREACHABLE', 'NEVER_LOOKED'];
 
+  /* The precedence rule itself, in one place. Exported because more than
+     one module has to sort a case (or a closure snapshot of one) into these
+     classes, and two copies of a precedence rule become two rules. Takes
+     counts rather than a case so a ledger entry recording what checks came
+     back at the moment of closure can be classified by the same rule as a
+     live case. */
+  function classifyCounts(counts) {
+    const c = counts || {};
+    if ((c.answered || 0) > 0) return 'ANSWERED';
+    if ((c.noRecord || 0) > 0) return 'NOTHING_TO_FETCH';
+    if ((c.inconclusive || 0) > 0) return 'UNREACHABLE';
+    return 'NEVER_LOOKED';
+  }
+
   const EXAMINATION_NOTE = {
     ANSWERED: 'at least one check answered on the signals it was run against',
     NOTHING_TO_FETCH: 'checks were run and there was no record of that kind to fetch',
@@ -401,10 +415,7 @@ const FWInvestigationEngine = (() => {
       } else if (f.outcome === 'NO_RECORD_EXISTS') noRecord++;
       else inconclusive++;
     });
-    const cls = answered ? 'ANSWERED'
-      : noRecord ? 'NOTHING_TO_FETCH'
-      : inconclusive ? 'UNREACHABLE'
-      : 'NEVER_LOOKED';
+    const cls = classifyCounts({ answered, noRecord, inconclusive });
     return {
       checksRun: findings.length,
       answeredChecks: answered,
@@ -478,7 +489,7 @@ const FWInvestigationEngine = (() => {
 
   return {
     ACTION_CATALOG, OUTCOME_NOTE, SUBSTANTIVE_OUTCOMES, LEARNED_NOTHING_OUTCOMES,
-    EXAMINATION_CLASSES, EXAMINATION_NOTE, examination, examinationRollup, siteCheckOutcomes,
+    EXAMINATION_CLASSES, EXAMINATION_NOTE, classifyCounts, examination, examinationRollup, siteCheckOutcomes,
     availableActions, performAction, summary, isInvestigable,
     signalsForMo, sitedSignals, siteRecordChance, narrateSiteUnavailable,
     MAX_UPWARD_ADJUSTMENT, MAX_DOWNWARD_ADJUSTMENT

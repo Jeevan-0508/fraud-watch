@@ -160,16 +160,23 @@ const FWAnalyticsEngine = (() => {
     const scored = cal.scoredCount;
     const decisive = cal.decisiveCount;
     const decisiveOf = 'scored closures the record came back decisive on';
+    const scoredOf = 'scored closures, decisive or ambiguous';
+    const ex = cal.examination;
     return group('calibration', 'Calibration against the record',
-      'How closures compared with what this simulation had on record — never with the real world, and never as a score. Note the two bases: the first three rows are over decisive closures, the fourth is over all scored closures.',
+      'How closures compared with what this simulation had on record — never with the real world, and never as a score. Note the bases: the alignment rows are over decisive closures, the examination rows over all scored closures, and the structurally-empty count over a subset of the decisive ones. Nothing in this group sums to anything; the examination group further down is where the disjoint version of that sort lives.',
       [
         metric({ id: 'cal-aligned', label: 'Aligned with the record', numerator: cal.counts.ALIGNED, denominator: decisive, of: decisiveOf }),
         metric({ id: 'cal-over', label: 'Over-called against the record', numerator: cal.counts.OVERCALLED, denominator: decisive, of: decisiveOf }),
         metric({ id: 'cal-under', label: 'Under-called against the record', numerator: cal.counts.UNDERCALLED, denominator: decisive, of: decisiveOf }),
         metric({
           id: 'cal-blind', label: 'Closed before pulling any record', numerator: cal.blindCount, denominator: scored,
-          of: 'scored closures, decisive or ambiguous',
+          of: scoredOf,
           note: 'A larger base than the three rows above it, because an ambiguous case can still have been closed blind.'
+        }),
+        metric({
+          id: 'cal-unanswered', label: 'Closed with no check having answered', numerator: ex.neverAnswered, denominator: scored,
+          of: scoredOf,
+          note: 'Contains the row above it and is not added to it: closed blind is one of the three ways nothing was answered, alongside checks that found nothing to fetch and checks that could not reach their source. Until Slice 28 this row did not exist, and a closure whose every check failed to reach a source was counted here as an examined one.'
         }),
         metric({
           id: 'cal-ambiguous', label: 'Record left it ambiguous', kind: KIND.COUNT, numerator: cal.counts.AMBIGUOUS,
@@ -179,7 +186,7 @@ const FWAnalyticsEngine = (() => {
         metric({
           id: 'cal-unseeable', label: 'Decided after checks that found nothing to fetch', kind: KIND.COUNT,
           numerator: cal.unseeableCount, of: 'decisive closures whose every record check came back structurally empty',
-          note: 'Deliberately a count and not a share of the three rates above it: the analyst looked, and this port keeps no record covering the case, so what it measures is coverage rather than judgement. It is left inside the rate denominators all the same — removing it would grade calibration only over the cases the port could see.'
+          note: 'Deliberately a count and not a share of the three rates above it: the analyst looked, and this port keeps no record covering the case, so what it measures is coverage rather than judgement. It is left inside the rate denominators all the same — removing it would grade calibration only over the cases the port could see. A strict subset of the never-answered row, over a smaller base again, so the two are not additive.'
         }),
         metric({
           id: 'cal-unscorable', label: 'Nothing on record to check against', kind: KIND.COUNT,
@@ -394,6 +401,10 @@ const FWAnalyticsEngine = (() => {
     {
       figure: 'An investigability or coverage score for the caseload',
       why: 'The two site-source rows in the coverage group are counts over a stated base and they stop there. Combined into one figure they would become a target — and the number moves mostly with where vehicles happened to travel in this run, so managing it would mean managing the route mix rather than the watching.'
+    },
+    {
+      figure: 'Alignment broken down by how far the case was examined',
+      why: 'The rows for closures nobody got an answer on sit beside the alignment rows here, and crossing them would answer the wrong question. Which cases get checked is chosen by the analyst and which cases have a record to pull depends on where this port watches, so a gap between the two groups would be produced by that selection with judgement held constant. The calibration mirror refuses the same split and gives the full reason.'
     },
     {
       figure: 'A benchmark for any of these figures',

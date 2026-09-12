@@ -24,7 +24,18 @@
    count, because its alignment measures this port's coverage as much as
    the analyst's judgement. It stays inside the rates all the same, for the
    reason outcomeEngine's header gives: removing it would measure
-   calibration only where the port could see. */
+   calibration only where the port could see.
+
+   Slice 28 replaces the two examination lines this panel used to carry
+   ("closed blind" over one base, "all checks came back empty" over
+   another, overlapping and neither of them complete) with the four
+   disjoint classes investigationEngine defines, over the single base of
+   scored closures. That base is deliberately the larger one -- an
+   ambiguous-record case can be closed with nothing having answered too --
+   so it is labelled, and the same sort over the rate base is given beside
+   it rather than left to be assumed identical. What this panel will not do
+   with those classes is compare alignment between them; the reason is in
+   outcomeEngine.NOT_MODELLED and is rendered on screen. */
 const FWCalibrationView = (() => {
   let els = {};
 
@@ -93,11 +104,63 @@ const FWCalibrationView = (() => {
     </div>`;
   }
 
-  // Looked and could not see, which is not the same as not having looked.
-  // Counted here, never subtracted from the rates above.
-  function unseeableLine(cal) {
-    if (!cal.unseeableCount) return '';
-    return `<div class="text-[10px] text-slate-400 mt-1">${cal.unseeableCount} of ${cal.decisiveCount} decided case${cal.unseeableCount === 1 ? '' : 's'} were closed after record checks that all came back with nothing to fetch — the analyst looked and this port keeps no record covering it. Those calls are scored above like any other, because the answer key exists whether or not it was reachable; what their alignment measures is this port's coverage as much as the judgement. They are not removed from the counts: doing that would grade calibration only over the cases the port happened to be able to see.</div>`;
+  const CLASS_LABEL = {
+    ANSWERED: 'A check answered on it',
+    NOTHING_TO_FETCH: 'Checks were run, and there was no record of that kind to fetch',
+    UNREACHABLE: 'Checks were run, and the sources could not be reached',
+    NEVER_LOOKED: 'No record source was checked at all'
+  };
+
+  const CLASS_TONE = {
+    ANSWERED: 'text-slate-300',
+    NOTHING_TO_FETCH: 'text-slate-400',
+    UNREACHABLE: 'text-slate-400',
+    NEVER_LOOKED: 'text-orange-300'
+  };
+
+  /* HOW FAR EACH CLOSED CASE WAS TAKEN BEFORE IT WAS CLOSED. Four disjoint
+     classes over one base, stated to sum to it, since the two figures this
+     replaces did not. Counts, plus a percentage per class only once the
+     base clears the same minimum sample the rates above use. Framed in
+     both directions in the copy, because a closure nobody could get an
+     answer on is not thereby a wrong closure. */
+  function examinationBlock(cal) {
+    const ex = cal.examination;
+    if (!ex || !ex.base) return '';
+    const rows = ex.classes.map(k => {
+      const n = ex.byClass[k];
+      const pctText = cal.examinationRateEligible ? ` · ${Math.round((n / ex.base) * 100)}%` : '';
+      return `<div class="flex justify-between gap-2 text-[10px] ${CLASS_TONE[k]}">
+        <span>${CLASS_LABEL[k]}</span><span class="font-mono">${n} / ${ex.base}${pctText}</span>
+      </div>`;
+    }).join('');
+    const subset = ex.allUnseeable
+      ? `<div class="text-[10px] text-slate-500 mt-1">Of the ${ex.byClass.NOTHING_TO_FETCH} in the second row, ${ex.allUnseeable} had <em>every</em> check come back with nothing to fetch. A stronger statement about this port's coverage, so it is stated separately — it is part of that row and not an addition to it.</div>`
+      : '';
+    const baseNote = cal.examinationBaseIsRateBase
+      ? ''
+      : `<div class="text-[10px] text-slate-500 mt-1">These four are taken over the ${ex.base} closures that made a checkable claim, which is a larger base than the ${cal.decisiveCount} the percentages above use: a case whose record was mixed can also have been closed with nothing having answered. Over that smaller base, ${cal.decisiveNeverAnswered} closure${cal.decisiveNeverAnswered === 1 ? '' : 's'} had no check answer. The two sets of percentages are not comparable with each other.</div>`;
+    return `<div class="mt-3 pt-2 border-t border-slate-800">
+      <div class="text-[10px] text-slate-300 font-semibold mb-1">How far each closed case was taken first</div>
+      <div class="text-[10px] text-slate-500 mb-1">Every closure falls in exactly one of these four, so unlike the rest of this panel they sum to their base. ${ex.neverAnswered} of ${ex.base} were closed without any check having answered anything about the case.</div>
+      ${rows}
+      ${subset}
+      <div class="text-[10px] text-slate-400 mt-1">This is not a scoring of the closures. A case nobody could get an answer on is not a bad call, and one that got an answer is not a correct one — the alignment above is what is checked against the record, and it is checked the same way for all four classes. None of these cases is removed from it.</div>
+      ${baseNote}
+    </div>`;
+  }
+
+  // What this panel will not report, at the same weight as the figures.
+  function refusalsBlock() {
+    const items = FWOutcomeEngine.NOT_MODELLED.map(n => `
+      <div class="mb-1">
+        <div class="text-[10px] text-slate-300">${n.figure}</div>
+        <div class="text-[10px] text-slate-500">${n.why}</div>
+      </div>`).join('');
+    return `<div class="mt-3 pt-2 border-t border-slate-800">
+      <div class="text-[10px] text-slate-300 font-semibold mb-1">Not reported here, and why</div>
+      ${items}
+    </div>`;
   }
 
   function renderBody(cal) {
@@ -115,7 +178,7 @@ const FWCalibrationView = (() => {
         In line with the record: ${cal.counts.ALIGNED} · went past it: ${cal.counts.OVERCALLED} · stopped short: ${cal.counts.UNDERCALLED} · mixed record: ${cal.counts.AMBIGUOUS}
       </div>
       <div class="text-[10px] text-slate-500 italic">Percentages are withheld until ${cal.minSample} cases with an unmixed record have been decided — below that a rate would be noise dressed up as a measurement.</div>`
-      + unseeableLine(cal);
+      + examinationBlock(cal) + refusalsBlock();
     }
 
     const t = cal.decisiveCount;
@@ -124,8 +187,7 @@ const FWCalibrationView = (() => {
       bar('Went past the record (escalated something explained)', cal.counts.OVERCALLED, t, 'bg-orange-500') +
       bar('Stopped short of the record (cleared something unexplained)', cal.counts.UNDERCALLED, t, 'bg-amber-500') +
       `<div class="text-[10px] text-slate-400 mt-2">Excluded from the rates above: ${cal.counts.AMBIGUOUS} case${cal.counts.AMBIGUOUS === 1 ? '' : 's'} whose record was mixed.</div>` +
-      `<div class="text-[10px] ${cal.blindCount ? 'text-orange-300' : 'text-slate-400'} mt-1">${cal.blindCount} of ${cal.scoredCount} closed without checking a single record source first.</div>` +
-      unseeableLine(cal);
+      examinationBlock(cal) + refusalsBlock();
   }
 
   function renderLedger(engine) {
@@ -139,7 +201,7 @@ const FWCalibrationView = (() => {
           </div>
         </div>
         <div class="text-[10px] text-slate-400">${e.narrative}</div>
-        <div class="text-[10px] text-slate-500 mt-1">Confidence at close ${Math.round(e.confidenceAtClose)}% · ${e.checksRun} record check${e.checksRun === 1 ? '' : 's'} run${e.noRecordChecks ? ` · ${e.noRecordChecks} with no such record to fetch` : ''}${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}</div>
+        <div class="text-[10px] text-slate-500 mt-1">Confidence at close ${Math.round(e.confidenceAtClose)}% · ${e.checksRun} record check${e.checksRun === 1 ? '' : 's'} run${e.noRecordChecks ? ` · ${e.noRecordChecks} with no such record to fetch` : ''}${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}${e.checksRun && !e.everAnswered ? ' · none of them answered' : ''}</div>
       </div>`).join('');
     return rows || '';
   }
