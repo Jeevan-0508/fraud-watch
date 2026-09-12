@@ -225,6 +225,61 @@ const FWAnalyticsEngine = (() => {
       ]);
   }
 
+  /* HOW FAR THE CASELOAD WAS TAKEN (Slice 27). The Record checks group
+     above is counted over checks run, which is the wrong base for the
+     question an analyst actually has at portfolio scale: not "what did
+     the pulls return" but "how many of these cases had anything pulled
+     at all". A case that nobody looked at contributes nothing to a base
+     of checks run, so it is invisible in that group by construction --
+     the caseload's biggest coverage fact was the one the dashboard could
+     not see.
+
+     Its own group rather than rows in that one, because the base is
+     different and a single group with two bases would be four
+     percentages implying comparability. Here the base is uniform: the
+     four classes are disjoint and every case is in exactly one, so these
+     rates do sum to their own base, which is stated rather than left to
+     be inferred.
+
+     The one figure over a different base -- closures reached without a
+     check ever answering -- is kept in this group deliberately so the
+     group's own denominator audit reports the mixed base out loud, which
+     is the machinery this panel already has for exactly that. */
+  function examinationGroup(state) {
+    const mos = state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
+    if (!window.FWInvestigationEngine || !FWInvestigationEngine.examinationRollup) return null;
+    const roll = FWInvestigationEngine.examinationRollup(mos);
+    const of = 'cases in this run, open and closed';
+    const closed = mos.filter(m => !FWMoEngine.OPEN_STATUSES.has(m.status));
+    const closedUnanswered = closed.filter(m => !FWInvestigationEngine.examination(m).everAnswered).length;
+    return group('examination', 'How far the caseload was taken',
+      'Counted over cases, not over checks. A case nobody pulled records on contributes nothing to a base of checks run, so it cannot appear in the group above at all — which made the largest coverage fact about a caseload the one figure this panel could not see. The four classes are disjoint and every case is in exactly one of them.',
+      [
+        metric({ id: 'exam-total', label: 'Cases', kind: KIND.COUNT, numerator: roll.total, of: of }),
+        metric({
+          id: 'exam-answered', label: 'A check answered on it', numerator: roll.byClass.ANSWERED, denominator: roll.total, of: of,
+          note: 'At least one completed check spoke to the signals it was run against. Says nothing about what it found.'
+        }),
+        metric({
+          id: 'exam-nothing', label: 'Looked, nothing there to fetch', numerator: roll.byClass.NOTHING_TO_FETCH, denominator: roll.total, of: of,
+          note: 'Checks were run and every one came back with no record of that kind existing. Structural, and a fact about what this port writes down rather than about the cases.'
+        }),
+        metric({
+          id: 'exam-unreachable', label: 'Looked, source unreachable', numerator: roll.byClass.UNREACHABLE, denominator: roll.total, of: of,
+          note: 'Checks were run and every one failed contingently. The records probably exist; these pulls did not get them.'
+        }),
+        metric({
+          id: 'exam-never', label: 'Never looked at', numerator: roll.byClass.NEVER_LOOKED, denominator: roll.total, of: of,
+          note: 'No check was ever run. This is a statement about where the hours went, and it is not a defect count: nothing in this simulation says which cases warranted the hours, and the check advisory refuses a work queue across cases for that reason.'
+        }),
+        metric({
+          id: 'exam-closed-unanswered', label: 'Closed without a check answering', numerator: closedUnanswered, denominator: closed.length,
+          of: 'closed cases, whether closed by a verdict or by process',
+          note: 'A different base from the four rows above, on purpose: the question is about closures, not about the caseload. Includes cases where the records did not exist to pull as well as cases nobody pulled, because both closed on the correlation alone.'
+        })
+      ]);
+  }
+
   // Almost every figure in this group is a PARAMETER: not a measurement,
   // unable to move as the run continues, and shown beside recorded counts
   // precisely so the two are not read as one thing. The exception is the
@@ -333,6 +388,10 @@ const FWAnalyticsEngine = (() => {
       why: 'Money in this project comes from one place, where the measured hours, the stated rate and the refused figures live together. Effort appears above as hours, which the simulation measures; converting it here would put a currency total outside that discipline.'
     },
     {
+      figure: 'A target, benchmark or expected share of cases examined',
+      why: 'There is no model here of which cases warranted the hours, so there is nothing to take a target against. Setting one would create the cross-case work queue the check advisory refuses outright, and it would be reachable by closing the easy cases: the share moves as fast by picking cases with records to pull as by looking harder.'
+    },
+    {
       figure: 'An investigability or coverage score for the caseload',
       why: 'The two site-source rows in the coverage group are counts over a stated base and they stop there. Combined into one figure they would become a target — and the number moves mostly with where vehicles happened to travel in this run, so managing it would mean managing the route mix rather than the watching.'
     },
@@ -347,7 +406,8 @@ const FWAnalyticsEngine = (() => {
     'A rate is shown as a percentage only once its base reaches the minimum sample this project reports rates on. Below that it stays a count, because a percentage of four things reads as a measurement and is not one.',
     'Percentages come in two kinds that look identical. A rate is a numerator over observations. A parameter is a number stated in a model file. The coverage group is entirely the second kind and is separated for that reason.',
     'Populations are stated before rates, because the bases are the part of a dashboard that is normally left implicit and is where the misreading happens.',
-    'No figure here is compared with a target, a benchmark or its own past value.'
+    'No figure here is compared with a target, a benchmark or its own past value.',
+    'The examination group is the one place where the rates on screen do sum to their base, because its four classes are disjoint and every case falls in exactly one. That is stated rather than left to be noticed, since everywhere else on this panel side-by-side percentages do not sum to anything.'
   ];
 
   function dashboard(state) {
@@ -356,6 +416,7 @@ const FWAnalyticsEngine = (() => {
       caseloadGroup(state),
       calibrationGroup(state),
       investigationGroup(state),
+      examinationGroup(state),
       coverageGroup(state),
       discoveryGroup(state)
     ].filter(Boolean);
