@@ -413,9 +413,10 @@ deliberately attack:
 - **Answer-key vocabulary** — banned words and leak tokens are owned by the application
   (`js/ui/copy-rules.js`), with a declared reason for each, scanned across rendered copy *including*
   `title`, `alt` and `aria-label`, since a tooltip is text a reader actually reads.
-- **Semantic ambiguity** — three different quantities in this codebase were once all called
-  `severity` and two were called `weight`. Each scale is now declared where it lives and checked
-  against its own declaration, so a taxonomy harm class cannot be summed into a correlation score.
+- **Semantic ambiguity** — two different quantities in this codebase are both called `severity` (a
+  taxonomy harm class, and a record of whether anything was disrupted), and two are called `weight`.
+  Each scale is declared where it lives and checked against its own declaration, so a taxonomy harm
+  class cannot be summed into a correlation score.
 - **Display refusals** — six formatting functions refuse to render a value that is off the scale their
   own output string asserts. `"250 / 100"` is not allowed to be printed.
 - **State consistency** — lifecycle stage, journey position and facility assignment must agree; a
@@ -625,3 +626,10 @@ cite it.
 
 Not legal or operational advice. Severity, prevalence and countermeasures reflect the source
 taxonomy's qualitative judgement about European road freight, not a proprietary detection model.
+
+---
+
+<sub>**Topics:** fraud investigation · fraud detection · risk management · risk intelligence · freight
+risk · logistics risk · supply chain risk · transportation security · GRC · risk technology · risk
+governance · anomaly detection · false positives · investigation workflow · deterministic simulation ·
+behavioral analytics · decision support · JavaScript</sub>
