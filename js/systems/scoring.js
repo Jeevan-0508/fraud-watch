@@ -46,8 +46,61 @@ const FWScoring = (() => {
     tokenOwner: 'FW.severityScale(), the taxonomy module -- these tokens are not declared here, they are reconciled against it',
     multiplier: { low: 1, medium: 1.5, high: 2, critical: 3 },
     usedByOutcomes: OUTCOME_NAMES.filter(n => OUTCOMES[n].usesHarmMultiplier),
-    note: 'Every outcome that consumes it carries a pattern by declaration, so on this app\u2019s own path a harm class is always available. A default would only ever fire on a call the app cannot make.'
+    note: 'Every outcome that consumes it carries a pattern by declaration, so on this app\u2019s own path a harm class is always available. A default would only ever fire on a call the app cannot make.',
+
+    /* WHICH OF TWO FACTS THIS TABLE IS RECONCILED AGAINST, now that the
+       taxonomy module states both. The reconciliation has always been against
+       the declared vocabulary; what was missing is that the code never said so,
+       and a reader comparing this table to the loaded data would find one
+       multiplier -- `low` -- for a class none of the twelve patterns carries. */
+    reconciliation: 'DECLARED_TOKENS',
+    reconciliationOwner: 'FW.severityScale().tokens',
+    reconciliationWhy: 'complete over the declared harm vocabulary, so a class the taxonomy declares can never reach the score without a declared multiplier. Presence in the loaded data is a separate fact, reported per lookup and never used to drop a multiplier.',
+    reconciliationRejected: 'PRESENT_IN_DATA',
+    reconciliationRejectedOwner: 'FW.severityScale().presentInData',
+    reconciliationRejectedWhy: 'a table complete only over the classes the currently loaded twelve patterns happen to carry would make the score\u2019s vocabulary a function of one data file: a thirteenth pattern carrying an absent class could then only be scored by inventing a multiplier, which is the exact fault assertHarmMultiplierTokens exists to stop.',
+    matchesTreatmentOf: 'FW.colorBasis, which keeps the declared colour for a declared-but-absent class and labels the absence DECLARED_ABSENT_IN_DATA rather than unmapping it. Declared-but-absent is a third state in this program, not a synonym for undeclared.',
+    presenceOwner: 'FW.severityScale().presentInData / .absentFromData -- measured at load with its denominator, not assumed here',
+
+    /* One declared multiplier is the arithmetic identity, so an interception of
+       a `low`-harm pattern scores byte-identically to one that was never scaled
+       by harm at all. That is the same shape as the unrecognised-token colour
+       being `low`'s declared colour, which Slice 67 fixed by making the
+       not-a-class value no class's value. Here the value cannot be moved
+       without inventing a harm assessment, so the two are told apart by BASIS
+       and never by the number -- and the one path that produced the identity
+       without a declared class has been removed rather than annotated. */
+    identityValue: 1,
+    identityCollision: ['low'],
+    identityCollisionMeans: 'the score alone cannot distinguish these classes from no harm scaling. harmMultiplier().basis is the only thing that can, so no caller may read a factor of 1 as evidence that a harm class was assessed.',
+    noFallback: 'there is no default factor. An outcome that scales by harm and has no declared class throws in applyOutcome; an outcome that does not scale never asks for a factor.'
   };
+
+  /* The two facts a declared class can carry about the loaded data, kept apart
+     from the two refusals in HARM_BASIS: absence is not a refusal, the
+     multiplier is the declared one either way. */
+  const HARM_PRESENCE = {
+    DECLARED_PRESENT: 'declared, and carried by at least one pattern in the loaded taxonomy.',
+    DECLARED_ABSENT_IN_DATA: 'declared, and carried by no pattern in the loaded taxonomy -- this multiplier is reachable only from data this taxonomy does not contain.',
+    NOT_MEASURED: 'the taxonomy module has not supplied a presence measurement, so this program does not know which and does not guess.',
+    NOT_A_DECLARED_CLASS: 'presence in the data is not a question that can be asked about a value the taxonomy does not declare as a harm class.',
+    NOT_A_CLASS_AT_ALL: 'no harm class was supplied, so there is nothing whose presence in the data could be looked up.'
+  };
+
+  function harmPresence(token) {
+    if (!Object.prototype.hasOwnProperty.call(HARM_MULTIPLIER.multiplier, token)) {
+      return { presence: 'NOT_A_DECLARED_CLASS', why: HARM_PRESENCE.NOT_A_DECLARED_CLASS };
+    }
+    const scale = (typeof FW !== 'undefined' && FW.severityScale) ? FW.severityScale() : null;
+    if (!scale || !Array.isArray(scale.presentInData)) {
+      return { presence: 'NOT_MEASURED', why: HARM_PRESENCE.NOT_MEASURED };
+    }
+    const present = scale.presentInData.indexOf(token) >= 0;
+    return {
+      presence: present ? 'DECLARED_PRESENT' : 'DECLARED_ABSENT_IN_DATA',
+      why: present ? HARM_PRESENCE.DECLARED_PRESENT : HARM_PRESENCE.DECLARED_ABSENT_IN_DATA
+    };
+  }
 
   /* Why a call got the multiplier it got, including the two cases that get no
      multiplier at all. Both refusals used to be silent numbers: an unrecognised
@@ -64,13 +117,18 @@ const FWScoring = (() => {
      the refusals are named rather than folded into a value. */
   function harmMultiplier(severity) {
     if (severity === undefined || severity === null || severity === '') {
-      return { multiplier: null, basis: 'NOT_SUPPLIED', why: HARM_BASIS.NOT_SUPPLIED, token: severity };
+      return { multiplier: null, basis: 'NOT_SUPPLIED', why: HARM_BASIS.NOT_SUPPLIED, token: severity,
+               presence: 'NOT_A_CLASS_AT_ALL', presenceWhy: HARM_PRESENCE.NOT_A_CLASS_AT_ALL };
     }
     if (!Object.prototype.hasOwnProperty.call(HARM_MULTIPLIER.multiplier, severity)) {
-      return { multiplier: null, basis: 'UNDECLARED_CLASS', why: HARM_BASIS.UNDECLARED_CLASS, token: severity };
+      const u = harmPresence(severity);
+      return { multiplier: null, basis: 'UNDECLARED_CLASS', why: HARM_BASIS.UNDECLARED_CLASS, token: severity,
+               presence: u.presence, presenceWhy: u.why };
     }
+    const p = harmPresence(severity);
     return { multiplier: HARM_MULTIPLIER.multiplier[severity], basis: 'DECLARED_CLASS',
-             why: HARM_BASIS.DECLARED_CLASS, token: severity };
+             why: HARM_BASIS.DECLARED_CLASS, token: severity,
+             presence: p.presence, presenceWhy: p.why };
   }
 
   /* Both directions against the module that owns the tokens. This table was an
@@ -93,6 +151,79 @@ const FWScoring = (() => {
     return true;
   }
 
+  /* The two facts this table could have been reconciled against, each naming
+     the field on the token owner that states it. A declaration that named a
+     fact the owner does not supply would be a choice between one real option
+     and one imaginary one. */
+  const RECONCILIATION_OPTIONS = {
+    DECLARED_TOKENS: { field: 'tokens', means: 'the harm classes the taxonomy module declares, whether or not the loaded data carries them.' },
+    PRESENT_IN_DATA: { field: 'presentInData', means: 'the harm classes at least one loaded pattern actually carries.' }
+  };
+
+  /* Both directions on the choice itself, not on the tokens: the chosen and the
+     rejected option must each be real and each be measurable off the owner, the
+     multiplier table must match the chosen one exactly, and it must NOT match
+     the rejected one -- otherwise the declaration would be untestable, because
+     the two agree whenever every declared class happens to occur. */
+  function assertHarmReconciliationDeclared(scale) {
+    const chosen = RECONCILIATION_OPTIONS[HARM_MULTIPLIER.reconciliation];
+    const rejected = RECONCILIATION_OPTIONS[HARM_MULTIPLIER.reconciliationRejected];
+    if (!chosen || !rejected || HARM_MULTIPLIER.reconciliation === HARM_MULTIPLIER.reconciliationRejected) {
+      throw new Error('FWScoring: the harm multiplier must declare which of ' +
+        Object.keys(RECONCILIATION_OPTIONS).join('/') + ' it is reconciled against and which it is not, ' +
+        'and they must differ -- got "' + HARM_MULTIPLIER.reconciliation + '" against "' +
+        HARM_MULTIPLIER.reconciliationRejected + '"');
+    }
+    [['reconciliation', chosen], ['reconciliationRejected', rejected]].forEach(([which, opt]) => {
+      if (!Array.isArray(scale[opt.field])) {
+        throw new Error('FWScoring: ' + which + ' names "' + opt.field + '" on the token owner and the ' +
+          'owner supplies no such list, so the choice is between one real option and one that cannot be checked');
+      }
+    });
+    const keys = Object.keys(HARM_MULTIPLIER.multiplier).slice().sort().join('/');
+    if (keys !== scale[chosen.field].slice().sort().join('/')) {
+      throw new Error('FWScoring: the multiplier table declares itself reconciled against ' +
+        HARM_MULTIPLIER.reconciliation + ' (' + HARM_MULTIPLIER.reconciliationOwner + ') and its keys are ' +
+        keys + ' against ' + scale[chosen.field].join('/'));
+    }
+    /* Whether the choice is observable on THIS data is a fact about the data,
+       not a fault in it: the two options agree whenever every declared class
+       occurs. Measured and published rather than thrown on, so a reader is never
+       told a choice was made that the loaded taxonomy could not have shown. */
+    const sameAsRejected = keys === scale[rejected.field].slice().sort().join('/');
+    HARM_MULTIPLIER.reconciliationObservable = {
+      observable: !sameAsRejected,
+      onData: HARM_MULTIPLIER.reconciliationOwner + ' = ' + scale[chosen.field].join('/') + '; ' +
+              HARM_MULTIPLIER.reconciliationRejectedOwner + ' = ' + (scale[rejected.field].join('/') || '(none)'),
+      why: sameAsRejected
+        ? 'every declared harm class is carried by the loaded taxonomy, so reconciling against the declared vocabulary and reconciling against presence in the data would produce the same table here. The choice still holds; this data cannot show it.'
+        : 'the two lists differ on the loaded taxonomy, so the table matching the declared vocabulary and not presence-in-data is an observable fact about this build and not only a stated intention.'
+    };
+    return true;
+  }
+
+  /* The identity claim, checked rather than restated: `identityValue` must be
+     the value that leaves a score unchanged when multiplied through, and
+     `identityCollision` must name exactly the declared classes that carry it.
+     A collision list that drifted from the table would be the one place a
+     reader is told the score can tell two things apart when it cannot. */
+  function assertIdentityCollisionNamed() {
+    const iv = HARM_MULTIPLIER.identityValue;
+    if (typeof iv !== 'number' || 100 * iv !== 100) {
+      throw new Error('FWScoring: identityValue is declared as ' + iv + ', which is not the factor that ' +
+        'leaves a score unchanged, so identityCollision would be a list about the wrong number');
+    }
+    const carry = Object.keys(HARM_MULTIPLIER.multiplier)
+      .filter(k => HARM_MULTIPLIER.multiplier[k] === iv).sort().join('/');
+    const named = (HARM_MULTIPLIER.identityCollision || []).slice().sort().join('/');
+    if (carry !== named) {
+      throw new Error('FWScoring: the classes whose multiplier is the identity ' + iv + ' are ' +
+        (carry || '(none)') + ' and identityCollision names ' + (named || '(none)') +
+        ' -- a score of 100 would then read as an assessed harm class that was never assessed');
+    }
+    return true;
+  }
+
   let harmTokensChecked = false;
   function checkHarmTokensOnce() {
     if (harmTokensChecked) return;
@@ -100,7 +231,28 @@ const FWScoring = (() => {
     const scale = FW.severityScale();
     if (!scale) return;
     assertHarmMultiplierTokens(scale.tokens);
+    assertHarmReconciliationDeclared(scale);
     harmTokensChecked = true;
+  }
+
+  // Runs at module load: it needs nothing from the taxonomy.
+  assertIdentityCollisionNamed();
+
+  /* The reconciliation measurement is against the taxonomy, so it cannot exist
+     before the taxonomy arrives. Returning a named refusal rather than an
+     absent field keeps a reader from taking "not yet measured" for "reconciled
+     against nothing". */
+  function harmReconciliation() {
+    checkHarmTokensOnce();
+    if (!HARM_MULTIPLIER.reconciliationObservable) {
+      return {
+        reconciliation: HARM_MULTIPLIER.reconciliation,
+        observable: null,
+        why: 'REFUSED_TAXONOMY_NOT_LOADED \u2014 the choice is declared, and whether this data could show it is a measurement against the taxonomy module, which has not supplied a harm scale yet.'
+      };
+    }
+    return Object.assign({ reconciliation: HARM_MULTIPLIER.reconciliation },
+                         HARM_MULTIPLIER.reconciliationObservable);
   }
 
   /* Said wherever a legacy record's counts are shown. A record written before
@@ -263,7 +415,15 @@ const FWScoring = (() => {
         'pattern it carried, and the harm class given was "' + opts.severity + '" \u2014 ' + harm.why +
         ' Known classes: ' + Object.keys(HARM_MULTIPLIER.multiplier).join('/') + '.');
     }
-    const sevMult = harm.multiplier === null ? 1 : harm.multiplier;
+    /* No fallback factor. A conditional here used to substitute the factor 1
+       whenever no harm class had been declared, and 1 is `low`'s declared
+       multiplier -- so the value meaning "no harm was assessed" was the one
+       harm class the taxonomy carries in none of its patterns. It was also
+       dead: the only outcome that reads this factor is the one that throws
+       above when there is no declared class, and measuring it confirmed no
+       non-scaling outcome's score moves with the severity passed. Removed
+       rather than commented, and the null is left null. */
+    const sevMult = spec.usesHarmMultiplier ? harm.multiplier : null;
 
     s.resolutions += 1;
     s[spec.bucket] += 1;
@@ -296,8 +456,9 @@ const FWScoring = (() => {
 
   return {
     load, save, reset, applyOutcome, migrate, tally, meters,
-    harmMultiplier, assertHarmMultiplierTokens,
-    HARM_MULTIPLIER, HARM_BASIS,
+    harmMultiplier, assertHarmMultiplierTokens, harmPresence,
+    assertHarmReconciliationDeclared, assertIdentityCollisionNamed, harmReconciliation,
+    HARM_MULTIPLIER, HARM_BASIS, HARM_PRESENCE, RECONCILIATION_OPTIONS,
     KEY, VERSION, OUTCOMES, OUTCOME_NAMES, BUCKETS, LEGACY_NOTE, REFUSALS
   };
 })();
