@@ -86,6 +86,10 @@ const FWExposureModel = (() => {
   // as much of the model as the present ones.
   const NOT_MODELLED = [
     {
+      figure: 'Whether an exposure band is still live or has been settled',
+      why: 'A consignment declares seven lifecycle states and this build ever issues one of them, so no cargo here is delivered, delayed or cancelled. There is therefore no point at which a band stops being exposure: the bands below are the value that was on the movements a case touched, held open indefinitely, and not a balance outstanding today.'
+    },
+    {
       figure: 'Expected loss on a case',
       why: 'Requires P(loss | signals). This simulation has no such model, and case confidence is not that probability — multiplying an exposure band by a confidence percentage would produce something that looks like an expected loss and is not one.'
     },
@@ -193,7 +197,16 @@ const FWExposureModel = (() => {
     if (!consignments.length) {
       return { attached: false, consignments: [], low: null, high: null, label: 'no consignment on record' };
     }
-    const bands = consignments.map(s => Object.assign({ shipmentId: s.id, status: s.status }, bandForCargo(s.cargo)));
+    // `consignmentStatus`, not `status`: a case on this panel also has a
+    // status and the two are different vocabularies. It is carried for
+    // completeness and is not a live-versus-settled distinction -- see
+    // NOT_MODELLED: shipment status never advances past the value it was
+    // created with, so no band here is ever delivered or cancelled.
+    const bands = consignments.map(s => Object.assign({
+      shipmentId: s.id,
+      consignmentStatus: s.status,
+      consignmentStatusIsReachableOnly: FWEntityEngine.writableStatuses('shipment').length === 1
+    }, bandForCargo(s.cargo)));
     const low = bands.reduce((a, b) => a + b.low, 0);
     const high = bands.reduce((a, b) => a + b.high, 0);
     return { attached: true, consignments: bands, low, high, label: fmt(low) + ' – ' + fmt(high) };

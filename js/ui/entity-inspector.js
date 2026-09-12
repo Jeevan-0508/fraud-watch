@@ -163,15 +163,19 @@ const FWEntityInspector = (() => {
 
     if (els.title) els.title.textContent = `${facility.name} — ${arch.label}`;
 
+    const eligibility = FWFacilityEngine.siteEligibility(state.registry);
+
     const whatHtml = `<div>
       <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">What this site is</div>
       <div class="text-[11px] text-slate-300 space-y-0.5">
-        <div>Type: ${arch.label} · status ${facility.status.replace(/_/g, ' ').toLowerCase()}</div>
+        <div>Type: ${arch.label} · status ${FWEntityEngine.formatStatus('facility', facility.status)}</div>
         <div>Assumed oversight factor: ${arch.oversightFactor.toFixed(2)}× the shift's own coverage</div>
         <div>Mean assumed coverage across the day: ${Math.round(row.meanCoverage * 100)}%</div>
       </div>
       <p class="text-[10px] text-slate-500 mt-1">${arch.rationale}</p>
       <p class="text-[10px] text-slate-500 mt-1">Both figures are stated modeling assumptions, not measured detection rates for anything.</p>
+      <p class="text-[10px] text-amber-300/80 mt-1">${FWEntityEngine.statusNote('facility')}</p>
+      <p class="text-[10px] text-slate-500 mt-1">${eligibility.note}</p>
     </div>`;
 
     const shiftRows = Object.keys(row.byShift || {})
@@ -274,14 +278,19 @@ const FWEntityInspector = (() => {
 
     if (els.title) els.title.textContent = `${truck.id} — ${truck.status.replace(/_/g, ' ')}`;
 
+    const vocab = FWEntityEngine.vocabularyCoverage(state.registry);
+
     const linksHtml = `<div>
       <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Currently linked to</div>
       <div class="text-[11px] text-slate-300 space-y-0.5">
-        <div>Driver: ${driver ? `${driver.id} (${driver.name}) — ${driver.status.replace(/_/g, ' ')}` : '—'}</div>
-        <div>Trailer: ${trailer ? `${trailer.id} — seal ${trailer.sealId || '—'} — ${trailer.status.replace(/_/g, ' ')}` : '—'}</div>
+        <div>Driver: ${driver ? `${driver.id} (${driver.name}) — ${FWEntityEngine.formatStatus('driver', driver.status)}` : '—'}</div>
+        <div>Trailer: ${trailer ? `${trailer.id} — seal ${trailer.sealId || '—'} — ${FWEntityEngine.formatStatus('trailer', trailer.status)}` : '—'}</div>
         <div>Carrier: ${carrier ? `${carrier.name} (${carrier.scac || carrier.id})` : '—'}</div>
         <div>Location: ${truck.location || '—'}</div>
       </div>
+      <p class="text-[10px] text-amber-300/80 mt-1">${FWEntityEngine.statusNote('trailer')}</p>
+      <p class="text-[10px] text-amber-300/80 mt-1">${FWEntityEngine.statusNote('carrier')}</p>
+      <p class="text-[10px] text-slate-500 mt-1">The stage in the title is the one status field whose whole vocabulary is reachable: ${vocab.rows.filter(r => r.kind === 'truck')[0].held.length} of ${FWEntityEngine.declaredStatuses('truck').length} stages are held by some movement right now, which is a stage nothing is in at the moment and not a stage that cannot happen. Across all six entity kinds ${vocab.writableTotal} of ${vocab.declaredTotal} declared status values are reachable at all.</p>
     </div>`;
 
     const signalsHtml = `<div>

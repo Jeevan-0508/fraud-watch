@@ -38,6 +38,34 @@ const FWBehaviorEngine = (() => {
   // outnumber disruptions, or every truck looks suspicious constantly.
   const DISRUPTION_CHANCE_PER_TICK = 0.015;
 
+  /* Two disruption generators select another entity by status literal, and
+     both literals are now checked against the vocabulary entityEngine owns
+     rather than trusted (convention from Slice 48: a comparison against a
+     value the system never issues is silently a no-op).
+
+     SPARE_TRAILER_STATUS is reachable, so the trailer clause really does
+     narrow the pool. SELECTABLE_CARRIER_STATUS is reachable too but it is
+     the ONLY reachable carrier status, so that clause narrows nothing: no
+     carrier here is ever suspended or put under review, so "swap to a
+     different active carrier" is, in this build, "swap to a different
+     carrier". Stated rather than implied, because the alternative is a
+     filter that reads like a control and is not one. */
+  const SPARE_TRAILER_STATUS = 'IN_STORAGE';
+  const SELECTABLE_CARRIER_STATUS = 'ACTIVE';
+
+  function assertSelectionLiterals() {
+    const trailerLit = FWEntityEngine.assertStatusLiteral('trailer', SPARE_TRAILER_STATUS, 'behaviorEngine TRAILER_SWAPPED');
+    const carrierLit = FWEntityEngine.assertStatusLiteral('carrier', SELECTABLE_CARRIER_STATUS, 'behaviorEngine EQUIPMENT_CARRIER_MISMATCH');
+    if (!trailerLit.reachable || !carrierLit.reachable) {
+      throw new Error('behaviorEngine: a disruption generator selects on a status this build never issues');
+    }
+    return {
+      trailer: trailerLit,
+      carrier: carrierLit,
+      carrierClauseNarrows: FWEntityEngine.writableStatuses('carrier').length > 1
+    };
+  }
+
   function attachBehavior(truck, rng, registry) {
     truck.behavior = {
       stageIndex: 0,
@@ -106,7 +134,7 @@ const FWBehaviorEngine = (() => {
       } else { return null; } // no spare driver available this tick, skip
     } else if (type === 'TRAILER_SWAPPED') {
       const trailers = FWEntityEngine.all(registry, 'trailer');
-      const candidates = trailers.filter(t => t.id !== truck.trailerId && t.status === 'IN_STORAGE');
+      const candidates = trailers.filter(t => t.id !== truck.trailerId && t.status === SPARE_TRAILER_STATUS);
       if (candidates.length) {
         const oldTrailer = FWEntityEngine.get(registry, 'trailer', truck.trailerId);
         const newTrailer = rng.pick(candidates);
@@ -137,7 +165,7 @@ const FWBehaviorEngine = (() => {
       metadata.lastResponseHoursAgo = rng.int(6, 72);
     } else if (type === 'EQUIPMENT_CARRIER_MISMATCH') {
       const carriers = FWEntityEngine.all(registry, 'carrier');
-      const candidates = carriers.filter(c => c.id !== truck.carrierId && c.status === 'ACTIVE');
+      const candidates = carriers.filter(c => c.id !== truck.carrierId && c.status === SELECTABLE_CARRIER_STATUS);
       if (candidates.length) {
         const mismatchCarrier = rng.pick(candidates);
         metadata.scheduledCarrierId = truck.carrierId;
@@ -223,5 +251,8 @@ const FWBehaviorEngine = (() => {
     return emitted;
   }
 
-  return { step, attachBehavior, relocate, LIFECYCLE, DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK };
+  assertSelectionLiterals();
+
+  return { step, attachBehavior, relocate, LIFECYCLE, DISRUPTION_TYPES, DISRUPTION_CHANCE_PER_TICK,
+    SPARE_TRAILER_STATUS, SELECTABLE_CARRIER_STATUS, assertSelectionLiterals };
 })();

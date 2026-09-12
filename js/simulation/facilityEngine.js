@@ -108,6 +108,10 @@ const FWFacilityEngine = (() => {
       why: 'It cannot be checked here. Validating an assumed coverage parameter needs an independent count of what actually happened, which is exactly the thing coverage below 100% means you do not have.'
     },
     {
+      figure: 'Whether a site was open when a movement passed through it',
+      why: 'A facility declares OPERATING, REDUCED and CLOSED and this build only ever issues OPERATING, so closure and reduced running are not modelled at all. The eligibility test in sitesForStage tests for CLOSED and therefore excludes nothing — see siteEligibility() for the count — and every figure here is over a site population that is fully operating by construction.'
+    },
+    {
       figure: 'Site-level exposure or cost',
       why: 'Not computed here on purpose. Money in this project comes only from exposureModel.js, where the measured hours, the stated rate and the refused figures live together. A per-site currency total assembled in this module would escape that discipline.'
     }
@@ -155,11 +159,58 @@ const FWFacilityEngine = (() => {
     return den ? num / den : 0;
   }
 
+  /* Site eligibility, and what the test actually excludes.
+
+     This filter used to read `f.status !== 'CLOSED'` inline, which looks
+     like an operational rule: closed sites do not take movements. CLOSED is
+     a real member of the facility vocabulary, so it is not Slice 48's
+     typo -- but entityEngine now measures that nothing in this build ever
+     writes it, so the clause is true of every site ever created and
+     excludes nothing. It is kept (a closure state is the right rule to
+     have) and it is now stated: the literal is checked against the owning
+     vocabulary, and the count it excludes is printed rather than implied. */
+  const SITE_INELIGIBLE_STATUSES = ['CLOSED'];
+  let literalsChecked = false;
+
+  function assertSiteStatusLiterals() {
+    if (literalsChecked) return true;
+    SITE_INELIGIBLE_STATUSES.forEach(lit => {
+      FWEntityEngine.assertStatusLiteral('facility', lit, 'facilityEngine.sitesForStage');
+    });
+    literalsChecked = true;
+    return true;
+  }
+
+  function siteEligible(facility) {
+    return SITE_INELIGIBLE_STATUSES.indexOf(facility.status) < 0;
+  }
+
+  // MEASURED per registry: how many sites the eligibility test removes.
+  function siteEligibility(registry) {
+    const facs = FWEntityEngine.all(registry, 'facility');
+    const eligible = facs.filter(siteEligible);
+    const unreachable = SITE_INELIGIBLE_STATUSES
+      .filter(lit => FWEntityEngine.writableStatuses('facility').indexOf(lit) < 0);
+    return {
+      pool: facs.length,
+      eligible: eligible.length,
+      excluded: facs.length - eligible.length,
+      testedStatuses: SITE_INELIGIBLE_STATUSES.slice(),
+      unreachableStatuses: unreachable,
+      note: 'Eligibility excluded ' + (facs.length - eligible.length) + ' of ' + facs.length +
+        ' sites' + (unreachable.length
+          ? ' and cannot exclude any: the states it tests for (' + unreachable.join(', ') +
+            ') are declared for a facility and never issued in this build, so every coverage figure below is over the whole site population, not over the sites that were open that day.'
+          : '.')
+    };
+  }
+
   function sitesForStage(registry, stage) {
+    assertSiteStatusLiterals();
     const kinds = STAGE_SITES[stage];
     if (!kinds) return [];
     return FWEntityEngine.all(registry, 'facility')
-      .filter(f => kinds.indexOf(f.kind) >= 0 && f.status !== 'CLOSED');
+      .filter(f => kinds.indexOf(f.kind) >= 0 && siteEligible(f));
   }
 
   // Where a truck is when it enters `stage`. Returns null for road
@@ -304,6 +355,7 @@ const FWFacilityEngine = (() => {
   return {
     ARCHETYPES, KIND_ORDER, STAGE_SITES, ASSUMPTIONS, NOT_MODELLED, RECORDED_SCOPE,
     UNSITED_LABEL, COVERAGE_MIN, COVERAGE_MAX,
+    SITE_INELIGIBLE_STATUSES, siteEligible, siteEligibility, assertSiteStatusLiterals,
     archetype, clampCoverage, coverage, meanCoverage,
     sitesForStage, assignForStage,
     createTracker, record, siteSummary, hiddenLedger
