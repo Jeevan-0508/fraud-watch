@@ -308,11 +308,32 @@ const FWMoIntelligence = (() => {
     const sum = FWInvestigationEngine.summary(mo);
     const base = mo.baseConfidence != null ? mo.baseConfidence : mo.confidence;
 
+    /* THE METER USED TO KEY ON THE ADJUSTMENT, NOT ON THE CHECKS. Both
+       outcomes that learn nothing move confidence by exactly zero, so a
+       case with three checks that all came back empty or unreachable fell
+       to the else branch and told the analyst "no investigative checks run
+       yet" — in the one panel where the decision to close is taken, and
+       about precisely the case the examination vocabulary exists to
+       distinguish. Keyed on checksRun now, with the two states named
+       separately. */
+    const ex = FWInvestigationEngine.examination(mo);
+    const checkPhrase = sum.checksRun === 0
+      ? '· no record source has been checked yet'
+      : sum.adjustment
+        ? `<b class="${sum.adjustment < 0 ? 'text-emerald-400' : 'text-orange-400'}">${fmtDelta(sum.adjustment)}</b> from ${sum.checksRun} completed check${sum.checksRun === 1 ? '' : 's'}`
+        : `· unchanged by ${sum.checksRun} completed check${sum.checksRun === 1 ? '' : 's'}`;
     const meter = `<div class="text-[10px] text-slate-400 mb-1">
       Confidence ${Math.round(mo.confidence)}% = ${Math.round(base)}% from correlated signals
-      ${sum.adjustment ? `<b class="${sum.adjustment < 0 ? 'text-emerald-400' : 'text-orange-400'}">${fmtDelta(sum.adjustment)}</b> from ${sum.checksRun} completed check${sum.checksRun === 1 ? '' : 's'}` : '· no investigative checks run yet'}
+      ${checkPhrase}
       ${sum.effortSeconds ? ` · ${fmtEffort(sum.effortSeconds)} of analyst effort spent` : ''}
     </div>`;
+
+    /* How far this case has been taken, in the shared vocabulary, stated at
+       the point of decision. Framed in both directions: a case nothing has
+       answered on is not thereby suspicious and not thereby clear. */
+    const examLine = ex.everAnswered
+      ? ''
+      : `<div class="text-[10px] text-amber-300/80 mb-1">Nothing has answered on this case yet — ${ex.note}. That is neither a reason to escalate it nor a reason to clear it; it is a statement about what has been looked at.</div>`;
 
     const advice = window.FWAdviceEngine ? FWAdviceEngine.advise(state, mo) : null;
     const actions = FWInvestigationEngine.availableActions(state, mo);
@@ -332,6 +353,7 @@ const FWMoIntelligence = (() => {
     return `<div class="mb-2 pt-2 border-t border-slate-800">
       <div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Investigate</div>
       ${meter}
+      ${examLine}
       ${mo.autoFaded ? `<div class="text-[10px] text-slate-500 italic mb-1">This case faded on its own before any analyst reviewed it. The records can still be checked.</div>` : ''}
       ${controls}
       ${renderAdvice(advice, investigable)}
