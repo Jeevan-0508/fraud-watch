@@ -288,13 +288,26 @@ const FWFacilityEngine = (() => {
   const SITE_INELIGIBLE_STATUSES = ['CLOSED'];
   let literalsChecked = false;
 
-  function assertSiteStatusLiterals() {
-    if (literalsChecked) return true;
-    SITE_INELIGIBLE_STATUSES.forEach(lit => {
+  /* Two changes, both convention 34. `literals` can be handed in, so a caller
+     can plant an undeclared status and see this guard fire -- it read a
+     module-private list before, so nothing had ever shown it could. And the
+     memo returned the same bare `true` whether it had just checked the list or
+     skipped because it had checked once before; "checked and clean" and "did
+     not look" are opposite facts and both read true. */
+  function assertSiteStatusLiterals(literals, opts) {
+    const force = !!(opts && opts.force);
+    const list = literals || SITE_INELIGIBLE_STATUSES;
+    if (literalsChecked && !literals && !force) {
+      return { state: 'SKIPPED_ALREADY_CHECKED', checked: 0,
+        note: 'This list was reconciled against the facility status vocabulary earlier in this run and is not ' +
+          're-read. That is a memo of an earlier check, not a check.' };
+    }
+    list.forEach(lit => {
       FWEntityEngine.assertStatusLiteral('facility', lit, 'facilityEngine.sitesForStage');
     });
-    literalsChecked = true;
-    return true;
+    if (!literals) literalsChecked = true;
+    return { state: 'CHECKED', checked: list.length,
+      note: 'Every status this stage filter compares against is a declared facility status.' };
   }
 
   function siteEligible(facility) {

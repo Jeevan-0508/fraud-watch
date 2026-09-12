@@ -281,11 +281,27 @@ const FWScenario = (() => {
   }
 
   let shapeChecked = false;
-  function assertShapeNotSeparableOnce() {
-    if (shapeChecked || asserting) return true;
+  /* The memo and the dependency guard both returned a bare `true`, so "checked
+     and not separable", "already checked earlier" and "could not check, the
+     taxonomy was not loaded" were one value. Those are three different facts
+     and the third is the absence of a check. `opts.force` re-runs it, which is
+     also the only way to demonstrate this guard can fire at all. Convention
+     34. */
+  function assertShapeNotSeparableOnce(opts) {
+    const force = !!(opts && opts.force);
+    const sample = (opts && opts.cases) || 160;
+    const level = (opts && opts.level) || 4;
+    if ((shapeChecked || asserting) && !force) {
+      return { state: shapeChecked ? 'SKIPPED_ALREADY_CHECKED' : 'SKIPPED_REENTRANT',
+        note: 'The shape check ran earlier in this session and is not re-run per case. A memo of a check is not a check.' };
+    }
     shapeChecked = true;
-    if (!window.FW || !FW.patterns || !FW.patterns()) return true;
-    const s = shapeSeparability(4, 160);
+    if (!window.FW || !FW.patterns || !FW.patterns()) {
+      return { state: 'SKIPPED_TAXONOMY_ABSENT',
+        note: 'The taxonomy was not loaded, so whether a case\'s kind is readable off its shape was never tested. ' +
+          'That is the absence of a result, not a clean one.' };
+    }
+    const s = shapeSeparability(level, sample);
     if (s.separable) {
       throw new Error(
         'scenario.js: the kind of case is readable off its shape. ' + s.note +
@@ -293,7 +309,7 @@ const FWScenario = (() => {
         'opposite of what this trains.'
       );
     }
-    return true;
+    return { state: 'CHECKED', cases: sample, level: level, note: s.note };
   }
 
   return {

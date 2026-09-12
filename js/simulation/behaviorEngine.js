@@ -53,9 +53,14 @@ const FWBehaviorEngine = (() => {
   const SPARE_TRAILER_STATUS = 'IN_STORAGE';
   const SELECTABLE_CARRIER_STATUS = 'ACTIVE';
 
-  function assertSelectionLiterals() {
-    const trailerLit = FWEntityEngine.assertStatusLiteral('trailer', SPARE_TRAILER_STATUS, 'behaviorEngine TRAILER_SWAPPED');
-    const carrierLit = FWEntityEngine.assertStatusLiteral('carrier', SELECTABLE_CARRIER_STATUS, 'behaviorEngine EQUIPMENT_CARRIER_MISMATCH');
+  /* `literals` exists so the guard can be pointed at planted values: it read
+     two module-private constants, so nothing could make it fire and a clean
+     result from it meant nothing. Convention 34. */
+  function assertSelectionLiterals(literals) {
+    const spare = literals && literals.trailer !== undefined ? literals.trailer : SPARE_TRAILER_STATUS;
+    const selectable = literals && literals.carrier !== undefined ? literals.carrier : SELECTABLE_CARRIER_STATUS;
+    const trailerLit = FWEntityEngine.assertStatusLiteral('trailer', spare, 'behaviorEngine TRAILER_SWAPPED');
+    const carrierLit = FWEntityEngine.assertStatusLiteral('carrier', selectable, 'behaviorEngine EQUIPMENT_CARRIER_MISMATCH');
     if (!trailerLit.reachable || !carrierLit.reachable) {
       throw new Error('behaviorEngine: a disruption generator selects on a status this build never issues');
     }

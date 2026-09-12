@@ -93,8 +93,13 @@ const FWEntityEngine = (() => {
     }
   };
 
-  function declaredStatuses(kind) {
-    const v = LIFECYCLE_VOCABULARY[kind];
+  /* `table` exists so this vocabulary can be checked against a DOCTORED copy of
+     itself. The guard below reads nothing but these helpers, so with no way to
+     hand them a bad table there was no way to show the guard could fire at all
+     -- and a guard that has never fired is a guard nobody has tested. Every
+     caller in the app passes nothing and gets the real table. */
+  function declaredStatuses(kind, table) {
+    const v = (table || LIFECYCLE_VOCABULARY)[kind];
     if (!v) throw new Error('entityEngine: no status vocabulary declared for kind ' + kind);
     if (v.declared) return v.declared.slice();
     if (v.declaredVia === 'FWEntityTruck.STATUSES') {
@@ -109,27 +114,27 @@ const FWEntityEngine = (() => {
     throw new Error('entityEngine: status vocabulary for ' + kind + ' declares neither a list nor a source');
   }
 
-  function writableStatuses(kind) {
-    const v = LIFECYCLE_VOCABULARY[kind];
+  function writableStatuses(kind, table) {
+    const v = (table || LIFECYCLE_VOCABULARY)[kind];
     if (!v) throw new Error('entityEngine: no status vocabulary declared for kind ' + kind);
-    return v.writableIsWholeVocabulary ? declaredStatuses(kind) : v.writable.slice();
+    return v.writableIsWholeVocabulary ? declaredStatuses(kind, table) : v.writable.slice();
   }
 
   // Declared but unreachable: the part of the vocabulary no line of this
   // codebase can produce. A filter testing one of these is a no-op.
-  function neverWritten(kind) {
-    const w = writableStatuses(kind);
-    return declaredStatuses(kind).filter(s => w.indexOf(s) < 0);
+  function neverWritten(kind, table) {
+    const w = writableStatuses(kind, table);
+    return declaredStatuses(kind, table).filter(s => w.indexOf(s) < 0);
   }
 
-  function statusVocabulary(kind) {
-    const v = LIFECYCLE_VOCABULARY[kind];
+  function statusVocabulary(kind, table) {
+    const v = (table || LIFECYCLE_VOCABULARY)[kind];
     if (!v) throw new Error('entityEngine: no status vocabulary declared for kind ' + kind);
     return Object.assign({}, v, {
       kind,
-      declared: declaredStatuses(kind),
-      writable: writableStatuses(kind),
-      neverWritten: neverWritten(kind)
+      declared: declaredStatuses(kind, table),
+      writable: writableStatuses(kind, table),
+      neverWritten: neverWritten(kind, table)
     });
   }
 
@@ -189,8 +194,8 @@ const FWEntityEngine = (() => {
     return human + ' — one of ' + v.declared.length + ' declared ' + kind + ' stages, all reachable';
   }
 
-  function statusNote(kind) {
-    const v = statusVocabulary(kind);
+  function statusNote(kind, table) {
+    const v = statusVocabulary(kind, table);
     const gap = v.neverWritten.length
       ? 'Declared and never issued: ' + v.neverWritten.join(', ') + '. '
       : 'Every declared value is reachable. ';
@@ -210,16 +215,20 @@ const FWEntityEngine = (() => {
     return { kind, literal, declared: true, reachable: v.writable.indexOf(literal) >= 0 };
   }
 
-  function assertLifecycleVocabulary() {
+  /* Every branch below is now reachable from a caller, because the table it
+     judges can be handed in. Convention 34: this guard reported nothing wrong
+     for ten sessions and nothing had ever demonstrated it COULD report
+     something wrong -- the two look identical from outside. */
+  function assertLifecycleVocabulary(table, mirror, noteFn) {
     KINDS.forEach(kind => {
-      const v = LIFECYCLE_VOCABULARY[kind];
+      const v = (table || LIFECYCLE_VOCABULARY)[kind];
       if (!v) throw new Error('entityEngine: kind ' + kind + ' has no status vocabulary');
-      const declared = declaredStatuses(kind);
+      const declared = declaredStatuses(kind, table);
       if (!declared.length) throw new Error('entityEngine: ' + kind + ' declares an empty status vocabulary');
       if (new Set(declared).size !== declared.length) {
         throw new Error('entityEngine: ' + kind + ' declares a duplicate status');
       }
-      const writable = writableStatuses(kind);
+      const writable = writableStatuses(kind, table);
       writable.forEach(s => {
         if (declared.indexOf(s) < 0) {
           throw new Error('entityEngine: ' + kind + ' lists ' + s + ' as writable but does not declare it');
@@ -239,15 +248,26 @@ const FWEntityEngine = (() => {
       // when one actually is. The reverse direction is not left to prose at
       // all -- statusNote() enumerates the unreachable values from the
       // derived list, so a gap cannot go unmentioned by omission.
-      const gap = neverWritten(kind);
+      const gap = neverWritten(kind, table);
       const claimsGap = /never issued|never sets|never written|never suspends/.test(v.doesNotMean);
       if (claimsGap && !gap.length) {
         throw new Error('entityEngine: ' + kind + ' note claims a value is never issued but every declared value is writable');
       }
-      const note = statusNote(kind);
+      /* This branch cannot fire against the vocabulary table, and that was worth
+         finding out. `statusNote` builds its first sentence by enumerating the
+         SAME derived gap list, so the note names every unreachable status by
+         construction and no doctored table can make it omit one. What the check
+         actually guards is `statusNote` itself: it fires the day that function
+         is rewritten to describe the gap in prose instead of listing it. So the
+         note builder is injectable, which is the only way to demonstrate the
+         branch can fire at all -- an assertion nothing can trip is an assertion
+         nobody has tested. */
+      const note = (noteFn || statusNote)(kind, table);
       gap.forEach(u => {
         if (note.indexOf(u) < 0) {
-          throw new Error('entityEngine: ' + kind + ' note does not name unreachable status ' + u);
+          throw new Error('entityEngine: ' + kind + ' note does not name unreachable status ' + u +
+            '. statusNote must LIST the unreachable values, not describe them: a reader cannot check a claim ' +
+            'against values they were never shown');
         }
       });
     });
@@ -260,16 +280,29 @@ const FWEntityEngine = (() => {
     // rather than returning 'undefined'. The mirror check therefore runs
     // whenever it can -- on any later call, and from the test suite -- and
     // is skipped, not faked, when it cannot.
-    let lifecycle = null;
-    try { lifecycle = FWBehaviorEngine.LIFECYCLE; } catch (e) { lifecycle = null; }
+    let lifecycle = mirror || null;
+    if (!lifecycle) { try { lifecycle = FWBehaviorEngine.LIFECYCLE; } catch (e) { lifecycle = null; } }
     if (Array.isArray(lifecycle)) {
-      const a = declaredStatuses('truck').join('|');
+      const a = declaredStatuses('truck', table).join('|');
       const b = lifecycle.join('|');
       if (a !== b) {
         throw new Error('entityEngine: FWEntityTruck.STATUSES and FWBehaviorEngine.LIFECYCLE disagree (' + a + ' vs ' + b + ')');
       }
     }
-    return true;
+    /* Not `true`. This guard has two outcomes that used to be one value: it
+       compared the two copies of the truck vocabulary, or the binding was in
+       its dead zone and it compared nothing. "Checked and agreed" and "never
+       compared" are opposite facts and both returned true. */
+    return {
+      state: 'CHECKED',
+      kinds: KINDS.length,
+      mirror: Array.isArray(lifecycle) ? 'COMPARED' : 'NOT_COMPARED_BINDING_ABSENT',
+      mirrorNote: Array.isArray(lifecycle)
+        ? 'The two declarations of the truck vocabulary were compared and agree.'
+        : 'The second declaration of the truck vocabulary was not reachable when this ran, so the two copies were ' +
+          'not compared. That is the absence of a comparison, not agreement.',
+      tableChecked: table ? 'SUPPLIED' : 'THE MODULE\'S OWN'
+    };
   }
 
   function createRegistry() {

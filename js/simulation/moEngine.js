@@ -329,17 +329,23 @@ const FWMoEngine = (() => {
      parted company; and the investigation adjustment is added straight to this
      number, so its bounds have to be in the same unit and inside the same
      span or the two are not commensurable. */
-  function assertIndexScaleDeclared() {
-    if (CONFIDENCE_INDEX.saturatesAtRaw * INDEX_MULTIPLIER !== INDEX_MAX) {
+  /* `index` exists so this guard can be pointed at a DOCTORED declaration. It
+     read only module-private constants, so no caller could plant a violation
+     and nothing had ever shown it capable of firing -- and a guard that has
+     never fired is indistinguishable from a guard that cannot. Convention 34.
+     Every caller in the app passes nothing and gets the real declaration. */
+  function assertIndexScaleDeclared(index) {
+    const CI = index || CONFIDENCE_INDEX;
+    if (CI.saturatesAtRaw * INDEX_MULTIPLIER !== INDEX_MAX) {
       throw new Error('moEngine: the declared saturation sum does not multiply back to the scale maximum');
     }
-    if (CONFIDENCE_INDEX.floorsAtRaw * INDEX_MULTIPLIER !== INDEX_MIN) {
+    if (CI.floorsAtRaw * INDEX_MULTIPLIER !== INDEX_MIN) {
       throw new Error('moEngine: the declared floor sum does not multiply back to the scale minimum');
     }
-    if (/%/.test(CONFIDENCE_INDEX.unit)) {
+    if (/%/.test(CI.unit)) {
       throw new Error('moEngine: the index unit must not be a percentage; nothing is divided');
     }
-    if (!/CURRENTLY ACTIVE/.test(CONFIDENCE_INDEX.basis)) {
+    if (!/CURRENTLY ACTIVE/.test(CI.basis)) {
       throw new Error('moEngine: the index must declare the signal set it is computed over, ' +
         'or a figure over a decayed subset reads as a figure over the whole case');
     }
@@ -704,15 +710,19 @@ const FWMoEngine = (() => {
      cannot make moEngine unloadable on its own (Slice 56's lesson). Both
      directions -- a reason issuing an undeclared class, and a class no reason
      can issue, which would be a badge nothing produces. */
-  function assertClassificationReasonsDeclared() {
-    CLASSIFICATION_REASON_KEYS.forEach(r => {
-      const cls = CLASSIFICATION_REASONS[r].issues;
-      if (!CLASSIFICATION[cls]) {
+  function assertClassificationReasonsDeclared(reasons, classes) {
+    const R = reasons || CLASSIFICATION_REASONS;
+    const RK = Object.keys(R);
+    const CLS = classes || CLASSIFICATION;
+    const CLSK = Object.keys(CLS);
+    RK.forEach(r => {
+      const cls = R[r].issues;
+      if (!CLS[cls]) {
         throw new Error('moEngine: classification reason ' + r + ' issues "' + cls + '", which is not a declared ' +
           'discovery class; the badge would have no label and no colour');
       }
     });
-    const unreasoned = CLASSIFICATIONS.filter(c => !CLASSIFICATION_REASON_KEYS.some(r => CLASSIFICATION_REASONS[r].issues === c));
+    const unreasoned = CLSK.filter(c => !RK.some(r => R[r].issues === c));
     if (unreasoned.length) {
       throw new Error('moEngine: discovery class(es) ' + unreasoned.join(', ') + ' can be issued by no declared ' +
         'reason; a class no branch produces is a bucket that can only ever read zero');
