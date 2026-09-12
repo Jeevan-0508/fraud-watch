@@ -244,17 +244,36 @@ const FWMoIntelligence = (() => {
      no expected confidence movement went into it is stated rather than
      assumed to be obvious. When the coverage is exhausted this block says
      so and puts nothing forward -- an advisory that always has a next
-     action to sell is selling. */
+     action to sell is selling.
+
+     Slice 25 adds the coverage line underneath it, and the reason it is
+     four counts rather than a progress figure is that the four are
+     different facts. A signal type answered on by a check, a type a check
+     was run against and got nothing from, a type nobody has looked at,
+     and a type no source in this simulation can read are not degrees of
+     the same thing, and a single percentage would put the port's own
+     blind spot on the same axis as work not yet done. */
   function renderAdvice(advice, investigable) {
     if (!advice || !investigable) return '';
     if (advice.nothingAvailable) return '';
     const gap = advice.uncheckableNote
       ? `<div class="text-[10px] text-amber-300/80 mt-1">${advice.uncheckableNote}</div>` : '';
     const head = `<div class="text-[10px] font-semibold text-slate-400 uppercase mt-2 mb-1">Worth the hours</div>`;
+    const part = advice.typePartition;
+    const coverage = part ? `<div class="text-[10px] text-slate-500 mt-1">
+      Of this case's ${part.total} signal type${part.total === 1 ? '' : 's'}:
+      ${part.spokenTo.length} answered on by a completed check ·
+      ${part.unread.length} attempted with nothing to show for it ·
+      ${part.neverAttempted.length} not yet looked at ·
+      ${part.unsourced.length} that no record source here can read.
+      Four counts, not a progress figure &mdash; a gap in what this port records is not work outstanding.
+    </div>` : '';
+    const unread = advice.unreadNote
+      ? `<div class="text-[10px] text-sky-300/80 mt-1">${advice.unreadNote}</div>` : '';
     const foot = `<div class="text-[9px] text-slate-500 italic mt-1">Ordered by coverage per hour: signal types not yet spoken to, times the stated chance the source returns anything, over the effort it costs. No expected confidence movement goes into this ordering in either direction &mdash; the deltas are asymmetric on purpose, so ranking by them would promote either the checks most likely to corroborate or the checks most likely to clear. Which check is worth running is not a claim about what it will find.</div>`;
 
     if (advice.exhausted) {
-      return `${head}<div class="text-[10px] text-slate-400">${advice.exhaustedNote}</div>${gap}${foot}`;
+      return `${head}<div class="text-[10px] text-slate-400">${advice.exhaustedNote}</div>${unread}${coverage}${gap}${foot}`;
     }
 
     const rows = advice.candidates.slice(0, 4).map(c => {
@@ -263,6 +282,7 @@ const FWMoIntelligence = (() => {
         <span class="font-mono text-[10px] ${lead ? 'text-sky-300' : 'text-slate-500'}">#${c.rank}${c.tied ? ' =' : ''}</span>
         <span class="text-[10px] ${lead ? 'text-slate-200' : 'text-slate-400'}">${c.label}</span>
         ${c.secondOpinionOnly ? '<span class="text-[9px] text-slate-500">second opinion only</span>' : ''}
+        ${!c.secondOpinionOnly && c.reopensUnreadTypes && c.reopensUnreadTypes.length ? '<span class="text-[9px] text-sky-300/80">reaches ground a spent check could not read</span>' : ''}
         <div class="text-[10px] text-slate-500">${c.basis}</div>
       </li>`;
     }).join('');
@@ -272,7 +292,7 @@ const FWMoIntelligence = (() => {
 
     return `${head}
       <ul class="list-none text-[10px]">${rows}</ul>
-      ${tie}${gap}${foot}`;
+      ${tie}${unread}${coverage}${gap}${foot}`;
   }
 
   /* Investigation panel (Phases 28-29). Two things are stated plainly here

@@ -281,6 +281,16 @@ const FWInvestigationEngine = (() => {
       ? !state.rng.chance(siteCtx.chance) : false;
     const inconclusive = !noRecord && state.rng ? state.rng.chance(def.inconclusiveChance) : false;
 
+    // Which types this check could actually ANSWER on, as opposed to
+    // which it was run against. The two differ for the site record: it is
+    // offered against every signal type, but it can only speak to the
+    // signals that were observed at a site, and a check that came back
+    // with nothing to fetch or could not be reached spoke to none of
+    // them. Kept separate from signalTypes rather than replacing it,
+    // because signalTypes is the honest record of what was attempted and
+    // is what the findings list narrates.
+    let spokenToTypes = [];
+
     let outcome, delta, narrative;
     if (noRecord) {
       outcome = 'NO_RECORD_EXISTS';
@@ -293,6 +303,7 @@ const FWInvestigationEngine = (() => {
     } else {
       // A site record can only speak to what was observed at a site.
       const scope = def.requiresSite ? sitedSignals(covered) : covered;
+      spokenToTypes = Array.from(new Set(scope.map(s => s.type)));
       const causes = explainedCauses(scope);
       const explained = scope.filter(s => s.groundTruth && s.groundTruth.legitimate).length;
       const fraction = explained / scope.length;
@@ -311,7 +322,7 @@ const FWInvestigationEngine = (() => {
 
     const finding = {
       actionKey, label: def.label, question: def.question,
-      outcome, confidenceDelta: delta, signalTypes: types,
+      outcome, confidenceDelta: delta, signalTypes: types, spokenToTypes,
       effortSeconds: def.effortSeconds, at: now, narrative,
       sites: siteCtx ? siteCtx.sites : null,
       siteRecordLikelihood: siteCtx ? Math.round(siteCtx.chance * 100) : null
@@ -348,6 +359,14 @@ const FWInvestigationEngine = (() => {
     };
   }
 
+  // An outcome either answered on the signals it was run against or it
+  // did not, and the two ways of not answering are not the same fact.
+  // Exported because the advisory has to tell them apart: a source whose
+  // check came back empty bought no coverage, and treating it as covered
+  // would let this port's blind spot read as a case having been examined.
+  const SUBSTANTIVE_OUTCOMES = ['EXCULPATORY', 'MIXED', 'CORROBORATING'];
+  const LEARNED_NOTHING_OUTCOMES = ['NO_RECORD_EXISTS', 'INCONCLUSIVE'];
+
   const OUTCOME_NOTE = {
     EXCULPATORY: 'A documented explanation was found on record. Records are verifiable, so this weighs heavily.',
     MIXED: 'Part of what was checked has a documented explanation and part does not. The remainder is unexplained, which is not the same as suspicious.',
@@ -357,7 +376,7 @@ const FWInvestigationEngine = (() => {
   };
 
   return {
-    ACTION_CATALOG, OUTCOME_NOTE, availableActions, performAction, summary, isInvestigable,
+    ACTION_CATALOG, OUTCOME_NOTE, SUBSTANTIVE_OUTCOMES, LEARNED_NOTHING_OUTCOMES, availableActions, performAction, summary, isInvestigable,
     signalsForMo, sitedSignals, siteRecordChance, narrateSiteUnavailable,
     MAX_UPWARD_ADJUSTMENT, MAX_DOWNWARD_ADJUSTMENT
   };

@@ -41,6 +41,22 @@
    evidence about the case — running the top-ranked check and finding
    nothing is not a finding about a carrier.
 
+   A SPENT CHECK IS NOT COVERAGE (Slice 25). This module predates the
+   outcome that says a source had nothing to fetch, and it originally
+   counted every completed check as having spoken to the signal types it
+   was run against. That is wrong in a way that runs in one direction
+   only: a site record that came back with no record existing, or a
+   source that could not be reached, learned nothing, and counting it as
+   covered demoted every other source that could still speak to those
+   signals -- far enough that a case could report that nothing was worth
+   the hours because its checks had all failed. The port's own blind spot
+   read as the case having been examined. Coverage here now means a type
+   a completed check actually ANSWERED on, and the three ways a type can
+   be left unanswered are kept apart: nothing to fetch, could not be
+   reached, and outside what the source can read at all (the site record
+   is offered against every signal type and can only read the ones
+   observed at a site).
+
    AND IT IS ALLOWED TO SAY "NOTHING". When every signal a source could
    speak to has already been checked, this module reports that further
    checks buy second opinions rather than coverage, and recommends none.
@@ -89,6 +105,8 @@ const FWAdviceEngine = (() => {
     'No expected confidence movement enters the ordering, in either direction. The deltas are asymmetric on purpose, so ranking by them would promote either the checks most likely to corroborate or the checks most likely to clear, depending only on whether the absolute value was taken.',
     'The chance a source returns anything is a stated model parameter, not a measurement: the disclosed site coverage for the site record, and the stated inconclusive chance for every other source.',
     'A signal already spoken to by a completed check counts for nothing here. A second source on the same signal is a second opinion, which is worth having and is not additional coverage.',
+    'Spoken to means a completed check answered on it. A check that came back with nothing to fetch, that could not be reached, or that was run against a signal it cannot read bought no coverage, so those signal types are still counted as unspoken-to and the sources that can still reach them are still ranked on them.',
+    'A source is second opinion only when every signal type it covers has actually been answered on. A spent check that learned nothing does not make the ground it touched covered, and treating it as covered would let this port\'s blind spot read as the case having been examined.',
     'Checks that tie on these inputs are reported as tied. An arbitrary order between them would read as a preference this module does not hold.',
     'The ordering is about the hours, never about the case. Which check is worth running is not a claim about what it will find, and the top of this list carries no implication either way.'
   ];
@@ -111,19 +129,93 @@ const FWAdviceEngine = (() => {
       why: 'No such quantity exists anywhere in this project, and confidence is not it. Nothing in an ordering of record checks could produce one.'
     },
     {
+      figure: 'The chance that repeating a check that learned nothing would return something',
+      why: 'Each source is spendable once per case in this model, so a repeat is not an action the analyst has, and reporting its value would recommend one. For a check that came back with nothing to fetch the question does not arise at all: that absence is structural, and no number of attempts produces a record the site never wrote.'
+    },
+    {
+      figure: 'A discount on a source because an earlier check on the same signals came back empty',
+      why: 'Computable, and refused. These are separate record systems and one failing to answer says nothing about the next. Worse as method: lowering the ranking of a case\'s remaining checks because that case has already resisted examination would make the hardest cases to examine look like the least worth the hours, which is the same question-begging the cost model refuses when it declines to split unresolved hours by how resolved cases turned out.'
+    },
+    {
       figure: 'A work queue or priority order across cases',
       why: 'This ranks checks within one case on the hours they cost. Ranking cases against each other would need a view of which case matters more, which means either exposure — refused as a ranking basis in the cost model — or confidence, which is not a probability of anything.'
     }
   ];
 
-  // Signals in the case that a completed check has already spoken to.
-  // Keyed by signal type, because that is the granularity at which the
-  // action catalog covers anything.
-  function checkedTypes(mo) {
+  // Why a signal type a check was run against still has no answer on it.
+  // Three different facts, and merging them would hide the one that
+  // matters most: a structural gap in what this port records is not a
+  // failed attempt, and neither is a source being asked about ground it
+  // cannot read.
+  const UNREAD_REASON_NOTE = {
+    NO_RECORD_EXISTS: 'a check was run and there was no record of that kind to fetch',
+    INCONCLUSIVE: 'a check was run and the source could not be reached or its records were incomplete',
+    OUT_OF_SOURCE_SCOPE: 'a check was run against it but that source can only read signals observed at a site, and this one was not'
+  };
+
+  // Per signal type: has a completed check ANSWERED on it, and if not,
+  // which ways of not answering are on the record. Keyed by signal type
+  // because that is the granularity at which the action catalog covers
+  // anything.
+  function typeLedger(mo) {
     const findings = (mo && mo.investigation && mo.investigation.findings) || [];
-    const seen = new Set();
-    findings.forEach(f => (f.signalTypes || []).forEach(t => seen.add(t)));
-    return seen;
+    const substantiveOutcomes = (window.FWInvestigationEngine && FWInvestigationEngine.SUBSTANTIVE_OUTCOMES)
+      || ['EXCULPATORY', 'MIXED', 'CORROBORATING'];
+    const map = new Map();
+    const entry = (t) => {
+      if (!map.has(t)) map.set(t, { type: t, spokenTo: false, reasons: [] });
+      return map.get(t);
+    };
+    findings.forEach(f => {
+      const substantive = substantiveOutcomes.indexOf(f.outcome) >= 0;
+      // A finding records what it was RUN against and, separately, what it
+      // could answer on. The two differ for the site record.
+      const answered = substantive ? (f.spokenToTypes || f.signalTypes || []) : [];
+      (f.signalTypes || []).forEach(t => {
+        const e = entry(t);
+        if (answered.indexOf(t) >= 0) { e.spokenTo = true; return; }
+        const reason = substantive ? 'OUT_OF_SOURCE_SCOPE' : (UNREAD_REASON_NOTE[f.outcome] ? f.outcome : 'INCONCLUSIVE');
+        if (e.reasons.indexOf(reason) < 0) e.reasons.push(reason);
+      });
+    });
+    return map;
+  }
+
+  // Signal types a completed check has actually spoken to. Named as it
+  // always was; what changed in Slice 25 is that a check which learned
+  // nothing no longer counts as having checked anything.
+  function checkedTypes(mo) {
+    const out = new Set();
+    typeLedger(mo).forEach(e => { if (e.spokenTo) out.add(e.type); });
+    return out;
+  }
+
+  /* Every signal type in the case sorted into one of four disjoint
+     buckets, summing to the case's signal type count and asserted to
+     (reconciled-totals discipline, Slice 23): answered on, attempted and
+     still unanswered, never attempted though a source exists, and covered
+     by no source in this simulation at all. Reported as counts, never as a
+     percentage complete, which would read as sufficiency. */
+  function typePartition(caseTypes, ledger, noSourceTypes) {
+    const noSource = new Set(noSourceTypes);
+    const spokenTo = [], unread = [], neverAttempted = [], unsourced = [];
+    caseTypes.forEach(t => {
+      const e = ledger.get(t);
+      if (e && e.spokenTo) spokenTo.push(t);
+      else if (e && e.reasons.length) unread.push({ type: t, reasons: e.reasons });
+      else if (noSource.has(t)) unsourced.push(t);
+      else neverAttempted.push(t);
+    });
+    const total = spokenTo.length + unread.length + neverAttempted.length + unsourced.length;
+    if (total !== caseTypes.length) {
+      throw new Error(
+        'adviceEngine: signal type partition does not reconcile (' + total + ' sorted vs ' +
+        caseTypes.length + ' in the case). Every type is answered on, attempted and unanswered, ' +
+        'unattempted, or unsourced; a type falling outside all four would be a coverage claim ' +
+        'with nothing behind it.'
+      );
+    }
+    return { spokenTo, unread, neverAttempted, unsourced, total };
   }
 
   // Signal types in this case that NO source in the catalog covers. The
@@ -145,13 +237,19 @@ const FWAdviceEngine = (() => {
     if (!state || !mo) return null;
     const investigable = FWInvestigationEngine.isInvestigable(mo);
     const actions = FWInvestigationEngine.availableActions(state, mo);
+    const ledger = typeLedger(mo);
     const done = checkedTypes(mo);
+    const unread = new Set();
+    ledger.forEach(e => { if (!e.spokenTo && e.reasons.length) unread.add(e.type); });
     const signals = FWInvestigationEngine.signalsForMo(state, mo);
     const caseTypes = Array.from(new Set(signals.map(s => s.type)));
 
     const candidates = actions.filter(a => !a.done).map(a => {
       const def = FWInvestigationEngine.ACTION_CATALOG[a.key];
+      // Unchecked means unanswered, which includes ground a spent check
+      // touched and could not read.
       const unchecked = a.signalTypes.filter(t => !done.has(t));
+      const reopens = unchecked.filter(t => unread.has(t));
       // Stated parameters only. For the site record the disclosed
       // coverage is multiplied in, because there the chance of getting
       // nothing at all is published before the hours are spent.
@@ -163,6 +261,11 @@ const FWAdviceEngine = (() => {
         question: a.question,
         uncheckedSignals: unchecked.length,
         uncheckedTypes: unchecked,
+        // Of the unanswered types this source covers, the ones another
+        // source already tried and got nothing from. Not a discount and
+        // not a bonus: it is stated so the analyst knows the ground is
+        // untouched rather than fresh.
+        reopensUnreadTypes: reopens,
         coveredTypes: a.signalTypes,
         repeatTypes: a.signalTypes.filter(t => done.has(t)),
         sourceAvailability: returnsSomething,
@@ -190,13 +293,20 @@ const FWAdviceEngine = (() => {
       c.basis = c.secondOpinionOnly
         ? 'Every signal type this source covers has already been spoken to by a completed check. Running it buys a second opinion on the same ground, not more coverage.'
         : c.uncheckedSignals + ' signal type' + (c.uncheckedSignals === 1 ? '' : 's') +
-          ' not yet spoken to, ' + Math.round(c.sourceAvailability * 100) + '% stated chance the source returns anything, ' +
+          ' not yet spoken to' +
+          (c.reopensUnreadTypes.length
+            ? ' (' + c.reopensUnreadTypes.length + ' of them attempted already by a check that came back with nothing)'
+            : '') +
+          ', ' + Math.round(c.sourceAvailability * 100) + '% stated chance the source returns anything, ' +
           (c.hours < 1 ? Math.round(c.hours * 60) + ' min' : c.hours.toFixed(1) + ' h') + ' of effort.';
     });
 
     const withCoverage = candidates.filter(c => !c.secondOpinionOnly);
     const uncheckable = uncheckableTypes(state, mo);
     const openTypes = caseTypes.filter(t => !done.has(t));
+    const partition = typePartition(caseTypes, ledger, uncheckable);
+    const reasonCounts = {};
+    partition.unread.forEach(u => u.reasons.forEach(r => { reasonCounts[r] = (reasonCounts[r] || 0) + 1; }));
 
     return {
       investigable,
@@ -208,8 +318,23 @@ const FWAdviceEngine = (() => {
       exhausted: candidates.length > 0 && withCoverage.length === 0,
       nothingAvailable: candidates.length === 0,
       caseSignalTypes: caseTypes,
-      checkedTypeCount: caseTypes.filter(t => done.has(t)).length,
+      // Answered on, not merely attempted.
+      checkedTypeCount: partition.spokenTo.length,
       openTypeCount: openTypes.length,
+      typePartition: partition,
+      unreadTypeCount: partition.unread.length,
+      unreadReasonCounts: reasonCounts,
+      UNREAD_REASON_NOTE,
+      // Stated whether or not any check remains, because "every source is
+      // spent" and "this case has been examined" are different claims and
+      // the gap between them is exactly what this bucket holds.
+      unreadNote: partition.unread.length
+        ? partition.unread.length + ' signal type' + (partition.unread.length === 1 ? '' : 's') +
+          ' had a check run against ' + (partition.unread.length === 1 ? 'it' : 'them') +
+          ' and still has no answer: ' +
+          Object.keys(reasonCounts).map(r => reasonCounts[r] + ' where ' + UNREAD_REASON_NOTE[r]).join('; ') +
+          '. Effort was spent there and no coverage was obtained, so it is not counted as checked.'
+        : null,
       uncheckableTypes: uncheckable,
       // Stated as a count of signal types with no source, never as a
       // completion percentage: a percentage would read as sufficiency.
@@ -218,12 +343,20 @@ const FWAdviceEngine = (() => {
           ' in this case (' + uncheckable.map(t => t.replace(/_/g, ' ').toLowerCase()).join(', ') +
           ') is not covered by any record source in this simulation. Running every check available would leave that part of the case unexamined, which is a limit of the sources and not a fact about the carrier.'
         : null,
-      exhaustedNote: 'Every signal type a source can speak to in this case has been spoken to. Further checks are second opinions on ground already covered, so none is put forward as worth the hours.',
+      exhaustedNote: partition.unread.length
+        ? 'Every remaining source covers only ground a completed check has already answered on, so none is put forward as worth the hours. That is not the same as this case having been examined: ' +
+          partition.unread.length + ' signal type' + (partition.unread.length === 1 ? '' : 's') +
+          ' had effort spent on ' + (partition.unread.length === 1 ? 'it' : 'them') +
+          ' and still has no answer, and no source left can reach ' + (partition.unread.length === 1 ? 'it' : 'them') + '.'
+        : 'Every signal type a source can speak to in this case has been spoken to. Further checks are second opinions on ground already covered, so none is put forward as worth the hours.',
       RANK_INPUTS,
       ASSUMPTIONS,
       NOT_MODELLED
     };
   }
 
-  return { RANK_INPUTS, FORBIDDEN_INPUT, ASSUMPTIONS, NOT_MODELLED, scoreInputs, scoreOf, checkedTypes, uncheckableTypes, advise };
+  return {
+    RANK_INPUTS, FORBIDDEN_INPUT, ASSUMPTIONS, NOT_MODELLED, UNREAD_REASON_NOTE,
+    scoreInputs, scoreOf, typeLedger, checkedTypes, typePartition, uncheckableTypes, advise
+  };
 })();
