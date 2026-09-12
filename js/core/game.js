@@ -49,16 +49,31 @@ const FWCoreGame = (() => {
         this.time.delayedCall(1200, () => this.startCase());
       }
 
+      /* The HUD used to print SOLVED and MISSED and no base, out of six
+         buckets. Two counts out of a population whose size is not on screen
+         invite the reader to supply the rest, and the rest included every case
+         nobody called. Both counts now carry the base they came out of, and
+         the uncalled cases are on screen instead of implied. */
       updateHud() {
-        const s = this.scoring;
         const dock = document.getElementById('port-hud-line');
-        if (dock) {
-          dock.innerHTML =
-            `<span class="text-slate-400">SCORE</span> <b class="text-white">${s.totalScore}</b>` +
-            `<span class="text-slate-400 ml-3">STREAK</span> <b class="text-amber-400">${s.streak}</b>` +
-            `<span class="text-slate-400 ml-3">LEVEL</span> <b class="text-sky-400">${s.level}</b>` +
-            `<span class="text-slate-400 ml-3">SOLVED</span> <b class="text-emerald-400">${s.casesSolved}</b>` +
-            `<span class="text-slate-400 ml-3">MISSED</span> <b class="text-red-400">${s.casesMissed}</b>`;
+        if (!dock) return;
+        const s = this.scoring;
+        const cut = FWScoring.tally(s);
+        dock.innerHTML =
+          `<span class="text-slate-400">SCORE</span> <b class="text-white">${s.totalScore}</b>` +
+          `<span class="text-slate-400 ml-3">STREAK</span> <b class="text-amber-400">${s.streak}</b>` +
+          `<span class="text-slate-400 ml-3">LEVEL</span> <b class="text-sky-400">${s.level}</b>` +
+          `<span class="text-slate-400 ml-3">INTERCEPTED</span> <b class="text-emerald-400">${cut.casesSolved}</b>` +
+          `<span class="text-slate-500">/${cut.resolutions}</span>` +
+          `<span class="text-slate-400 ml-3">LEFT AFTER YOUR CALL</span> <b class="text-red-400">${cut.casesMissed}</b>` +
+          `<span class="text-slate-500">/${cut.resolutions}</span>` +
+          `<span class="text-slate-400 ml-3">NO CALL MADE</span> <b class="text-slate-300">${cut.uncalled}</b>` +
+          `<span class="text-slate-500">/${cut.resolutions}</span>`;
+        const note = document.getElementById('port-hud-note');
+        if (note) {
+          note.innerHTML = cut.legacyUnreconciled
+            ? `<span class="text-amber-400/80">${FWScoring.LEGACY_NOTE}</span>`
+            : `Every case ends in exactly one of ${FWScoring.OUTCOME_NAMES.length} recorded ways, and ${FWScoring.OUTCOME_NAMES.filter(n => !FWScoring.OUTCOMES[n].decided).length} of them are not calls you made. A case whose window closed is counted as uncalled, never as a decision.`;
         }
       }
 
@@ -132,24 +147,41 @@ const FWCoreGame = (() => {
         FWPortUI.hideInvestigation();
         if (data.type === 'fraud') {
           if (action === 'flag') this.resolveOutcome('caught');
-          else this.triggerFlee();
+          else this.triggerFlee('decision');
         } else {
-          if (action === 'flag') this.resolveOutcome('false');
+          if (action === 'flag') this.resolveOutcome('overCalled');
           else this.resolveOutcome('cleared');
         }
       }
 
-      triggerFlee() {
+      /* A flee starts either because the player waved a pattern case through
+         or because the case window closed with nobody calling it. The vehicle
+         behaves identically, the record must not: if it reaches the gate, the
+         first is a call that went the other way and the second is no call at
+         all. Interception is a call in either case. */
+      triggerFlee(origin) {
+        if (origin !== 'decision' && origin !== 'expiry') {
+          throw new Error('triggerFlee: origin must be "decision" or "expiry" — the record cannot tell them apart afterwards.');
+        }
         this.phase = 'fleeing';
+        this.fleeOrigin = origin;
         const v = this.caseVehicle;
         v.setPaused(false);
         v.speed = 130;
         v.setRoute(FWVehicle.escapeRoute(FWWorld.ZONE, { x: v.body.x, y: v.body.y }), false);
-        v.onArrive = () => { if (this.phase === 'fleeing') this.resolveOutcome('missed'); };
+        v.onArrive = () => {
+          if (this.phase !== 'fleeing') return;
+          this.resolveOutcome(this.fleeOrigin === 'expiry' ? 'expiredPattern' : 'missed');
+        };
         v.highlight(true);
         this.cameras.main.startFollow(v.body, true, 0.06, 0.06);
         FWPortUI.showChaseHud(this.activeCase.id, { onIntercept: () => this.interceptCase() });
-        FWPortUI.pushRadio(`${this.activeCase.id}: making a run for the exit gate!`, 'bad');
+        FWPortUI.pushRadio(
+          origin === 'expiry'
+            ? `${this.activeCase.id}: case window closed with no call made — heading for the exit gate.`
+            : `${this.activeCase.id}: making a run for the exit gate!`,
+          origin === 'expiry' ? 'info' : 'bad'
+        );
       }
 
       interceptCase() {
@@ -187,12 +219,19 @@ const FWCoreGame = (() => {
       }
 
       showRevealCard(outcome, delta, data) {
+        /* The two expiry verdicts are deliberately neutral in icon, colour
+           and wording: no tick, no siren, and no verb that implies the player
+           did something. Colour is a claim here as much as text is. */
         const VERDICT = {
-          caught:  { icon: '🚨', text: 'BUSTED!', color: 'text-emerald-400', flash: 'flash-good' },
-          missed:  { icon: '🕵️', text: 'IT GOT AWAY', color: 'text-red-400', flash: 'flash-bad' },
-          false:   { icon: '🚫', text: 'FALSE ALARM', color: 'text-amber-400', flash: 'flash-bad' },
-          cleared: { icon: '✅', text: 'CLEAN — WAVED THROUGH', color: 'text-emerald-400', flash: 'flash-good' }
+          caught:         { icon: '🚨', text: 'BUSTED!', color: 'text-emerald-400', flash: 'flash-good' },
+          missed:         { icon: '🕵️', text: 'IT GOT AWAY', color: 'text-red-400', flash: 'flash-bad' },
+          overCalled:     { icon: '🚫', text: 'FALSE ALARM', color: 'text-amber-400', flash: 'flash-bad' },
+          cleared:        { icon: '✅', text: 'CLEAN — WAVED THROUGH', color: 'text-emerald-400', flash: 'flash-good' },
+          expiredPattern: { icon: '⏱', text: 'WINDOW CLOSED — NO CALL MADE', color: 'text-slate-300', flash: null },
+          expiredClean:   { icon: '⏱', text: 'WINDOW CLOSED — NO CALL MADE', color: 'text-slate-300', flash: null }
         }[outcome];
+        if (!VERDICT) throw new Error('showRevealCard: no verdict for outcome ' + outcome);
+        const uncalled = FWScoring.OUTCOMES[outcome] && !FWScoring.OUTCOMES[outcome].decided;
 
         let body;
         if (data.type === 'fraud') {
@@ -209,6 +248,8 @@ const FWCoreGame = (() => {
             <ul class="text-sm text-slate-300 space-y-1 mb-3">${shown.map(i => `<li>• ${i.signal}</li>`).join('') || '<li class="text-slate-500">None — you decided cold.</li>'}</ul>
             <p class="text-xs text-slate-500 uppercase mb-1">Would have caught it (${cm.bucket})</p>
             <p class="text-sm text-sky-300">${cm.text}</p>`;
+        } else if (!data.decoy) {
+          body = `<p class="text-sm text-slate-400">No pattern in the generator's script for this one, and no borrowed clue either. Nothing to compare a call against.</p>`;
         } else {
           body = `
             <p class="text-sm text-slate-400 mb-3">This looked suspicious but wasn't. The clue mimicked <b>${data.decoy.pattern.name}</b>:</p>
@@ -219,7 +260,13 @@ const FWCoreGame = (() => {
             <p class="text-sm text-sky-300">${data.decoy.fp.how_to_rule_out}</p>`;
         }
 
-        FWPortUI.queueReveal({ icon: VERDICT.icon, text: VERDICT.text, color: VERDICT.color, flash: VERDICT.flash, delta, body });
+        const prefix = uncalled
+          ? `<p class="text-[11px] text-slate-400 border-l-2 border-slate-600 pl-2 mb-3">No call was made on this case — its window closed first. The score moved; the streak and the interception rate did not, because there was no call to measure.</p>`
+          : '';
+        FWPortUI.queueReveal({
+          icon: VERDICT.icon, text: VERDICT.text, color: VERDICT.color,
+          flash: VERDICT.flash, delta, body: prefix + body
+        });
       }
 
       update(time, delta) {
@@ -230,9 +277,13 @@ const FWCoreGame = (() => {
         if (this.activeCase && (this.phase === 'idle' || this.phase === 'investigating')) {
           this.caseElapsed += dt;
           if (this.caseElapsed > this.activeCase.caseSeconds) {
+            /* The window closed with nobody calling it. This used to resolve a
+               clean case as 'cleared' -- the same record the player gets for
+               deliberately waving one through, complete with a green tick and
+               "WAVED THROUGH" on the reveal card. Nobody waved anything. */
             FWPortUI.hideInvestigation();
-            if (this.activeCase.type === 'fraud') this.triggerFlee();
-            else this.resolveOutcome('cleared');
+            if (this.activeCase.type === 'fraud') this.triggerFlee('expiry');
+            else this.resolveOutcome('expiredClean');
           }
         }
       }

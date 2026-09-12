@@ -112,10 +112,19 @@ const FWPortUI = (() => {
     revealShowing = true;
     const { icon, text, color, flash, delta, body } = revealQueue.shift();
 
+    /* No flash class means no flash. A screen flash is a verdict of its own,
+       so an outcome that is not a verdict -- a case whose window closed with
+       nobody calling it -- passes null and gets none, rather than a flash
+       layer wearing the string "null". */
     if (els.revealFlash) {
-      els.revealFlash.className = flash;
-      els.revealFlash.classList.remove('hidden');
-      setTimeout(() => els.revealFlash.classList.add('hidden'), 650);
+      if (flash) {
+        els.revealFlash.className = flash;
+        els.revealFlash.classList.remove('hidden');
+        setTimeout(() => els.revealFlash.classList.add('hidden'), 650);
+      } else {
+        els.revealFlash.className = '';
+        els.revealFlash.classList.add('hidden');
+      }
     }
 
     els.revealCard.innerHTML = `
