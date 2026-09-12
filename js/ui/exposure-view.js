@@ -8,7 +8,13 @@
    Two invariants enforced here:
      - money is never shown without the measured hour count and the stated
        rate that produced it, in the same block of text;
-     - exposure is never shown without the words that say it is not a loss. */
+     - exposure is never shown without the words that say it is not a loss.
+
+   The "where that effort went" rows are built from closed cases, because
+   an alignment only exists once a case is closed. The analytics dashboard
+   counts measured effort across every case, so the two panels legitimately
+   show different hour totals. The reconciliation block below names the gap
+   rather than leaving the reader to treat it as an error in one of them. */
 const FWExposureView = (() => {
   let els = {};
   let assumptionsOpen = false;
@@ -88,6 +94,29 @@ const FWExposureView = (() => {
       <table class="w-full text-left"><tbody>${bands}</tbody></table>`;
   }
 
+  // The hours above are the hours of closed cases. This says where the rest
+  // of the measured effort in the run sits, and why it cannot appear in an
+  // alignment row.
+  function renderReconciliation(state) {
+    const r = FWExposureModel.effortReconciliation(state);
+    if (!r.total.seconds) {
+      return `<div class="mt-2 pt-2 border-t border-slate-800"><div class="text-[10px] text-slate-600 italic">No record check has been run yet, so there are no measured hours to reconcile.</div></div>`;
+    }
+    const rows = [
+      `<li>${r.booked.hoursLabel} on ${r.booked.cases} case${r.booked.cases === 1 ? '' : 's'} with a closure on the ledger — the hours the rows above are built from</li>`,
+      `<li>${r.unbooked.hoursLabel} on ${r.unbooked.cases} case${r.unbooked.cases === 1 ? '' : 's'} with no closure yet, so no alignment exists to book them against</li>`
+    ];
+    if (r.postClosure.seconds) {
+      rows.push(`<li>${r.postClosure.hoursLabel} spent on ${r.postClosure.cases} case${r.postClosure.cases === 1 ? '' : 's'} after its closure was already booked — a case the engine faded on its own stays investigable, and that effort is real but arrives after the row was written</li>`);
+    }
+    return `<div class="mt-2 pt-2 border-t border-slate-800">
+      <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">All measured effort in this run, and where it sits</div>
+      <div class="text-[11px] text-slate-200 mb-1">${r.total.hoursLabel} across ${r.total.cases} case${r.total.cases === 1 ? '' : 's'} × €${r.rate}/h = <b>${r.total.costLabel}</b></div>
+      <ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mb-1">${rows.join('')}</ul>
+      <div class="text-[10px] text-slate-500">This is the same total the analytics dashboard reports as measured effort; the hours at the top of this card are the closed subset of it, which is why the two figures differ. The unbooked hours are not waste and not yet an over-call — they are hours spent on cases nobody has decided. They are not split across the alignment rows in the proportions the closed cases show: the open cases are the ones that have resisted resolution, so assuming they resolve the same way is the one assumption the caseload argues against.</div>
+    </div>`;
+  }
+
   function renderProcess(state) {
     if (!els.process) return;
     const p = FWExposureModel.portfolio(state);
@@ -117,7 +146,8 @@ const FWExposureView = (() => {
       </div>
       <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Where that effort went</div>
       ${rows}
-      <p class="text-[10px] text-slate-500 mt-1">Effort on an over-called case is a real cost and not a verdict on the analyst — over-calls are an expected output of working from signals.</p>`;
+      <p class="text-[10px] text-slate-500 mt-1">Effort on an over-called case is a real cost and not a verdict on the analyst — over-calls are an expected output of working from signals.</p>
+      ${renderReconciliation(state)}`;
   }
 
   function renderExposure(state) {

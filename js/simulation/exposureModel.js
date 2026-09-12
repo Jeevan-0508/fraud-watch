@@ -29,7 +29,24 @@
    consignment attached to a case: what was at stake. It says nothing
    about whether anything happened. A benign case can carry the largest
    exposure in the port, and a confirmed one can carry the smallest. Any
-   UI reading from this module has to say so. */
+   UI reading from this module has to say so.
+
+   ONE RECONCILIATION THIS MODULE OWES THE READER. The alignment rows below
+   are built from the outcome ledger, so the hours in them are the hours of
+   CLOSED cases. The analytics dashboard reports measured effort across ALL
+   cases. Both are correct and they are different numbers, and a reader who
+   sees them in two panels reads the gap as a discrepancy. So the gap is
+   computed and named here instead: effort on cases with nothing on the
+   ledger yet, and effort recorded on a case after its closure was booked
+   (which happens legitimately — a case the engine faded stays investigable
+   after its ledger row is written). Nothing about those hours is estimated;
+   they are the same measured seconds, sorted by whether an outcome exists
+   to book them against.
+
+   What is REFUSED there, in NOT_MODELLED: distributing the unbooked hours
+   across alignments in the proportions the closed cases show. The cases
+   still open are precisely the ones that have resisted resolution, so
+   assuming they resolve like the closed ones selects against itself. */
 const FWExposureModel = (() => {
   const CURRENCY = 'EUR';
 
@@ -83,6 +100,10 @@ const FWExposureModel = (() => {
     {
       figure: 'Recovery, insurance, deductibles and salvage',
       why: 'These decide what a loss actually costs the business rather than what the goods were worth. Not modelled at all, so no figure here should be read as a net loss.'
+    },
+    {
+      figure: 'How the unbooked hours will land across alignments',
+      why: 'Effort on a case with no outcome yet cannot be attributed to an aligned, over- or under-called row, and splitting it in the proportions the closed cases show would assume the open ones resolve the same way. They are the cases that have resisted resolution so far, so that is the one assumption the data actively argues against. The hours are reported as unbooked, and left there.'
     },
     {
       figure: 'Cost of the oversight blind spot',
@@ -183,6 +204,42 @@ const FWExposureModel = (() => {
     };
   }
 
+  // Every measured second of investigative effort in the run, sorted by
+  // whether an outcome exists to book it against. Three buckets, no
+  // estimation: the same seconds investigationEngine recorded, counted once.
+  function effortReconciliation(state) {
+    const mos = state && state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
+    const byMo = (state && state.outcomeEngine && state.outcomeEngine.byMo) || new Map();
+    let bookedSeconds = 0, unbookedSeconds = 0, postClosureSeconds = 0;
+    let bookedCases = 0, unbookedCases = 0, postClosureCases = 0, totalSeconds = 0;
+    mos.forEach(m => {
+      const inv = FWInvestigationEngine.summary(m);
+      totalSeconds += inv.effortSeconds;
+      if (!inv.effortSeconds) return;
+      const entry = byMo.get ? byMo.get(m.id) : null;
+      if (!entry) { unbookedSeconds += inv.effortSeconds; unbookedCases += 1; return; }
+      const atClose = entry.effortSeconds || 0;
+      bookedSeconds += Math.min(atClose, inv.effortSeconds);
+      bookedCases += 1;
+      const extra = inv.effortSeconds - atClose;
+      if (extra > 0) { postClosureSeconds += extra; postClosureCases += 1; }
+    });
+    const bucket = (seconds, cases) => {
+      const c = processCost(seconds);
+      return { seconds, cases, hours: c.hours, hoursLabel: c.hoursLabel, cost: c.cost, costLabel: c.costLabel };
+    };
+    return {
+      total: bucket(totalSeconds, mos.filter(m => FWInvestigationEngine.summary(m).effortSeconds > 0).length),
+      booked: bucket(bookedSeconds, bookedCases),
+      unbooked: bucket(unbookedSeconds, unbookedCases),
+      postClosure: bucket(postClosureSeconds, postClosureCases),
+      rate: LOADED_ANALYST_HOUR,
+      // The invariant that makes this a reconciliation rather than three
+      // unrelated figures.
+      balances: Math.abs(totalSeconds - (bookedSeconds + unbookedSeconds + postClosureSeconds)) < 1
+    };
+  }
+
   // Portfolio view. The load-bearing number is effort by alignment: how
   // many measured hours went into cases the simulation's own record says
   // were over- or under-called. That is a real efficiency statement built
@@ -252,7 +309,7 @@ const FWExposureModel = (() => {
   return {
     CURRENCY, LOADED_ANALYST_HOUR, RATE_ASSUMPTION_NOTE, CARGO_BANDS, FALLBACK_CARGO,
     NOT_MODELLED, ASSUMPTIONS,
-    fmt, fmtBand, bandForCargo, hours, processCost,
+    fmt, fmtBand, bandForCargo, hours, processCost, effortReconciliation,
     consignmentsForMo, exposureForMo, caseSheet, portfolio
   };
 })();

@@ -201,7 +201,12 @@ const FWAnalyticsEngine = (() => {
       'What the record sources returned when they were pulled. Corroborating and exculpatory are outcomes of looking; the last two rows are what happened when looking did not work, and they are kept apart from each other on purpose.',
       [
         metric({ id: 'inv-checks', label: 'Checks run', kind: KIND.COUNT, numerator: checks, of: of }),
-        metric({ id: 'inv-hours', label: 'Measured effort (hours)', kind: KIND.COUNT, numerator: Math.round(effort / 360) / 10, of: 'hours of analyst effort the simulation measured, priced only in the exposure panel' }),
+        metric({
+          id: 'inv-hours', label: 'Measured effort (hours)', kind: KIND.COUNT,
+          numerator: Math.round(effort / 360) / 10,
+          of: 'hours of analyst effort the simulation measured across every case, open and closed, priced only in the exposure panel',
+          note: 'The exposure panel\'s cost-of-process figure is the closed subset of this, because effort can only be booked against an outcome once one exists. It reconciles the two there rather than leaving the difference to look like an error.'
+        }),
         metric({ id: 'inv-corrob', label: 'Came back corroborating', numerator: corroborating, denominator: checks, of: of }),
         metric({ id: 'inv-excul', label: 'Came back exculpatory', numerator: exculpatory, denominator: checks, of: of }),
         metric({
