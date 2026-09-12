@@ -147,32 +147,45 @@ const FWExposureView = (() => {
   function renderProcess(state) {
     if (!els.process) return;
     const p = FWExposureModel.portfolio(state);
+    // A bar is a share, so it is drawn only where a base exists. When no
+    // effort has been booked the share is null, not 0, and the row says so
+    // instead of showing an empty bar that reads as "none of it went here".
     const rows = p.alignmentRows.length ? p.alignmentRows.map(r => `
       <div class="mb-1.5">
         <div class="flex items-center justify-between text-[10px] mb-0.5">
           <span class="text-slate-400">${ALIGNMENT_LABEL[r.alignment] || r.alignment}</span>
           <span class="font-mono text-slate-300">${r.hoursLabel} · ${r.cases} case${r.cases === 1 ? '' : 's'}</span>
         </div>
-        <div class="h-1.5 rounded bg-slate-800 overflow-hidden">
+        ${r.shareOfEffort == null
+          ? '<div class="text-[9px] text-slate-500 italic">no effort booked on any closure, so there is no total for this to be a share of</div>'
+          : `<div class="h-1.5 rounded bg-slate-800 overflow-hidden">
           <div class="h-full ${ALIGNMENT_TONE[r.alignment] || 'bg-slate-600'}" style="width:${Math.round(r.shareOfEffort * 100)}%"></div>
-        </div>
+        </div>`}
       </div>`).join('')
       : '<p class="text-[10px] text-slate-600 italic">No case has been closed yet, so no effort has been booked against an outcome.</p>';
 
-    const perCase = p.hoursPerClosedCase != null
-      ? `${p.hoursPerClosedCase.toFixed(1)} h per closed case`
-      : 'no closed cases to average';
+    const barBase = p.alignmentRows.length && p.alignmentRows[0].shareOfEffort != null
+      ? `<p class="text-[10px] text-slate-500 mt-0.5">Each bar is that row's hours as a share of the ${p.alignmentRows[0].shareBase} booked against a closure — not of the effort measured in the run, which is larger.</p>`
+      : '';
+
+    const perCase = p.hoursPerClosedCase.value != null
+      ? `${p.hoursPerClosedCase.value.toFixed(1)} h per closed case (${p.hoursPerClosedCase.basisLabel})`
+      : p.hoursPerClosedCase.n
+        ? `per-case mean withheld · ${p.hoursPerClosedCase.basisLabel}`
+        : 'no closure on the ledger to average';
 
     els.process.innerHTML = `
       <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Cost of the process</div>
-      <div class="font-orbitron text-lg text-white leading-tight">${p.totalHoursLabel}</div>
-      <div class="text-[10px] text-slate-500 mb-2">measured investigative effort across ${p.closedCases} closed case${p.closedCases === 1 ? '' : 's'} · ${perCase}</div>
+      <div class="font-orbitron text-lg text-white leading-tight">${p.bookedHoursLabel}</div>
+      <div class="text-[10px] text-slate-500 mb-2">investigative effort booked against a closure, on ${p.closedCases} closed case${p.closedCases === 1 ? '' : 's'} · ${perCase}</div>
+      <p class="text-[10px] text-amber-300/80 mb-2">${p.effortBasis.note}${p.hoursPerClosedCase.withheld && p.hoursPerClosedCase.n ? ' ' + p.hoursPerClosedCase.note : ''}</p>
       <div class="bg-[#0b1119] border border-slate-800 rounded-lg p-2 mb-2">
-        <div class="text-[11px] text-slate-200">${p.totalHoursLabel} × €${p.rate}/h = <b>${p.totalCostLabel}</b></div>
+        <div class="text-[11px] text-slate-200">${p.bookedHoursLabel} × €${p.rate}/h = <b>${p.bookedCostLabel}</b></div>
         <div class="text-[10px] text-slate-500 mt-0.5">Hours are measured by this simulation. The rate is a stated assumption — change it and this total rescales, while every ratio below stays the same.</div>
       </div>
-      <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Where that effort went</div>
+      <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">Where the booked effort went</div>
       ${rows}
+      ${barBase}
       <p class="text-[10px] text-slate-500 mt-1">Effort on an over-called case is a real cost and not a verdict on the analyst — over-calls are an expected output of working from signals.</p>
       ${renderReconciliation(state)}`;
   }
@@ -183,10 +196,17 @@ const FWExposureView = (() => {
     // A second copy of a filter that was wrong in the engine too. One owner now.
     const openMos = FWMoEngine.standingPartition(
       state.moEngine ? Array.from(state.moEngine.mos.values()) : []).open;
-    const sheets = openMos
+    // Truncating is a claim the rest did not matter, so the pool is counted
+    // and the omission is stated rather than left as a short list.
+    const SHOWN = 6;
+    const allSheets = openMos
       .map(m => FWExposureModel.caseSheet(state, m))
-      .sort((a, b) => (b.exposure.high || 0) - (a.exposure.high || 0))
-      .slice(0, 6);
+      .sort((a, b) => (b.exposure.high || 0) - (a.exposure.high || 0));
+    const sheets = allSheets.slice(0, SHOWN);
+    const hidden = allSheets.length - sheets.length;
+    const hiddenNote = hidden
+      ? `<p class="text-[10px] text-slate-500 mt-1">Showing the ${sheets.length} widest bands of ${allSheets.length} live cases. The ${hidden} not listed are ordered by band and nothing else, so a case low on this list is not a case found to be less serious.</p>`
+      : (allSheets.length ? `<p class="text-[10px] text-slate-500 mt-1">All ${allSheets.length} live case${allSheets.length === 1 ? '' : 's'} listed, none omitted.</p>` : '');
 
     const list = sheets.length ? sheets.map(s => {
       const cargoNames = s.exposure.attached
@@ -207,7 +227,8 @@ const FWExposureView = (() => {
       <div class="text-[10px] text-slate-500 mb-1">${p.openWithConsignment} of ${p.openCases} open case${p.openCases === 1 ? '' : 's'} has a consignment on record${p.openWithoutConsignment ? ` · ${p.openWithoutConsignment} with none, reported as absent rather than as zero` : ''}</div>
       <div class="text-[9px] text-slate-500 italic mb-1">${p.standingNote}${p.closedWithoutVerdict ? ` The band above covers live cases only: it does not include the ${p.closedWithoutVerdict} closed with no verdict, which were counted as open until Slice 48 and carried exposure with them.` : ''}</div>
       <p class="text-[10px] text-amber-300/80 mb-2">This is what is at stake, not a loss and not an expected loss. A case carrying the largest band in the port may be entirely benign; a confirmed one may carry the smallest. The range is wide on purpose and the model will not narrow it.</p>
-      ${list}`;
+      ${list}
+      ${hiddenNote}`;
   }
 
   function render(state) {
@@ -219,7 +240,7 @@ const FWExposureView = (() => {
       // "N closed - M open" read as a partition of the case register and was not
       // one: closed came from the outcome ledger, open from a filter that matched
       // everything. Both scopes are named, and the third group is stated.
-      els.summary.textContent = `${p.totalHoursLabel} booked · ${p.closedCases} on the outcome ledger · ` +
+      els.summary.textContent = `${p.bookedHoursLabel} booked of ${p.effortBasis.measuredHoursLabel} measured · ${p.closedCases} on the outcome ledger · ` +
         `of ${p.standingTotal} case${p.standingTotal === 1 ? '' : 's'} raised: ${p.openCases} live, ` +
         `${p.standing.CLOSED_WITH_VERDICT} closed with a verdict, ${p.closedWithoutVerdict} closed with none`;
     }

@@ -87,7 +87,7 @@ const FWExposureModel = (() => {
   const NOT_MODELLED = [
     {
       figure: 'Whether an exposure band is still live or has been settled',
-      why: 'A consignment declares seven lifecycle states and this build ever issues one of them, so no cargo here is delivered, delayed or cancelled. There is therefore no point at which a band stops being exposure: the bands below are the value that was on the movements a case touched, held open indefinitely, and not a balance outstanding today.'
+      why: 'A consignment declares seven lifecycle states and this build only ever issues one of them, so no cargo here is delivered, delayed or cancelled. There is therefore no point at which a band stops being exposure: the bands below are the value that was on the movements a case touched, held open indefinitely, and not a balance outstanding today.'
     },
     {
       figure: 'Expected loss on a case',
@@ -351,7 +351,6 @@ const FWExposureModel = (() => {
       totalEffort += e.effortSeconds || 0;
     });
 
-    const closedCost = processCost(totalEffort);
     const alignmentRows = Object.keys(byAlignment)
       .filter(k => byAlignment[k].cases > 0)
       .map(k => {
@@ -360,7 +359,13 @@ const FWExposureModel = (() => {
         return {
           alignment: k, cases: r.cases, hours: c.hours,
           hoursLabel: c.hoursLabel, cost: c.cost, costLabel: c.costLabel,
-          shareOfEffort: totalEffort ? r.effortSeconds / totalEffort : 0
+          // A share of nothing is not zero. When no effort has been booked
+          // at all there is no base to be a share of, and returning 0 put a
+          // zero-width bar on screen that reads as "this alignment consumed
+          // none of the effort" instead of "no effort was recorded".
+          shareOfEffort: totalEffort ? r.effortSeconds / totalEffort : null,
+          shareBase: totalEffort ? processCost(totalEffort).hoursLabel : null,
+          shareOfWhat: 'the hours booked against a closure'
         };
       })
       .sort((a, b) => b.hours - a.hours);
@@ -383,6 +388,68 @@ const FWExposureModel = (() => {
     });
 
     const closedCases = ledger.length;
+
+    /* The hours quantity, and why it is no longer called "total".
+
+       `totalHours` here was the ledger sum -- effort as recorded at the
+       moment each case closed -- while effortReconciliation() in this same
+       module measures total / booked / unbooked / postClosure and knows
+       they differ. On a worked run the two words met on the same panel:
+       4.25 h under the name total, 6.0 h of effort actually measured, the
+       missing 1.75 h sitting on an open case that has no closure to be
+       booked against. Same word, two scopes, one card. The booked figure is
+       now taken from the reconciliation (one owner, not a second
+       derivation) and carries its own basis. */
+    const recon = effortReconciliation(state);
+    const bookedFromLedger = processCost(totalEffort);  // same seconds, summed off the ledger
+    if (Math.abs(bookedFromLedger.hours - recon.booked.hours) > 0.02) {
+      throw new Error('exposureModel: the ledger effort sum (' + bookedFromLedger.hours +
+        ' h) and effortReconciliation.booked (' + recon.booked.hours +
+        ' h) disagree, so one of them is not the booked hours');
+    }
+    const effortBasis = {
+      bookedHours: recon.booked.hours,
+      bookedHoursLabel: recon.booked.hoursLabel,
+      bookedCases: recon.booked.cases,
+      measuredHours: recon.total.hours,
+      measuredHoursLabel: recon.total.hoursLabel,
+      casesWithEffort: recon.total.cases,
+      unbookedHours: recon.unbooked.hours,
+      unbookedCases: recon.unbooked.cases,
+      isWholeRun: Math.abs(recon.booked.hours - recon.total.hours) < 0.02,
+      note: !recon.total.cases
+        ? 'No investigative effort has been recorded in this run yet, so there is nothing booked and nothing unbooked.'
+        : recon.booked.hoursLabel + ' of the ' + recon.total.hoursLabel +
+          ' of investigative effort this run measured, on ' + recon.booked.cases + ' of ' +
+          recon.total.cases + ' case' + (recon.total.cases === 1 ? '' : 's') + ' that recorded any.' +
+          (Math.abs(recon.booked.hours - recon.total.hours) < 0.02
+            ? ' Every measured hour is booked against a closure, so on this run the two figures coincide.'
+            : ' The remainder is not missing: it is hours on cases with no closure to book them against.')
+    };
+
+    // A mean needs a minimum sample and a stated base. Its base is the
+    // outcome ledger, which can include a closure that recorded no effort
+    // at all, so that count is reported rather than quietly averaged in.
+    const minSample = window.FWAnalyticsEngine ? FWAnalyticsEngine.minSample() : 5;
+    const zeroEffortClosures = ledger.filter(e => !e.effortSeconds).length;
+    const hoursPerClosedCase = {
+      value: closedCases && closedCases >= minSample ? bookedFromLedger.hours / closedCases : null,
+      n: closedCases,
+      minSample,
+      withheld: !(closedCases >= minSample),
+      zeroEffortClosures,
+      basisLabel: closedCases
+        ? recon.booked.hoursLabel + ' over ' + closedCases + ' closure' + (closedCases === 1 ? '' : 's') +
+          ' on the outcome ledger' + (zeroEffortClosures
+            ? ', ' + zeroEffortClosures + ' of which recorded no effort at all'
+            : '')
+        : 'no closure on the outcome ledger yet',
+      note: closedCases >= minSample
+        ? 'Mean over ' + closedCases + ' closures, at or above the ' + minSample + ' this project requires before printing a rate or a mean.'
+        : 'Withheld: ' + closedCases + ' closure' + (closedCases === 1 ? '' : 's') + ' is below the minimum sample of ' +
+          minSample + '. The hours are real and are shown above; dividing them by this few cases would put a per-case figure on screen that the next closure could double.'
+    };
+
     return {
       closedCases,
       // The ledger is a different population from the case register, so the two
@@ -392,12 +459,13 @@ const FWExposureModel = (() => {
       standingTotal: standing.total,
       standingNote: standing.note,
       closedWithoutVerdict: standing.closedNoVerdict,
-      totalHours: closedCost.hours,
-      totalHoursLabel: closedCost.hoursLabel,
-      totalCost: closedCost.cost,
-      totalCostLabel: closedCost.costLabel,
+      bookedHours: recon.booked.hours,
+      bookedHoursLabel: recon.booked.hoursLabel,
+      bookedCost: recon.booked.cost,
+      bookedCostLabel: recon.booked.costLabel,
+      effortBasis,
       rate: LOADED_ANALYST_HOUR,
-      hoursPerClosedCase: closedCases ? closedCost.hours / closedCases : null,
+      hoursPerClosedCase,
       alignmentRows,
       openCases: openMos.length,
       openWithConsignment,
