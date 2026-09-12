@@ -607,12 +607,271 @@ const FWMoEngine = (() => {
      tally can never assert that a case is the pattern it resembles. */
   function classificationTally(cls) { return classificationEntry(cls).tally; }
 
+  /* THE BADGE ON EVERY CASE RESTED ON TWO BARE 3s OF DIFFERENT UNITS, AND ONE
+     OF THE FOUR CLASSES MEANT TWO UNRELATED THINGS.
+
+     `classifyDiscovery` read `topVotes >= 3` and `priorCount < 3`. The first 3
+     is a count of distinct shared KEYWORDS, the second a count of prior
+     SIGHTINGS; they are not the same unit, neither is derived from the other,
+     and nothing said either number out loud. Slice 56 declared what a vote IS
+     while leaving the thresholds ON it undeclared, which is half a
+     declaration.
+
+     Measured over 87 cases across five seeded 60-day runs, the open-time top
+     vote took only the values 2, 5 and 6 -- never 3 and never 4. A floor of 3,
+     4 or 5 therefore issues exactly the same badges (38 variant / 11 potential
+     on first sightings), a floor of 1 makes the thin-vocabulary branch
+     unreachable outright -- a ranked pattern always shares at least one keyword
+     -- a floor of 2 empties it across every case observed, and 6 flips 25 of
+     the 38. The number is calibration sitting
+     in a gap in the OBSERVED distribution, not a boundary anything measured.
+     Both populations are computed live rather than restated from this comment:
+     `voteFloorEquivalence()` over every combination the catalogue allows, where
+     the floor does separate because every vote value from 1 to 6 is reachable,
+     and `observedVoteFloorEquivalence(engine)` over the cases actually in hand,
+     where it does not. Those two answers disagree, which is exactly why naming
+     the population is not optional.
+
+     The sharper defect: POTENTIAL_NEW_MO was issued for TWO different reasons
+     -- a first sighting whose vocabulary overlap fell below the vote floor (11
+     of 87) and a combination seen once or twice before regardless of its
+     overlap (34 of 87) -- and its declared meaning only ever described the
+     second ("seen too few times for the recurrence count to say anything
+     either way"). 27 of 87 cases carried that label while sharing 5 or 6
+     keywords with a documented pattern, i.e. while satisfying the variant
+     branch on vocabulary alone. Same badge, two incompatible facts, no way for
+     a reader to tell which one they were looking at. The class distribution is
+     deliberately unchanged; what is added is the REASON, declared and
+     rendered, so the two are distinguishable in the panel and not only in the
+     code. */
+  const DISCOVERY_THRESHOLDS = {
+    kind: 'PARAMETER',
+    scope: 'the discovery class badge, within moEngine',
+    variantVoteFloor: 3,
+    variantVoteUnit: VOTE_BASIS.unit,
+    variantVoteMeans: 'at or above this many distinct keywords shared with the top-ranked documented pattern, a ' +
+      'first sighting is called a variant of that pattern rather than left unplaced.',
+    variantVoteAppliesWhen: 'the first sighting of a combination only. A combination seen before is classified by ' +
+      'its sighting count, not by its vocabulary, so this floor is not consulted at all on those cases.',
+    familiarSightings: 3,
+    familiarSightingsUnit: 'prior sightings of the same signal-type combination, as the case opened',
+    familiarSightingsMeans: 'at or above this many prior sightings, the combination is called familiar in this ' +
+      'simulation run.',
+    doesNotMean: 'neither number is a probability, a score, a share, a significance level or a minimum sample ' +
+      'size; "familiar" is not a claim the combination is understood, and a variant is a resemblance in ' +
+      'vocabulary, not a finding of relatedness.',
+    sharedLiteral: 'Both thresholds are the number 3 by coincidence. They count different things -- keywords and ' +
+      'sightings -- and changing one says nothing about the other. They are declared separately so the ' +
+      'coincidence cannot be read as one calibration.',
+    calibratedBy: 'ASSUMED. Neither floor was fitted to anything. The vote floor was chosen inside a gap in the ' +
+      'observed vote distribution, so a range of values behaves identically; the sighting floor is the smallest ' +
+      'count at which "recurred" reads as more than a repeat.'
+  };
+
+  /* Which fact produced the badge. A class is not a reason: two of these
+     issue the same class from opposite evidence, and a panel that prints only
+     the class cannot say which. Declared as a table so a reason can never be
+     invented at a call site, and reconciled against CLASSIFICATION below. */
+  const CLASSIFICATION_REASONS = {
+    NO_RESEMBLANCE: {
+      issues: 'EMERGING_BEHAVIOR',
+      note: 'no documented pattern shares a single keyword with any of this case\u2019s signal types.'
+    },
+    VOCABULARY_SHARED_AT_FIRST_SIGHTING: {
+      issues: 'MO_VARIANT',
+      note: 'first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or ' +
+        'above the declared floor.'
+    },
+    VOCABULARY_THIN_AT_FIRST_SIGHTING: {
+      issues: 'POTENTIAL_NEW_MO',
+      note: 'first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is below ' +
+        'the declared floor. This is a statement about shared words, not about how often it has been seen.'
+    },
+    TOO_FEW_SIGHTINGS: {
+      issues: 'POTENTIAL_NEW_MO',
+      note: 'seen before but fewer times than the familiarity floor, so the sighting count says nothing either ' +
+        'way. Its vocabulary overlap may be wide; on this branch it was not consulted.'
+    },
+    SIGHTINGS_AT_OR_ABOVE_FLOOR: {
+      issues: 'KNOWN_MO',
+      note: 'this combination has recurred at or above the familiarity floor in this run. Familiar, which is not ' +
+        'the same as understood.'
+    }
+  };
+  const CLASSIFICATION_REASON_KEYS = Object.keys(CLASSIFICATION_REASONS);
+
+  /* Reconciled at load: this table has no dependency outside the module, so it
+     cannot make moEngine unloadable on its own (Slice 56's lesson). Both
+     directions -- a reason issuing an undeclared class, and a class no reason
+     can issue, which would be a badge nothing produces. */
+  function assertClassificationReasonsDeclared() {
+    CLASSIFICATION_REASON_KEYS.forEach(r => {
+      const cls = CLASSIFICATION_REASONS[r].issues;
+      if (!CLASSIFICATION[cls]) {
+        throw new Error('moEngine: classification reason ' + r + ' issues "' + cls + '", which is not a declared ' +
+          'discovery class; the badge would have no label and no colour');
+      }
+    });
+    const unreasoned = CLASSIFICATIONS.filter(c => !CLASSIFICATION_REASON_KEYS.some(r => CLASSIFICATION_REASONS[r].issues === c));
+    if (unreasoned.length) {
+      throw new Error('moEngine: discovery class(es) ' + unreasoned.join(', ') + ' can be issued by no declared ' +
+        'reason; a class no branch produces is a bucket that can only ever read zero');
+    }
+    return true;
+  }
+  assertClassificationReasonsDeclared();
+
+  function classificationReasonEntry(reason) {
+    const e = CLASSIFICATION_REASONS[reason];
+    if (!e) {
+      throw new Error('moEngine: no declared classification reason "' + reason + '"; the badge would state a fact ' +
+        'nothing here defines');
+    }
+    return e;
+  }
+
+  /* The class AND the fact that produced it, with the thresholds that were
+     actually consulted on this case -- `voteFloorConsulted` is false on every
+     recurrence branch, because the floor genuinely plays no part there and a
+     panel that showed it would imply otherwise. */
+  function classifyDiscoveryDetail(ranked, priorCount) {
+    if (typeof priorCount !== 'number' || !isFinite(priorCount) || priorCount < 0) {
+      throw new Error('moEngine.classifyDiscoveryDetail: no prior-sighting count to classify against');
+    }
+    const list = ranked || [];
+    const topVotes = list.length ? list[0].votes : 0;
+    const keywords = list.length ? (list[0].keywords || []) : [];
+    let reason;
+    if (!list.length) reason = 'NO_RESEMBLANCE';
+    else if (priorCount === 0) {
+      reason = topVotes >= DISCOVERY_THRESHOLDS.variantVoteFloor
+        ? 'VOCABULARY_SHARED_AT_FIRST_SIGHTING'
+        : 'VOCABULARY_THIN_AT_FIRST_SIGHTING';
+    } else if (priorCount < DISCOVERY_THRESHOLDS.familiarSightings) reason = 'TOO_FEW_SIGHTINGS';
+    else reason = 'SIGHTINGS_AT_OR_ABOVE_FLOOR';
+    const entry = classificationReasonEntry(reason);
+    const voteConsulted = reason === 'VOCABULARY_SHARED_AT_FIRST_SIGHTING' || reason === 'VOCABULARY_THIN_AT_FIRST_SIGHTING';
+    return {
+      classification: entry.issues,
+      reason: reason,
+      reasonNote: entry.note,
+      topVotes: topVotes,
+      topKeywords: keywords.slice(),
+      priorCount: priorCount,
+      voteFloorConsulted: voteConsulted,
+      voteFloor: voteConsulted ? DISCOVERY_THRESHOLDS.variantVoteFloor : null,
+      voteFloorUnit: voteConsulted ? DISCOVERY_THRESHOLDS.variantVoteUnit : null,
+      sightingFloorConsulted: !voteConsulted && reason !== 'NO_RESEMBLANCE',
+      sightingFloor: DISCOVERY_THRESHOLDS.familiarSightings,
+      declaredBy: 'moEngine.DISCOVERY_THRESHOLDS'
+    };
+  }
+
   function classifyDiscovery(ranked, priorCount) {
-    const topVotes = ranked.length ? ranked[0].votes : 0;
-    if (!ranked.length) return 'EMERGING_BEHAVIOR';       // no resemblance to anything known
-    if (priorCount === 0) return topVotes >= 3 ? 'MO_VARIANT' : 'POTENTIAL_NEW_MO';
-    if (priorCount < 3) return 'POTENTIAL_NEW_MO';
-    return 'KNOWN_MO';                                     // signature seen 3+ times in THIS run; not a claim it is understood
+    return classifyDiscoveryDetail(ranked, priorCount).classification;
+  }
+
+  /* How much work the vote floor is doing, computed from the live tables
+     instead of from the paragraph above. Every combination of
+     MIN_SIGNAL_TYPES catalogued types is ranked, and the floors that would
+     partition those combinations identically to the declared one are listed:
+     if that list has more than one member, the exact value is arbitrary
+     within it, and saying so is the difference between a calibration and a
+     number that looks measured. */
+  function voteFloorEquivalence() {
+    const catalog = (typeof FWSignalEngine !== 'undefined' && FWSignalEngine && FWSignalEngine.SIGNAL_CATALOG)
+      ? Object.keys(FWSignalEngine.SIGNAL_CATALOG)
+      : null;
+    if (!catalog || typeof FW === 'undefined' || !FW.patterns || !(FW.patterns() || []).length) {
+      return {
+        known: false,
+        note: 'How much the vote floor discriminates is not computable here: it needs the signal catalogue and the ' +
+          'loaded taxonomy. Not knowing is reported rather than assumed.'
+      };
+    }
+    const seen = [];
+    for (let i = 0; i < catalog.length; i++) {
+      for (let j = i + 1; j < catalog.length; j++) {
+        const r = rankPatterns([{ type: catalog[i] }, { type: catalog[j] }]);
+        seen.push(r.length ? r[0].votes : 0);
+      }
+    }
+    const floor = DISCOVERY_THRESHOLDS.variantVoteFloor;
+    const above = seen.filter(v => v >= floor).length;
+    const equivalent = [];
+    const maxSeen = seen.length ? Math.max.apply(null, seen) : 0;
+    for (let f = 1; f <= maxSeen + 1; f++) {
+      if (seen.filter(v => v >= f).length === above) equivalent.push(f);
+    }
+    return {
+      known: true,
+      combinationsTested: seen.length,
+      combinationSize: MIN_SIGNAL_TYPES,
+      votesObserved: Array.from(new Set(seen)).sort((a, b) => a - b),
+      floor: floor,
+      atOrAboveFloor: above,
+      belowFloor: seen.length - above,
+      equivalentFloors: equivalent,
+      population: 'every combination of ' + MIN_SIGNAL_TYPES + ' catalogued signal types \u2014 the space a case ' +
+        'could open on, not the cases that have actually opened',
+      note: 'Over the ' + seen.length + ' combination' + (seen.length === 1 ? '' : 's') + ' of ' + MIN_SIGNAL_TYPES +
+        ' catalogued signal types \u2014 the reachable space, not the observed cases \u2014 ' + above +
+        ' reach the vote floor of ' + floor + ' and ' + (seen.length - above) + ' do not. ' +
+        (equivalent.length > 1
+          ? 'Any floor in {' + equivalent.join(', ') + '} partitions them identically, so within that range the ' +
+            'exact value changes nothing: it is a declared choice, not a boundary in the data.'
+          : 'No other floor partitions them the same way, so on this population the value does discriminate. ' +
+            'That is a fact about the reachable space; whether it discriminates among the cases actually opened ' +
+            'is a different question, answered over that population.')
+    };
+  }
+
+  /* The same question asked of the cases that actually opened, which is a
+     different population from the reachable space above and can give the
+     opposite answer -- and did: every pair of catalogued types is separated by
+     the floor, while the top vote of a real case has only ever come out 2, 5
+     or 6, so 3, 4 and 5 issue identical badges. A threshold that discriminates
+     in principle and not in practice is still a declared choice, and both
+     populations have to be visible for that to be readable. Computed from the
+     cases in hand rather than from the paragraph. */
+  function observedVoteFloorEquivalence(engine) {
+    const mos = engine && engine.mos ? Array.from(engine.mos.values()) : [];
+    const votes = mos
+      .filter(mo => mo.classificationDetail && typeof mo.classificationDetail.topVotes === 'number')
+      .map(mo => mo.classificationDetail.topVotes);
+    if (!votes.length) {
+      return {
+        known: false,
+        cases: mos.length,
+        note: 'How much the vote floor separates the cases in hand is not computable: none of the ' + mos.length +
+          ' case' + (mos.length === 1 ? '' : 's') + ' carries a recorded vote. Not knowing is reported, not assumed.'
+      };
+    }
+    const floor = DISCOVERY_THRESHOLDS.variantVoteFloor;
+    const above = votes.filter(v => v >= floor).length;
+    const maxSeen = Math.max.apply(null, votes);
+    const equivalent = [];
+    for (let f = 1; f <= maxSeen + 1; f++) {
+      if (votes.filter(v => v >= f).length === above) equivalent.push(f);
+    }
+    const observed = Array.from(new Set(votes)).sort((a, b) => a - b);
+    return {
+      known: true,
+      cases: votes.length,
+      population: 'the cases open in this run that carry a recorded vote',
+      votesObserved: observed,
+      floor: floor,
+      atOrAboveFloor: above,
+      belowFloor: votes.length - above,
+      equivalentFloors: equivalent,
+      note: 'Across the ' + votes.length + ' case' + (votes.length === 1 ? '' : 's') + ' in hand the top vote has ' +
+        'taken the value' + (observed.length === 1 ? ' ' : 's ') + observed.join(', ') + ', and ' + above + ' of them ' +
+        'reach the floor of ' + floor + '. ' +
+        (equivalent.length > 1
+          ? 'Any floor in {' + equivalent.join(', ') + '} would put exactly the same cases on each side, so on this ' +
+            'population the exact value separates nothing further.'
+          : 'No other floor separates these cases the same way.')
+    };
   }
 
   /* THE ONE CLASS THAT ADMITS THE TAXONOMY DOES NOT COVER A CASE, AND NO CASE
@@ -1078,8 +1337,52 @@ const FWMoEngine = (() => {
      its own defect: an analyst would read the second as what it always said.
      `resemblanceRevisions` keeps from/to/when/why, so a revision is visible as a
      revision. */
+  /* THE BADGE WAS STILL FROZEN AT THE MOMENT THE CASE OPENED. Slice 56 caught
+     the title, the category, the related pattern and the false-positive list
+     being derived once and never again -- and left the discovery class, which
+     is derived from the SAME `ranked` list, doing exactly that one field away.
+     Measured over 87 cases across five seeded 60-day runs: 13 cases hold a
+     signal type their opening combination did not have, and 2 of them carry a
+     badge that disagrees with their own re-derived resemblance -- labelled
+     "Potential New MO" beside a title voted from 5 and 6 shared keywords.
+
+     Only the VOCABULARY half is re-derived. The sighting count is deliberately
+     the count of the combination AS THE CASE OPENED: recurrence was counted
+     against that combination at that moment, and re-signaturing the case later
+     would mean re-counting a history that already happened. So the two halves
+     of this badge have different bases, and `classificationBasis` says which is
+     which rather than letting a reader assume one. Every change is recorded
+     from/to/when/why, for the same reason a silently changed title is read as
+     what it always said. */
+  function applyClassification(mo, ranked, now, reason) {
+    const priorCount = Math.max(0, (mo.recurrenceCount || 1) - 1);
+    const previous = mo.classification !== undefined ? mo.classification : null;
+    const detail = classifyDiscoveryDetail(ranked, priorCount);
+    mo.classification = detail.classification;
+    mo.classificationReason = detail.reason;
+    mo.classificationReasonNote = detail.reasonNote;
+    mo.classificationDetail = detail;
+    mo.classificationDerivedAt = now;
+    mo.classificationBasis = {
+      vocabularyOver: 'the case\'s whole evidence record, re-derived whenever the record gains a signal type',
+      sightingsOver: 'the signal-type combination the case OPENED with, counted at that moment',
+      note: 'The two halves of this badge do not share a basis. What the case resembles is re-voted over its ' +
+        'growing record; how often the combination has been seen is the count taken when it opened, because ' +
+        're-signaturing a case later would re-count a history that already happened.'
+    };
+    if (reason && previous !== null && previous !== detail.classification) {
+      mo.classificationRevisions = (mo.classificationRevisions || []).concat([{
+        at: now, from: previous, to: detail.classification, reason: reason
+      }]);
+    }
+    return detail;
+  }
+
   function applyResemblance(mo, typeBearing, now, reason) {
     const ranked = rankPatterns(typeBearing);
+    // Before resemblanceNotes, which reads mo.classification: the note and the
+    // badge have to be derived from the same vote in the same pass.
+    applyClassification(mo, ranked, now, reason);
     const pattern = ranked.length ? ranked[0].pattern : null;
     const previous = mo.relatedPattern !== undefined ? mo.relatedPattern : null;
     mo.title = pattern ? 'Possible ' + pattern.name : 'Unclassified correlated anomaly';
@@ -1126,6 +1429,9 @@ const FWMoEngine = (() => {
     const signature = signalSignature(signals);
     const priorCount = engine.signatures.get(signature) || 0;
     engine.signatures.set(signature, priorCount + 1);
+    // Set here so the object literal below declares the field, then re-derived
+    // (identically, from the same ranked list) by applyClassification at the
+    // end of buildMo -- one owner, no second formula.
     const classification = classifyDiscovery(ranked, priorCount);
     const noveltyScore = noveltyFromRecurrence(priorCount);
 
@@ -1159,6 +1465,7 @@ const FWMoEngine = (() => {
       // place, because they are all one derivation and used to be re-derived
       // nowhere.
       resemblanceRevisions: [],
+      classificationRevisions: [],
       evidence: buildEvidence(signals),
       firstObserved: Math.min(...signals.map(s => s.createdAt)),
       // When the case was OPENED, which is not when its first signal was
@@ -1201,7 +1508,8 @@ const FWMoEngine = (() => {
     if (typesAfter !== typesBefore) {
       applyResemblance(mo, mo.evidence.map(e => ({ type: e.signalType })), now,
         'the case\'s evidence record gained a signal type it did not open with (' + (typesBefore || 'none') +
-        ' \u2192 ' + typesAfter + '), so what it resembles was re-derived from the record');
+        ' \u2192 ' + typesAfter + '), so what it resembles and the vocabulary half of its badge were re-derived ' +
+        'from the record');
     }
     const raw = scoreSignals(signals);
     mo.baseSignalSum = raw;
@@ -1239,9 +1547,41 @@ const FWMoEngine = (() => {
       throw new Error('moEngine.discoverySummary: discovery classes sum to ' + summed + ' over ' + all.length +
         ' cases; sharing a base is not adding up to it');
     }
+    /* One bucket, two facts: POTENTIAL_NEW_MO is issued both for a first
+       sighting whose vocabulary overlap is thin and for a combination seen
+       once or twice, and the class tally cannot tell them apart. Counted by
+       reason as well, over the same base, declared partition, throwing on
+       either failure -- the same shape as the class tally above, for the same
+       reason. */
+    const byReason = {};
+    CLASSIFICATION_REASON_KEYS.forEach(k => { byReason[k] = 0; });
+    let reasonless = 0;
+    all.forEach(mo => {
+      if (mo.classificationReason === undefined || mo.classificationReason === null) { reasonless++; return; }
+      if (byReason[mo.classificationReason] === undefined) {
+        throw new Error('moEngine.discoverySummary: case ' + (mo.id || '(no id)') + ' carries classification reason "' +
+          mo.classificationReason + '", which is not one of ' + CLASSIFICATION_REASON_KEYS.join('/'));
+      }
+      byReason[mo.classificationReason]++;
+    });
+    const reasonSummed = CLASSIFICATION_REASON_KEYS.reduce((n, k) => n + byReason[k], 0);
+    if (reasonSummed + reasonless !== all.length) {
+      throw new Error('moEngine.discoverySummary: classification reasons sum to ' + reasonSummed + ' plus ' +
+        reasonless + ' unstated over ' + all.length + ' cases; sharing a base is not adding up to it');
+    }
     const reach = classificationReach();
+    const voteFloor = voteFloorEquivalence();
+    const observedFloor = observedVoteFloorEquivalence(engine);
     return {
       totalSignatures: engine.signatures.size, totalMos: all.length, byClassification: byClass, classifiedTotal: summed,
+      byReason: byReason,
+      // A case built before this engine recorded reasons has no reason, which
+      // is not the same as a reason of "none". Counted separately, never
+      // folded into a bucket.
+      reasonNotStated: reasonless,
+      reasonBase: all.length,
+      voteFloorNote: voteFloor.note,
+      observedVoteFloorNote: observedFloor.note,
       // A bucket reading 0 because no case can carry it is not the same fact as
       // a bucket reading 0 because none has come up, and the panel had no way
       // to tell them apart.
@@ -1425,7 +1765,10 @@ const FWMoEngine = (() => {
     FALSE_POSITIVE_SCOPE, falsePositivesFor, RESEMBLANCE_SHOWN, resemblanceCoverage,
     PATTERN_KEYWORDS, TYPES_WITHOUT_VOCABULARY, assertKeywordVocabularyDeclared, vocabularyCoverage,
     checkVocabularyOnce, vocabularyCheckState,
-    VOTE_BASIS, classificationReach, applyResemblance,
+    VOTE_BASIS, classificationReach, applyResemblance, applyClassification, observedVoteFloorEquivalence,
+    DISCOVERY_THRESHOLDS, CLASSIFICATION_REASONS, CLASSIFICATION_REASON_KEYS,
+    classificationReasonEntry, assertClassificationReasonsDeclared,
+    classifyDiscoveryDetail, voteFloorEquivalence,
     EVIDENCE_CONTRIBUTION, contributionScopes,
     CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
     CONFIDENCE_INDEX, indexNote, formatIndex, indexReach, indexBasis, assertIndexScaleDeclared,

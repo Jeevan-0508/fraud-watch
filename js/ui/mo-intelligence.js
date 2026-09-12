@@ -196,8 +196,19 @@ const FWMoIntelligence = (() => {
     // bucket that reads 0 because none has come up, and one of those is an
     // observation while the other is an impossibility.
     const unissuable = (summary.unissuableClasses || []).length ? ` ${summary.reachNote}` : '';
+    // The class tally counts two different findings in the same bucket, so the
+    // reason tally is printed with it, over the same base.
+    const byReason = summary.byReason
+      ? ' · by reason: ' + FWMoEngine.CLASSIFICATION_REASON_KEYS
+        .map(k => `${summary.byReason[k]} ${FWMoEngine.classificationReasonEntry(k).note}`).join(' · ')
+      : '';
+    const unstated = summary.reasonNotStated
+      ? ` ${summary.reasonNotStated} of ${summary.reasonBase} cases state no reason (not a reason of "none").`
+      : '';
     els.summary.textContent = `${mos.length} total cases · ${summary.totalSignatures} distinct behavior signatures seen · ` +
-      `by discovery class over ${summary.classifiedTotal} cases: ${byClass}` + unissuable;
+      `by discovery class over ${summary.classifiedTotal} cases: ${byClass}` + byReason + unstated + unissuable +
+      (summary.voteFloorNote ? ` ${summary.voteFloorNote}` : '') +
+      (summary.observedVoteFloorNote ? ` ${summary.observedVoteFloorNote}` : '');
   }
 
   /* Never "novelty 100/100": that reads as a share and there is no base. The
@@ -520,13 +531,31 @@ const FWMoIntelligence = (() => {
     return `<div class="text-[10px] text-slate-500 mt-1">Recorded at: ${list}.${road} ${note}</div>`;
   }
 
+  /* The class was printed with its declared meaning and nothing else. Two of
+     the four classes are issued from opposite evidence -- a thin vocabulary
+     overlap and a low sighting count both produce "Potential New MO" -- so the
+     reason is printed beside the label. Without it the badge asserts one of two
+     facts and the reader picks. */
+  function classificationReasonLine(mo) {
+    if (!mo.classificationReason) return '';
+    const d = mo.classificationDetail || {};
+    const floor = d.voteFloorConsulted
+      ? ` Its top-ranked pattern shares ${d.topVotes} keyword${d.topVotes === 1 ? '' : 's'}, against a declared floor of ${d.voteFloor}.`
+      : '';
+    const revs = (mo.classificationRevisions || []).length
+      ? ` This badge has been re-derived ${mo.classificationRevisions.length} time${mo.classificationRevisions.length === 1 ? '' : 's'} since the case opened: ${mo.classificationRevisions.map(r => `${classificationLabel(r.from)} → ${classificationLabel(r.to)}`).join(', ')}.`
+      : '';
+    return `<div class="text-[9px] text-slate-500 italic mt-1">Why this badge: ${mo.classificationReasonNote}${floor}${revs} ${(mo.classificationBasis || {}).note || ''}</div>`;
+  }
+
   function renderExecutiveSummary(mo) {
     const sigTypes = (mo.signature || '').split('+').map(t => t.replace(/_/g, ' ')).join(', ');
     return `<div class="mb-2 text-[11px] text-slate-300 leading-snug">
       Involves <b>${mo.entities.truckId}</b>${mo.entities.driverId ? ` (driver ${mo.entities.driverId})` : ''}.
-      Detected from: ${sigTypes || 'a correlated signal combination'}.
-      This exact combination has been observed ${mo.recurrenceCount} time${mo.recurrenceCount === 1 ? '' : 's'} in this simulation, currently classified
+      Opened on the combination: ${sigTypes || 'a correlated signal combination'} — the types it opened with, which the evidence below may since have added to.
+      That opening combination has been observed ${mo.recurrenceCount} time${mo.recurrenceCount === 1 ? '' : 's'} in this simulation, currently classified
       <b>${classificationLabel(mo.classification)}</b> — ${FWMoEngine.CLASSIFICATION[mo.classification].means}
+      ${classificationReasonLine(mo)}
       ${noveltyLine(mo)}
       ${indexSentence(mo)}
       ${patternHarmNote(mo)}

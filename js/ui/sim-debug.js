@@ -285,10 +285,23 @@ const FWSimDebug = (() => {
     const reachSpan = (summary.unissuableClasses || []).length
       ? `<span class="basis-full text-slate-600 italic">${summary.reachNote}</span>`
       : '';
+    // Two of the four classes are issued from opposite evidence, so the class
+    // tally alone cannot say what it counted.
+    const reasonSpans = summary.byReason
+      ? FWMoEngine.CLASSIFICATION_REASON_KEYS.map(k =>
+        `<span>${summary.byReason[k]} / ${summary.reasonBase} ${FWMoEngine.classificationReasonEntry(k).note}</span>`).join('')
+      : '';
+    // Two populations, two answers, both named: the floor separates every
+    // combination the catalogue allows and separates almost none of the cases
+    // actually opened.
+    const floorSpan = (summary.voteFloorNote ? `<span class="basis-full text-slate-600 italic">${summary.voteFloorNote}</span>` : '') +
+      (summary.observedVoteFloorNote ? `<span class="basis-full text-slate-600 italic">${summary.observedVoteFloorNote}</span>` : '');
     const summaryHtml = `<div class="text-[10px] text-slate-500 mb-2 flex flex-wrap gap-x-3 gap-y-0.5">
       <span>${summary.totalSignatures} distinct behavior patterns seen</span>
       ${classSpans}
       ${reachSpan}
+      ${reasonSpans}
+      ${floorSpan}
     </div>`;
 
     if (!mos.length) {
@@ -311,8 +324,9 @@ const FWSimDebug = (() => {
         <div class="text-xs text-white mb-1">${mo.title || mo.matchedPatternName || 'Unclassified pattern'}</div>
         <div class="flex items-center gap-2 mb-1">
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${classificationBadgeClass(mo.classification)}">${classificationLabel(mo.classification)}</span>
-          <span class="text-[10px] text-slate-500">${noveltyChip(mo)} · seen ${mo.recurrenceCount}×</span>
+          <span class="text-[10px] text-slate-500">${noveltyChip(mo)} · the combination it opened with seen ${mo.recurrenceCount}×</span>
         </div>
+        ${mo.classificationReasonNote ? `<div class="text-[10px] text-slate-600 mb-1">Why this badge: ${mo.classificationReasonNote}</div>` : ''}
         <div class="text-[10px] text-slate-500 mb-1">${indexLine(mo)}</div>
         <div class="text-[10px] text-slate-500 mb-1">status: ${mo.status}${closureHand(mo)}</div>
         <div class="text-[10px] text-slate-500 mb-1">${examinationLine(mo)}</div>
