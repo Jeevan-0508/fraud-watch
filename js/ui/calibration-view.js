@@ -16,7 +16,15 @@
    the process, and pricing a *calibration* outcome would mean pricing an
    over- or under-call, which is the first entry on its refused list. The
    effort those calls consumed is reported in the Exposure & Cost panel
-   instead, in hours. */
+   instead, in hours.
+
+   Since Slice 18 a record check can come back structurally empty
+   (NO_RECORD_EXISTS: the site keeps no record of that kind at that hour).
+   A case decided on nothing but empty checks is reported here as its own
+   count, because its alignment measures this port's coverage as much as
+   the analyst's judgement. It stays inside the rates all the same, for the
+   reason outcomeEngine's header gives: removing it would measure
+   calibration only where the port could see. */
 const FWCalibrationView = (() => {
   let els = {};
 
@@ -85,6 +93,13 @@ const FWCalibrationView = (() => {
     </div>`;
   }
 
+  // Looked and could not see, which is not the same as not having looked.
+  // Counted here, never subtracted from the rates above.
+  function unseeableLine(cal) {
+    if (!cal.unseeableCount) return '';
+    return `<div class="text-[10px] text-slate-400 mt-1">${cal.unseeableCount} of ${cal.decisiveCount} decided case${cal.unseeableCount === 1 ? '' : 's'} were closed after record checks that all came back with nothing to fetch — the analyst looked and this port keeps no record covering it. Those calls are scored above like any other, because the answer key exists whether or not it was reachable; what their alignment measures is this port's coverage as much as the judgement. They are not removed from the counts: doing that would grade calibration only over the cases the port happened to be able to see.</div>`;
+  }
+
   function renderBody(cal) {
     if (!cal.totalClosed) {
       return `<p class="text-slate-600 text-xs italic">No cases closed yet. Close one as Confirm Fraud or Mark False Positive in the MO Intelligence Center and it will be checked against the simulation's record here.</p>`;
@@ -99,7 +114,8 @@ const FWCalibrationView = (() => {
       return head + `<div class="text-[10px] text-slate-400 mb-2">
         In line with the record: ${cal.counts.ALIGNED} · went past it: ${cal.counts.OVERCALLED} · stopped short: ${cal.counts.UNDERCALLED} · mixed record: ${cal.counts.AMBIGUOUS}
       </div>
-      <div class="text-[10px] text-slate-500 italic">Percentages are withheld until ${cal.minSample} cases with an unmixed record have been decided — below that a rate would be noise dressed up as a measurement.</div>`;
+      <div class="text-[10px] text-slate-500 italic">Percentages are withheld until ${cal.minSample} cases with an unmixed record have been decided — below that a rate would be noise dressed up as a measurement.</div>`
+      + unseeableLine(cal);
     }
 
     const t = cal.decisiveCount;
@@ -108,7 +124,8 @@ const FWCalibrationView = (() => {
       bar('Went past the record (escalated something explained)', cal.counts.OVERCALLED, t, 'bg-orange-500') +
       bar('Stopped short of the record (cleared something unexplained)', cal.counts.UNDERCALLED, t, 'bg-amber-500') +
       `<div class="text-[10px] text-slate-400 mt-2">Excluded from the rates above: ${cal.counts.AMBIGUOUS} case${cal.counts.AMBIGUOUS === 1 ? '' : 's'} whose record was mixed.</div>` +
-      `<div class="text-[10px] ${cal.blindCount ? 'text-orange-300' : 'text-slate-400'} mt-1">${cal.blindCount} of ${cal.scoredCount} closed without checking a single record source first.</div>`;
+      `<div class="text-[10px] ${cal.blindCount ? 'text-orange-300' : 'text-slate-400'} mt-1">${cal.blindCount} of ${cal.scoredCount} closed without checking a single record source first.</div>` +
+      unseeableLine(cal);
   }
 
   function renderLedger(engine) {
@@ -122,7 +139,7 @@ const FWCalibrationView = (() => {
           </div>
         </div>
         <div class="text-[10px] text-slate-400">${e.narrative}</div>
-        <div class="text-[10px] text-slate-500 mt-1">Confidence at close ${Math.round(e.confidenceAtClose)}% · ${e.checksRun} record check${e.checksRun === 1 ? '' : 's'} run${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}</div>
+        <div class="text-[10px] text-slate-500 mt-1">Confidence at close ${Math.round(e.confidenceAtClose)}% · ${e.checksRun} record check${e.checksRun === 1 ? '' : 's'} run${e.noRecordChecks ? ` · ${e.noRecordChecks} with no such record to fetch` : ''}${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}</div>
       </div>`).join('');
     return rows || '';
   }
