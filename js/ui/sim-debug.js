@@ -133,6 +133,18 @@ const FWSimDebug = (() => {
   function fmtPct(x) { return Math.round(x * 100) + '%'; }
 
   // The band and its tone are moEngine's, not this panel's second opinion.
+  /* The index used to print as `78%`, which is a denominator claim over a
+     sum that divides nothing. Its unit, its scale and what it is not now
+     travel with it, and at either end of the clamp the caveat is stated
+     rather than the stale number printed alone. */
+  function indexLine(mo) {
+    const decl = FWMoEngine.CONFIDENCE_INDEX;
+    const n = mo.indexScaleNote;
+    const bound = n && (n.saturated || n.floored) ? ` &mdash; ${n.reason}` : '';
+    const basis = FWMoEngine.indexBasis(mo);
+    return `${decl.displayLabel} ${FWMoEngine.formatIndex(mo.confidence)} (${decl.unit}; not a probability that fraud occurred)${bound}<br>${basis.note}`;
+  }
+
   function bandBadgeClass(band) { return FWMoEngine.bandTone(band); }
 
   // Discovery-class labels and tones come from moEngine, the module that
@@ -288,13 +300,14 @@ const FWSimDebug = (() => {
       return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2 mb-2">
         <div class="flex items-center justify-between mb-1">
           <span class="font-mono text-[11px] text-slate-300">${mo.id} · ${mo.entities.truckId}</span>
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${bandBadgeClass(mo.confidenceBand)}">${mo.confidenceBand} · ${Math.round(mo.confidence)}%</span>
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${bandBadgeClass(mo.confidenceBand)}">${mo.confidenceBand} · idx ${FWMoEngine.formatIndex(mo.confidence)}</span>
         </div>
         <div class="text-xs text-white mb-1">${mo.title || mo.matchedPatternName || 'Unclassified pattern'}</div>
         <div class="flex items-center gap-2 mb-1">
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${classificationBadgeClass(mo.classification)}">${classificationLabel(mo.classification)}</span>
           <span class="text-[10px] text-slate-500">${noveltyChip(mo)} · seen ${mo.recurrenceCount}×</span>
         </div>
+        <div class="text-[10px] text-slate-500 mb-1">${indexLine(mo)}</div>
         <div class="text-[10px] text-slate-500 mb-1">status: ${mo.status}${closureHand(mo)}</div>
         <div class="text-[10px] text-slate-500 mb-1">${examinationLine(mo)}</div>
         ${related ? `<div class="text-[10px] text-slate-500 mb-1">Closest known patterns: ${related}</div>` : ''}

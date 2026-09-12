@@ -272,7 +272,7 @@ const FWCalibrationView = (() => {
           </div>
         </div>
         <div class="text-[10px] text-slate-400">${e.narrative}</div>
-        <div class="text-[10px] text-slate-500 mt-1">Confidence at close ${Math.round(e.confidenceAtClose)}% · ${checksLine(e)}${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}${e.checksRun && !e.everAnswered ? ' · none of them answered' : ''}</div>
+        <div class="text-[10px] text-slate-500 mt-1">${FWMoEngine.CONFIDENCE_INDEX.displayLabel} at close ${FWMoEngine.formatIndex(e.confidenceAtClose)} · ${checksLine(e)}${e.effortSeconds ? ` · ${fmtEffort(e.effortSeconds)} effort` : ''}${e.checksRun && !e.everAnswered ? ' · none of them answered' : ''}</div>
       </div>`).join('');
     return rows || '';
   }

@@ -125,6 +125,29 @@ const FWMoIntelligence = (() => {
      against a pattern the taxonomy assesses as high harm used to render as
      "severity LOW". Informational in both directions -- it says nothing about
      whether this case is that pattern. */
+  /* THE MOST PROMINENT NUMBER IN THE APP, AND IT USED TO END IN A PERCENT
+     SIGN. It is a sum of weight * reliability multiplied by a calibration
+     constant; nothing is divided, so there is no base, no n / N, and no
+     percentage to state. Printed as `Confidence 78%` it reads as a probability
+     that fraud occurred -- exactly the collapse of "we observed X" into "X
+     means fraud" that every other panel in this app is built to refuse. Same
+     number, declared unit, disclosed model, and the ceiling caveat when the
+     clamp has stopped it tracking its own source. */
+  function indexSentence(mo) {
+    const decl = FWMoEngine.CONFIDENCE_INDEX;
+    const n = mo.indexScaleNote;
+    const bound = n && (n.saturated || n.floored)
+      ? ` <span class="text-amber-300/80">Withheld as a distinguishing figure: ${n.reason}</span>`
+      : '';
+    const reach = FWMoEngine.indexReach();
+    return `${decl.displayLabel} <b>${FWMoEngine.formatIndex(mo.confidence)}</b> (band <b>${mo.confidenceBand}</b> — the same number, banded, not a second measurement).
+      ${decl.means[0].toUpperCase() + decl.means.slice(1)} It is ${decl.unit}. Denominator: ${decl.denominator}
+      It is not ${decl.doesNotMean}${bound}
+      <span class="text-amber-300/80">Scope of the sum, not a rate over it &mdash; ${FWMoEngine.indexBasis(mo).note}</span>
+      <span class="text-slate-500">Elsewhere this app calls the same number "confidence" &mdash; ${decl.storedAs} One quantity, and this is its unit.
+      ${reach.note}</span>`;
+  }
+
   function patternHarmNote(mo) {
     if (typeof FW === 'undefined' || !FW.loaded() || !mo.relatedPattern) return '';
     const scale = FW.severityScale();
@@ -341,8 +364,9 @@ const FWMoIntelligence = (() => {
       : sum.adjustment
         ? `<b class="${sum.adjustment < 0 ? 'text-emerald-400' : 'text-orange-400'}">${fmtDelta(sum.adjustment)}</b> from ${sum.checksRun} completed check${sum.checksRun === 1 ? '' : 's'}`
         : `· unchanged by ${sum.checksRun} completed check${sum.checksRun === 1 ? '' : 's'}`;
+    const decl = FWMoEngine.CONFIDENCE_INDEX;
     const meter = `<div class="text-[10px] text-slate-400 mb-1">
-      Confidence ${Math.round(mo.confidence)}% = ${Math.round(base)}% from correlated signals
+      ${decl.displayLabel} ${FWMoEngine.formatIndex(mo.confidence)} = ${Math.round(base)} index points from correlated signals
       ${checkPhrase}
       ${sum.effortSeconds ? ` · ${fmtEffort(sum.effortSeconds)} of analyst effort spent` : ''}
     </div>`;
@@ -426,7 +450,7 @@ const FWMoIntelligence = (() => {
       This exact combination has been observed ${mo.recurrenceCount} time${mo.recurrenceCount === 1 ? '' : 's'} in this simulation, currently classified
       <b>${classificationLabel(mo.classification)}</b> — ${FWMoEngine.CLASSIFICATION[mo.classification].means}
       ${noveltyLine(mo)}
-      Confidence ${Math.round(mo.confidence)}% (band <b>${mo.confidenceBand}</b> — the same number, banded, not a second measurement).
+      ${indexSentence(mo)}
       ${patternHarmNote(mo)}
       ${mo.resolutionReason ? `<br>Resolution note: ${mo.resolutionReason}` : ''}
       ${renderCaseSites(mo)}
@@ -454,7 +478,7 @@ const FWMoIntelligence = (() => {
       <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
         <span class="font-mono text-[11px] text-slate-300">${mo.id} · ${mo.entities.truckId}</span>
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${bandBadgeClass(mo.confidenceBand)}">${mo.confidenceBand} · ${Math.round(mo.confidence)}%</span>
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${bandBadgeClass(mo.confidenceBand)}">${mo.confidenceBand} · idx ${FWMoEngine.formatIndex(mo.confidence)}</span>
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${classificationBadgeClass(mo.classification)}">${classificationLabel(mo.classification)}</span>
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${statusBadgeClass(mo.status)}">${mo.status.replace(/_/g, ' ')}</span>
           <button data-mo-view="${mo.id}" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-700 hover:bg-slate-600 text-white">${isOpen ? 'HIDE' : 'VIEW'}</button>

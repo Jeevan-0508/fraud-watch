@@ -59,10 +59,211 @@ const FWMoEngine = (() => {
     return signals.reduce((sum, s) => sum + s.weight * s.reliability, 0);
   }
 
+  /* THE NUMBER THIS WHOLE PANEL IS BUILT AROUND, AND IT USED TO WEAR A
+     PERCENT SIGN. `rawScore` is a SUM of weight * reliability over the
+     signals currently active on a case. Multiplying a sum by 12 and clamping
+     it to 1-100 does not divide anything by anything, so there is no base and
+     no denominator -- and rendered as `Confidence 78%` it reads as a
+     probability that fraud occurred, which is the one claim this entire
+     project exists to refuse. A percent sign is a denominator claim
+     (rate/denominator discipline), and this number has none to make.
+
+     So: same number, declared unit. It is an INDEX on a scale this engine
+     defines, the multiplier is disclosed as calibration rather than a
+     conversion into any real quantity, and both ends of the clamp are stated
+     because past them the figure stops tracking the sum it comes from.
+
+     The old comment here claimed "2 mid-weight signals should land WATCH/
+     ELEVATED, a genuine chain of 4-5 should reach HIGH/CRITICAL". Three
+     problems, all measurable: HIGH and CRITICAL stopped being bands in
+     Slice 41 and are the taxonomy's harm classes; two mid-weight signals sum
+     to about 2.7 and never clear CREATE_THRESHOLD at all, so no such case
+     exists; and the lowest a case can OPEN is CREATE_THRESHOLD * the
+     multiplier, which is mid-scale. The reachable range is computed below
+     instead of described here, so it cannot drift again. */
+  const INDEX_MIN = 1;
+  const INDEX_MAX = 100;
+  const INDEX_MULTIPLIER = 12;
+
+  const CONFIDENCE_INDEX = {
+    kind: 'PARAMETER',
+    unit: 'index points on a declared ' + INDEX_MIN + '-' + INDEX_MAX + ' scale, not a percentage',
+    displayLabel: 'Correlation index',
+    scope: 'one case\'s currently-active signal set, within moEngine',
+    derivedFrom: 'moEngine.scoreSignals -- the sum of weight * reliability over the signals still active on the case',
+    model: 'that sum multiplied by ' + INDEX_MULTIPLIER + ', rounded, clamped to ' + INDEX_MIN + '-' + INDEX_MAX +
+      '. The multiplier is calibration chosen so a case that just clears CREATE_THRESHOLD opens mid-scale; it converts the sum into nothing real.',
+    means: 'how much active correlated signal weight this case currently carries, on a scale this engine defines and owns.',
+    doesNotMean: 'a probability that fraud occurred, a percentage of anything, a share of any population, ' +
+      'how much harm the resembled pattern would do, and not a finding that anything happened.',
+    storedAs: 'mo.confidence -- the field name is historical; the quantity is this index, and mo.confidenceBand is the same number banded.',
+    basis: 'the signals CURRENTLY ACTIVE on the case, not every signal the case was ever opened on. ' +
+      'Signals decay out of the active set, so this index falls on its own with no analyst having checked anything ' +
+      'and with nothing having been ruled out -- and it can fall below the sum that would open the case at all. ' +
+      'A case whose index has fallen that way is resting on its evidence record, which only ever grows.',
+    divides: null,
+    denominator: 'none. The index divides nothing, so there is no rate here and no percent sign is warranted.',
+    // Computed from the multiplier, never restated: the sum at which each end
+    // of the clamp is reached. Past these the index is no longer a function of
+    // its own source.
+    saturatesAtRaw: INDEX_MAX / INDEX_MULTIPLIER,
+    floorsAtRaw: INDEX_MIN / INDEX_MULTIPLIER
+  };
+
   function confidenceFromScore(rawScore) {
-    // Calibrated, not precise: 2 mid-weight signals should land WATCH/
-    // ELEVATED, a genuine chain of 4-5 should reach HIGH/CRITICAL.
-    return Math.max(1, Math.min(100, Math.round(rawScore * 12)));
+    if (typeof rawScore !== 'number' || !isFinite(rawScore) || rawScore < 0) {
+      throw new Error('moEngine.confidenceFromScore: no usable signal sum (' + rawScore +
+        '); an index without a sum behind it would state support nobody derived');
+    }
+    return Math.max(INDEX_MIN, Math.min(INDEX_MAX, Math.round(rawScore * INDEX_MULTIPLIER)));
+  }
+
+  /* Both ends of the clamp are the Slice 42 shape: a derived figure that has
+     stopped tracking its source and is still displayed. Signal sums of 8.4 and
+     16.6 both print 100, so at the ceiling the index no longer distinguishes
+     two cases that differ by a factor of two. Stated at the point of display,
+     with the figure that DOES still distinguish them named, rather than
+     printing a confident-looking 100 as if it were measured there. */
+  function indexNote(rawScore) {
+    const value = confidenceFromScore(rawScore);
+    if (rawScore >= CONFIDENCE_INDEX.saturatesAtRaw) {
+      return {
+        value: value, saturated: true, floored: false,
+        reason: 'at the ceiling of the scale: every signal sum at or above ' +
+          CONFIDENCE_INDEX.saturatesAtRaw.toFixed(2) + ' prints ' + INDEX_MAX +
+          ', so above it this index stops distinguishing cases. The active signal sum (' +
+          rawScore.toFixed(2) + ') is the figure that still does.'
+      };
+    }
+    if (rawScore <= CONFIDENCE_INDEX.floorsAtRaw) {
+      return {
+        value: value, saturated: false, floored: true,
+        reason: 'at the floor of the scale: every signal sum at or below ' +
+          CONFIDENCE_INDEX.floorsAtRaw.toFixed(2) + ' prints ' + INDEX_MIN +
+          ', so below it this index stops distinguishing cases. The active signal sum (' +
+          rawScore.toFixed(2) + ') is the figure that still does.'
+      };
+    }
+    return { value: value, saturated: false, floored: false, reason: null };
+  }
+
+  // One canonical rendering of the index, so three panels cannot drift into
+  // three units. The maximum is read from the declared scale, not typed in.
+  function formatIndex(value) {
+    if (typeof value !== 'number' || !isFinite(value)) {
+      throw new Error('moEngine.formatIndex: nothing to format');
+    }
+    return Math.round(value) + ' / ' + INDEX_MAX;
+  }
+
+  /* What the index scale can actually reach, measured rather than claimed. A
+     case cannot open below CREATE_THRESHOLD * the multiplier, so some bands
+     are unreachable at creation and are only reached by investigation findings
+     moving the number DOWN. That is worth stating: it means a low band on a
+     case is a result of record checks, not of a weak correlation. */
+  function indexReach() {
+    const openingFloor = confidenceFromScore(CREATE_THRESHOLD);
+    const notAtCreation = CONFIDENCE_BAND.tokens.filter(b => {
+      for (let v = openingFloor; v <= INDEX_MAX; v++) if (confidenceLabel(v) === b) return false;
+      return true;
+    });
+    const unreachable = CONFIDENCE_BAND.tokens.filter(b => {
+      for (let v = INDEX_MIN; v <= INDEX_MAX; v++) if (confidenceLabel(v) === b) return false;
+      return true;
+    });
+    return {
+      openingFloor: openingFloor,
+      openingFloorBand: confidenceLabel(openingFloor),
+      bandsNotReachableAtCreation: notAtCreation,
+      bandsUnreachableAnywhere: unreachable,
+      note: 'A case cannot open below index ' + openingFloor + ' (' + formatIndex(openingFloor) +
+        '), because correlation will not open one below a signal sum of ' + CREATE_THRESHOLD +
+        '. ' + (notAtCreation.length
+          ? 'The band' + (notAtCreation.length === 1 ? ' ' : 's ') + notAtCreation.join(' and ') +
+            ' are never reached by a newly opened case. They are reached afterwards, two ways that mean ' +
+            'opposite things: an investigation finding that lowered the index, or the case\'s signals simply ' +
+            'ageing out of the active set with nothing checked and nothing ruled out.'
+          : 'Every band is reachable at creation.')
+    };
+  }
+
+  /* WHAT THE INDEX IS COMPUTED OVER, which is not what the case holds. The
+     evidence record only ever grows (mergeEvidence) while the index is
+     recomputed from the signals still ACTIVE, so on the seeded run every open
+     case reads a band BELOW the lowest a case can open at -- with zero record
+     checks run and nothing ruled out. Read off the badge alone that looks like
+     a weak case. It is a quiet case: the weight aged out.
+
+     Those are opposite facts and the panels had no way to tell them apart, so
+     the index now carries the count it was computed over against the count the
+     case holds -- the same n / N discipline every rate in this app obeys, owed
+     equally by a figure computed over a subset. */
+  function indexBasis(mo) {
+    const everCount = (mo.evidence || []).length;
+    const activeCount = (mo.activeSignals || []).length;
+    const sum = typeof mo.baseSignalSum === 'number' ? mo.baseSignalSum : null;
+    const belowOpening = sum != null && sum < CREATE_THRESHOLD;
+    const decayed = everCount - activeCount;
+    return {
+      activeCount: activeCount,
+      everCount: everCount,
+      decayedCount: decayed,
+      signalSum: sum,
+      belowOpeningSum: belowOpening,
+      note: 'Computed over ' + activeCount + ' of the ' + everCount + ' signal' +
+        (everCount === 1 ? '' : 's') + ' this case holds' +
+        (decayed > 0
+          ? ' \u2014 ' + decayed + ' ' + (decayed === 1 ? 'has' : 'have') +
+            ' decayed out of the active set. A signal decaying stopped it counting toward the index; it did not stop it happening.'
+          : '; none has decayed yet.') +
+        (belowOpening
+          ? ' The active sum (' + sum.toFixed(2) + ') is now below the ' + CREATE_THRESHOLD +
+            ' that opens a case, so correlation would not open this one today. It stays open on its record, and a low index here is signals ageing out, not anything checked or ruled out.'
+          : '')
+    };
+  }
+
+  /* Declared in both directions, the Slice 39 pattern. A band nothing on the
+     scale can reach would be dead vocabulary; a ceiling that is not the
+     multiplier's own ceiling would mean the disclosed model and the code had
+     parted company; and the investigation adjustment is added straight to this
+     number, so its bounds have to be in the same unit and inside the same
+     span or the two are not commensurable. */
+  function assertIndexScaleDeclared() {
+    if (CONFIDENCE_INDEX.saturatesAtRaw * INDEX_MULTIPLIER !== INDEX_MAX) {
+      throw new Error('moEngine: the declared saturation sum does not multiply back to the scale maximum');
+    }
+    if (CONFIDENCE_INDEX.floorsAtRaw * INDEX_MULTIPLIER !== INDEX_MIN) {
+      throw new Error('moEngine: the declared floor sum does not multiply back to the scale minimum');
+    }
+    if (/%/.test(CONFIDENCE_INDEX.unit)) {
+      throw new Error('moEngine: the index unit must not be a percentage; nothing is divided');
+    }
+    if (!/CURRENTLY ACTIVE/.test(CONFIDENCE_INDEX.basis)) {
+      throw new Error('moEngine: the index must declare the signal set it is computed over, ' +
+        'or a figure over a decayed subset reads as a figure over the whole case');
+    }
+    const reach = indexReach();
+    if (reach.bandsUnreachableAnywhere.length) {
+      throw new Error('moEngine: confidence band(s) ' + reach.bandsUnreachableAnywhere.join(', ') +
+        ' cannot be reached anywhere on the index scale, so the vocabulary claims a distinction the number cannot make');
+    }
+    if (reach.openingFloorBand !== confidenceLabel(reach.openingFloor)) {
+      throw new Error('moEngine: the stated opening band does not match the opening floor');
+    }
+    if (typeof window !== 'undefined' && window.FWInvestigationEngine) {
+      const up = window.FWInvestigationEngine.MAX_UPWARD_ADJUSTMENT;
+      const down = window.FWInvestigationEngine.MAX_DOWNWARD_ADJUSTMENT;
+      const span = INDEX_MAX - INDEX_MIN;
+      if (typeof up !== 'number' || typeof down !== 'number') {
+        throw new Error('moEngine: the investigation adjustment bounds are not numbers, so their unit is undeclared');
+      }
+      if (up > span || Math.abs(down) > span) {
+        throw new Error('moEngine: an investigation adjustment can move the index further than the whole scale spans, ' +
+          'so the two are not on the same scale');
+      }
+    }
+    return true;
   }
 
   /* A band over the confidence number, and nothing else. It used to be stored
@@ -142,6 +343,7 @@ const FWMoEngine = (() => {
     const scale = FW.severityScale();
     if (!scale) return;
     assertBandScopeDistinct(scale.tokens);
+    assertIndexScaleDeclared();
     scopesChecked = true;
   }
 
@@ -391,6 +593,9 @@ const FWMoEngine = (() => {
     const id = 'MO-' + String(engine.nextMoId++).padStart(4, '0');
     const rawScore = scoreSignals(signals);
     const confidence = confidenceFromScore(rawScore);
+    // The sum was computed and thrown away, which is why nothing could say
+    // what a clamped 100 was hiding. Kept, so the ceiling caveat has a figure.
+    const indexNoteAtOpen = indexNote(rawScore);
     const ranked = rankPatterns(signals);
     const pattern = ranked.length ? ranked[0].pattern : null;
 
@@ -409,6 +614,8 @@ const FWMoEngine = (() => {
       category: pattern ? pattern.category : 'unclassified',
       confidence,
       baseConfidence: confidence,
+      baseSignalSum: rawScore,
+      indexScaleNote: indexNoteAtOpen,
       investigationAdjustment: 0,
       investigation: { findings: [], completed: [], effortSeconds: 0 },
       confidenceBand: confidenceLabel(confidence),
@@ -452,14 +659,22 @@ const FWMoEngine = (() => {
   function recomputeConfidence(mo) {
     const base = mo.baseConfidence != null ? mo.baseConfidence : mo.confidence;
     const adj = mo.investigationAdjustment || 0;
-    mo.confidence = Math.max(1, Math.min(100, Math.round(base + adj)));
+    // Index points added to index points. The base is already clamped, so on a
+    // saturated case the adjustment is applied to the ceiling rather than to
+    // the sum -- two cases whose signal sums differ by a factor of two come
+    // out of an identical finding with an identical number. mo.indexScaleNote says
+    // so wherever that has happened; it is not silently smoothed here.
+    mo.confidence = Math.max(INDEX_MIN, Math.min(INDEX_MAX, Math.round(base + adj)));
     mo.confidenceBand = confidenceLabel(mo.confidence);
     return mo.confidence;
   }
 
   function refreshMo(mo, signals, now) {
     mergeEvidence(mo, signals);
-    mo.baseConfidence = confidenceFromScore(scoreSignals(signals));
+    const raw = scoreSignals(signals);
+    mo.baseSignalSum = raw;
+    mo.indexScaleNote = indexNote(raw);
+    mo.baseConfidence = confidenceFromScore(raw);
     recomputeConfidence(mo);
     mo.lastObserved = now;
   }
@@ -572,6 +787,8 @@ const FWMoEngine = (() => {
     siteBreakdown, applySites, SITE_SPREAD_NOTE,
     confidenceFromScore, confidenceLabel, buildEvidence, recommendedActionsFor,
     CONFIDENCE_BAND, bandTone, assertBandScopeDistinct,
+    CONFIDENCE_INDEX, indexNote, formatIndex, indexReach, indexBasis, assertIndexScaleDeclared,
+    INDEX_MIN, INDEX_MAX, INDEX_MULTIPLIER,
     signalSignature, classifyDiscovery, noveltyFromRecurrence, discoverySummary,
     CLASSIFICATION, CLASSIFICATIONS, classificationLabel, classificationTone, classificationTally,
     RECURRENCE_NOVELTY, noveltyIsFloored, noveltyNote,
