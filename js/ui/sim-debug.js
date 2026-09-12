@@ -82,6 +82,11 @@ const FWSimDebug = (() => {
     }
   }
 
+  /* One sim-hour. Chosen as the smallest interval measured to place every truck
+     (0 of 8 at hour 0, 8 of 8 at hour 1), not as a round number that looked
+     right. */
+  const WARM_START_SECONDS = 3600;
+
   function boot() {
     if (booted) return;
     booted = true;
@@ -126,6 +131,20 @@ const FWSimDebug = (() => {
       FWAnalyticsView.init();
       FWSimRunner.onTick(FWAnalyticsView.render);
     }
+    /* WARM START, and why there is one. A truck's first journey is drawn on its
+       first behavior tick, not at t=0, so at the instant the run is created no
+       truck has a journey and the network map draws eleven places and nothing
+       moving. Measured at seed 12345: sim hour 0 has 0 of 8 trucks placeable,
+       sim hour 1 has 8 of 8. Since Slice 77 the Live Sim is what the page opens
+       on, so that empty first frame is now the first thing anyone sees, and it
+       reads as a broken drawing rather than as a world that has not started.
+
+       This advances the simulation's own clock by a declared interval before the
+       first paint. It fabricates nothing: WARM_START_SECONDS of the run happen
+       exactly as they would have happened with nobody watching, by the same
+       tick path, and the clock says so -- the header opens on hour 1 rather than
+       hour 0 and does not pretend otherwise. */
+    FWSimRunner.fastForward(WARM_START_SECONDS);
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
@@ -429,5 +448,6 @@ const FWSimDebug = (() => {
     render(FWSimRunner.getState());
   }
 
-  return { init, boot, show, render, groundTruthNote, examinationLine, closureHand, ANSWER_KEY_CAPTION };
+  return { init, boot, show, render, groundTruthNote, examinationLine, closureHand, ANSWER_KEY_CAPTION,
+    WARM_START_SECONDS };
 })();
