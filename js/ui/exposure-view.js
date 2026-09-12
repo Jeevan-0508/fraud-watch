@@ -97,6 +97,32 @@ const FWExposureView = (() => {
   // The hours above are the hours of closed cases. This says where the rest
   // of the measured effort in the run sits, and why it cannot appear in an
   // alignment row.
+  /* The same seconds, cut a second way: by what the checks on the case came
+     back with. Both cuts sum to the same total independently, which is
+     stated, and they are deliberately not crossed into a grid — the reason
+     is in the refused register on this same panel. */
+  function renderExaminationCut(state, recon) {
+    const x = FWExposureModel.effortByExamination(state);
+    if (!x.total.seconds) return '';
+    const label = {
+      ANSWERED: 'on cases a check answered on',
+      NOTHING_TO_FETCH: 'on cases where a check found there was no record of that kind to fetch, and nothing else answered',
+      UNREACHABLE: 'on cases where the sources could not be reached, and nothing answered'
+    };
+    const rows = ['ANSWERED', 'NOTHING_TO_FETCH', 'UNREACHABLE']
+      .filter(k => x.byClass[k].seconds > 0)
+      .map(k => `<li>${x.byClass[k].hoursLabel} on ${x.byClass[k].cases} case${x.byClass[k].cases === 1 ? '' : 's'} ${label[k]}</li>`)
+      .join('');
+    const sameTotal = Math.abs(x.total.seconds - recon.total.seconds) < 1;
+    return `<div class="mt-2 pt-2 border-t border-slate-800">
+      <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">The same hours, cut by what came back</div>
+      <div class="text-[11px] text-slate-200 mb-1">${x.nothingCameBack.hoursLabel} across ${x.nothingCameBack.cases} case${x.nothingCameBack.cases === 1 ? '' : 's'} × €${x.rate}/h = <b>${x.nothingCameBack.costLabel}</b> went into cases where no check ever answered anything</div>
+      <ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mb-1">${rows}</ul>
+      <div class="text-[10px] text-slate-500">${sameTotal ? 'These are the same measured seconds as the cut above' : 'These hours are a subset of the measured total'}, sorted by what the checks came back with instead of by whether a closure exists to book them against. Each cut sums to the total on its own; they are not crossed with each other. Cases no check was ever run on hold none of these hours by construction — effort here is only ever created by running a check.</div>
+      <div class="text-[10px] text-slate-400">None of it is waste. That a record of that kind does not exist is a finding about this port, and no analyst knows in advance which check will answer — which is why there is no cost-per-answer figure on this panel and a reason for its absence in the refused register.</div>
+    </div>`;
+  }
+
   function renderReconciliation(state) {
     const r = FWExposureModel.effortReconciliation(state);
     if (!r.total.seconds) {
@@ -113,6 +139,7 @@ const FWExposureView = (() => {
       <div class="text-[10px] uppercase tracking-wide text-slate-400 mb-1">All measured effort in this run, and where it sits</div>
       <div class="text-[11px] text-slate-200 mb-1">${r.total.hoursLabel} across ${r.total.cases} case${r.total.cases === 1 ? '' : 's'} × €${r.rate}/h = <b>${r.total.costLabel}</b></div>
       <ul class="list-disc list-inside text-[10px] text-slate-400 space-y-0.5 mb-1">${rows.join('')}</ul>
+      ${renderExaminationCut(state, r)}
       <div class="text-[10px] text-slate-500">This is the same total the analytics dashboard reports as measured effort; the hours at the top of this card are the closed subset of it, which is why the two figures differ. The unbooked hours are not waste and not yet an over-call — they are hours spent on cases nobody has decided. They are not split across the alignment rows in the proportions the closed cases show: the open cases are the ones that have resisted resolution, so assuming they resolve the same way is the one assumption the caseload argues against.</div>
     </div>`;
   }

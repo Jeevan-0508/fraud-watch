@@ -106,6 +106,18 @@ const FWExposureModel = (() => {
       why: 'Effort on a case with no outcome yet cannot be attributed to an aligned, over- or under-called row, and splitting it in the proportions the closed cases show would assume the open ones resolve the same way. They are the cases that have resisted resolution so far, so that is the one assumption the data actively argues against. The hours are reported as unbooked, and left there.'
     },
     {
+      figure: 'Hours per answer, or a cost per record that came back',
+      why: 'It divides measured hours by how many checks happened to answer, and whether a check answers is decided by this port\'s coverage and whether the source could be reached — not by how the hour was spent. Printed as a yield it reads as productivity, and the fastest way to improve it is to stop checking the sources that come back empty, which means only ever looking where the port already sees. The check advisory refuses the same figure as retry value, for the same reason.'
+    },
+    {
+      figure: 'Wasted, avoidable or unproductive hours',
+      why: 'Hours on a case where nothing came back are not wasted. That there is no record of that kind at that site IS a finding, about this port rather than about the case, and nothing tells an analyst in advance which check will answer. Labelling those hours waste would price the port\'s blind spot as the analyst\'s inefficiency, so they are reported as hours against what came back and nothing is called avoidable.'
+    },
+    {
+      figure: 'The two cuts of these hours crossed into one table',
+      why: 'Measured effort is cut two ways here — by whether a closure exists to book it against, and by what the checks on the case came back with — and each cut sums to the same total on its own. Crossed into a grid, every cell would hold a case or two, and the grid would read as an efficiency matrix with an unbooked-and-nothing-answered corner that looks like the waste cell refused above.'
+    },
+    {
       figure: 'Cost of the oversight blind spot',
       why: 'Coverage in this simulation depends on both the hour and the site (Phases 37 and 5), and the model records how many disruptions went unobserved under each. But an unobserved disruption has no consignment attached in the record and no known outcome, so pricing it would mean inventing both — and the same holds for a record that structurally never existed because nothing at that site produces it.'
     }
@@ -240,6 +252,72 @@ const FWExposureModel = (() => {
     };
   }
 
+  /* THE SAME SECONDS, CUT BY WHAT CAME BACK (Slice 30). The reconciliation
+     above cuts measured effort by whether a closure exists to book it
+     against. This cuts the identical total by the shared examination class
+     of the case the hours went into: hours on cases a check answered on,
+     and hours on cases where nothing ever came back, split into the two
+     ways of learning nothing.
+
+     Both quantities in it are measured. The seconds are measured by the
+     simulation and the class is a fact about outcomes that were recorded,
+     so this is not the question Slice 23 refused -- that one asked how
+     UNRESOLVED effort would land across alignments, which needs an
+     assumption about how open cases will resolve. Nothing here is
+     projected.
+
+     Two structural invariants, both asserted rather than assumed: the four
+     classes sum to the same total the reconciliation reports, and the
+     never-looked class holds exactly zero seconds, because effort in this
+     model is only ever created by running a check.
+
+     What must not be read out of it is a yield -- see NOT_MODELLED. */
+  function effortByExamination(state) {
+    const mos = state && state.moEngine ? Array.from(state.moEngine.mos.values()) : [];
+    const classes = FWInvestigationEngine.EXAMINATION_CLASSES;
+    const acc = {};
+    classes.forEach(k => { acc[k] = { seconds: 0, cases: 0 }; });
+    let totalSeconds = 0, totalCases = 0;
+    mos.forEach(m => {
+      const ex = FWInvestigationEngine.examination(m);
+      const seconds = ex.effortSeconds || 0;
+      acc[ex.examinationClass].seconds += seconds;
+      totalSeconds += seconds;
+      if (seconds > 0) { acc[ex.examinationClass].cases += 1; totalCases += 1; }
+    });
+    const sum = classes.reduce((a, k) => a + acc[k].seconds, 0);
+    if (Math.abs(sum - totalSeconds) >= 1) {
+      throw new Error('exposureModel: examination cut does not reconcile (' + sum + ' vs ' + totalSeconds + ' seconds)');
+    }
+    if (acc.NEVER_LOOKED.seconds !== 0) {
+      throw new Error(
+        'exposureModel: ' + acc.NEVER_LOOKED.seconds + ' seconds booked against cases no check was run on. ' +
+        'Effort in this model is created only by running a check, so this class must hold none.'
+      );
+    }
+    const bucket = (b) => {
+      const c = processCost(b.seconds);
+      return { seconds: b.seconds, cases: b.cases, hours: c.hours, hoursLabel: c.hoursLabel, cost: c.cost, costLabel: c.costLabel };
+    };
+    const byClass = {};
+    classes.forEach(k => { byClass[k] = bucket(acc[k]); });
+    const nothingBack = { seconds: acc.NOTHING_TO_FETCH.seconds + acc.UNREACHABLE.seconds,
+      cases: acc.NOTHING_TO_FETCH.cases + acc.UNREACHABLE.cases };
+    return {
+      total: bucket({ seconds: totalSeconds, cases: totalCases }),
+      byClass,
+      classes: classes.slice(),
+      notes: FWInvestigationEngine.EXAMINATION_NOTE,
+      // The two failure classes together, since the panel's sentence is
+      // about them jointly and adding two labelled figures by hand is how a
+      // reader gets it wrong.
+      nothingCameBack: bucket(nothingBack),
+      rate: LOADED_ANALYST_HOUR,
+      balances: Math.abs(sum - totalSeconds) < 1,
+      neverLookedIsZero: acc.NEVER_LOOKED.seconds === 0
+    };
+  }
+
   // Portfolio view. The load-bearing number is effort by alignment: how
   // many measured hours went into cases the simulation's own record says
   // were over- or under-called. That is a real efficiency statement built
@@ -309,7 +387,7 @@ const FWExposureModel = (() => {
   return {
     CURRENCY, LOADED_ANALYST_HOUR, RATE_ASSUMPTION_NOTE, CARGO_BANDS, FALLBACK_CARGO,
     NOT_MODELLED, ASSUMPTIONS,
-    fmt, fmtBand, bandForCargo, hours, processCost, effortReconciliation,
+    fmt, fmtBand, bandForCargo, hours, processCost, effortReconciliation, effortByExamination,
     consignmentsForMo, exposureForMo, caseSheet, portfolio
   };
 })();
