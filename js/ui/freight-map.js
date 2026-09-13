@@ -435,7 +435,7 @@ const FWFreightMap = (() => {
        The published list is a 40-row ring buffer over a stream that is
        overwhelmingly routine traffic, so a 14-row window onto it is mostly
        routine traffic. Sampled at seed 12345 over 200 hourly frames: 2800 rows,
-       of which 38 carried the disruption severity -- 1.4% of rows, and 13.5% of
+       of which 23 carried the disruption severity -- 0.8% of rows, and 10% of
        windows held at least one, never more than two. That is the honest
        shape of this surface and it is not a fault to be tuned away: a strip
        that reliably showed a disruption would be a strip that had stopped being
@@ -443,15 +443,19 @@ const FWFreightMap = (() => {
        shown rows carried one, instead of leaving a reader to assume the visible
        rows are the interesting ones.
 
-       RE-MEASURED AFTER SLICE 81, and it moved the wrong way on purpose-free
-       grounds: 42 -> 38 disruption rows, 32 -> 27 windows, most-in-one-window
-       3 -> 2. Tripling the fleet tripled the event stream, but the ring buffer
-       and this window are both fixed sizes, so the same 14 rows now cover about
-       a third as much simulated time and catch fewer of the rare rows. A bigger
-       world made this surface LESS likely to show a disruption, not more, and
-       the caption is the only reason a reader is not misled by that. */
-    measured: { seed: 12345, frames: 200, rowsSampled: 2800, disruptionRows: 38,
-      windowsWithADisruption: 27, mostInOneWindow: 2 },
+       RE-MEASURED AFTER SLICES 81 AND 83, and it has moved the wrong way twice
+       on purpose-free grounds: 42 -> 38 -> 23 disruption rows, 32 -> 27 -> 20
+       windows, most-in-one-window 3 -> 2. The world got three times bigger and
+       then half again, so the event stream grew with it -- but the ring buffer
+       and this window are both FIXED sizes, so the same 14 rows now cover a
+       small fraction of the simulated time they used to and catch far fewer of
+       the rare rows. A bigger world made this surface LESS likely to show a
+       disruption, not more, and the caption is the only reason a reader is not
+       misled by that. Tuning the cap to make the strip look busier would be
+       tuning the strip to stop being chronological, so it is left alone and the
+       number is restated instead. */
+    measured: { seed: 12345, frames: 200, rowsSampled: 2800, disruptionRows: 23,
+      windowsWithADisruption: 20, mostInOneWindow: 2 },
     cap: 14
   };
 

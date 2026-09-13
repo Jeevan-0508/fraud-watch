@@ -866,7 +866,22 @@ const FWEntityEngine = (() => {
       // terminus that carries no site: a truck parked at an unsited node
       // reports a null site indistinguishable from one on the open road, so
       // every journey ending there would be unobservable by construction.
-      { kind: 'CROSS_DOCK', name: 'FC South dock' }
+      { kind: 'CROSS_DOCK', name: 'FC South dock' },
+      /* Slice 83: nine of the ten new places. worldGraph.NODES joins to these BY
+         NAME and assertFacilitiesResolve is what catches a name changed on one
+         side only. The tenth, Customs yard, is deliberately left unsited along
+         with three of the fulfilment centres, so a movement with no observation
+         coverage at all stays reachable -- facilityEngine's unsited bucket has to
+         have something in it for the panels that report it to be about anything. */
+      { kind: 'GATEHOUSE', name: 'Central Gate' },
+      { kind: 'GATEHOUSE', name: 'East Border Gate' },
+      { kind: 'CROSS_DOCK', name: 'Cross-dock D (central)' },
+      { kind: 'CROSS_DOCK', name: 'Cross-dock E (south)' },
+      { kind: 'CROSS_DOCK', name: 'FC West dock' },
+      { kind: 'CROSS_DOCK', name: 'FC Northeast dock' },
+      { kind: 'REMOTE_DEPOT', name: 'Inland Depot Nordwest' },
+      { kind: 'REMOTE_DEPOT', name: 'Inland Depot Sudost' },
+      { kind: 'YARD', name: 'Yard 7 (transit north)' }
     ];
     facilitySpec.forEach(spec => {
       const id = nextId(reg, 'facility');

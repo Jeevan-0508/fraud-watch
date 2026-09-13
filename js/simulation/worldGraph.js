@@ -69,6 +69,39 @@ const FWWorldGraph = (() => {
     CHECKPOINT: 'GATEHOUSE'
   };
 
+  /* THE REGIONS. A region is a LABEL on a node and nothing else: it groups
+     places for the eye and for coverage reporting, and it is the reason a
+     journey can be described as crossing from one part of the network to
+     another. It is invented, like every other name in this file.
+
+     The register exists because "region" is a word that invites two wrong
+     readings, and both of them would put geographic prejudice into a risk
+     system. Crossing a region boundary is not suspicious. A region is not a
+     jurisdiction, a country, a tax or customs area, or a risk class, and
+     nothing anywhere in this codebase may weight a signal, a case or an
+     exposure by it. What it does mean is: this node was grouped here.
+
+     PORT is a region like the others -- the terminal and its yards and gates
+     are one part of the network, not a thing outside the regional scheme. */
+  const REGIONS = {
+    kind: 'LABEL',
+    scope: 'which part of the invented network a node is grouped into',
+    names: ['PORT', 'NORTH', 'WEST', 'CENTRAL', 'SOUTH', 'EAST'],
+    means: 'a grouping of nodes, used for reporting coverage by region and for saying that a leg or a journey ' +
+      'crossed from one grouping into another.',
+    doesNotMean: 'a country, a jurisdiction, a customs or tax area, a border, a risk class, a coverage class, or ' +
+      'anywhere real. Crossing a region boundary is NOT a risk factor and nothing in this codebase weights a ' +
+      'signal, a case, an exposure or a hypothesis by which region anything is in. There is no ordering over ' +
+      'these names and no region is nearer, safer, busier or more suspicious than another.',
+    notInterchangeableWith: 'observation coverage, which is a property of the FACILITY at a node (facilityEngine ' +
+      'ARCHETYPES) and not of the region the node is grouped into. Two nodes in one region can have completely ' +
+      'different coverage, and they do.',
+    source: 'invented. The groupings were chosen so that the route table contains journeys that stay inside one ' +
+      'region and journeys that cross two or three, because both had to be reachable for either to be about anything.'
+  };
+
+  const REGION_NAMES = REGIONS.names;
+
   /* THE FIRST DISTANCE IN THIS CODEBASE, so it gets a scale register like
      every other number here (signalEngine.WEIGHT_SCALE, DECAY_SCALE,
      exposureModel's bands). A number without a declared unit and a stated
@@ -118,38 +151,60 @@ const FWWorldGraph = (() => {
      handling facilities and sit at the PORT node; the two gates, three yards
      and two inland depots each get the node their role calls for.
 
-     SOME nodes carry no seeded facility -- Regional Hub West, FC North,
-     FC Central and FC East. The COUNT is deliberately not restated here as a
-     literal: the previous wording said "four" while listing three and stayed
-     wrong through six sessions. nodeCoverage() measures it instead.
+     SOME nodes carry no seeded facility. The COUNT is deliberately not
+     restated here as a literal, and neither is the LIST: the wording once said
+     "four" while listing three and stayed wrong through six sessions, then
+     listed four correctly and went stale again the next time a place was added.
+     nodeCoverage() measures both, and regionCoverage() measures them per region.
      That state is deliberate, not an oversight: a node with no facility
      entity has no observation coverage, so a movement there lands in
      facilityEngine's unsited bucket rather than being charged to a site, and
      the unsited bucket has to stay reachable for the panels that report it
-     to be about anything. Slice 81 sited the seven new places that a gate,
-     yard, hub-east or depot role requires and deliberately left the
-     fulfilment centres unsited. */
+     to be about anything. Slices 81 and 83 sited every new place whose gate,
+     yard, hub or depot role requires one, and deliberately left some
+     fulfilment centres and one yard unsited so that bucket stays reachable. */
   const NODES = [
-    { id: 'PORT_MERIDIAN',     type: 'PORT',               label: 'Port Meridian',     facilityNames: ['Cross-dock A', 'Cross-dock B'] },
-    { id: 'GATE_NORTH',        type: 'CHECKPOINT',         label: 'North Gate',        facilityNames: ['North Gate'] },
-    { id: 'GATE_SOUTH',        type: 'CHECKPOINT',         label: 'South Gate',        facilityNames: ['South Gate'] },
-    { id: 'YARD_QUAYSIDE',     type: 'WAREHOUSE',          label: 'Quayside yard',     facilityNames: ['Yard 1 (quayside)'] },
-    { id: 'YARD_EMPTIES',      type: 'WAREHOUSE',          label: 'Empties yard',      facilityNames: ['Yard 2 (empties)'] },
-    { id: 'YARD_OVERFLOW',     type: 'WAREHOUSE',          label: 'Overflow yard',     facilityNames: ['Yard 3 (overflow)'] },
-    { id: 'HUB_REGIONAL_WEST', type: 'REGIONAL_HUB',       label: 'Regional Hub West', facilityNames: [] },
-    { id: 'FC_NORTH',          type: 'FULFILLMENT_CENTER', label: 'FC North',          facilityNames: [] },
-    { id: 'FC_CENTRAL',        type: 'FULFILLMENT_CENTER', label: 'FC Central',        facilityNames: [] },
-    { id: 'DEPOT_OST',         type: 'DEPOT',              label: 'Inland Depot Ost',  facilityNames: ['Inland Depot Ost'] },
-    { id: 'DEPOT_SUD',         type: 'DEPOT',              label: 'Inland Depot Sud',  facilityNames: ['Inland Depot Sud'] },
-    { id: 'GATE_EAST',         type: 'CHECKPOINT',         label: 'East Gate',         facilityNames: ['East Gate'] },
-    { id: 'YARD_REEFER',       type: 'WAREHOUSE',          label: 'Reefer yard',       facilityNames: ['Yard 4 (reefer)'] },
-    { id: 'YARD_BONDED',       type: 'WAREHOUSE',          label: 'Bonded yard',       facilityNames: ['Yard 5 (bonded)'] },
-    { id: 'YARD_INSPECTION',   type: 'WAREHOUSE',          label: 'Inspection yard',   facilityNames: ['Yard 6 (inspection)'] },
-    { id: 'HUB_REGIONAL_EAST', type: 'REGIONAL_HUB',       label: 'Regional Hub East', facilityNames: ['Cross-dock C (east)'] },
-    { id: 'FC_SOUTH',          type: 'FULFILLMENT_CENTER', label: 'FC South',          facilityNames: ['FC South dock'] },
-    { id: 'FC_EAST',           type: 'FULFILLMENT_CENTER', label: 'FC East',           facilityNames: [] },
-    { id: 'DEPOT_NORD',        type: 'DEPOT',              label: 'Inland Depot Nord', facilityNames: ['Inland Depot Nord'] },
-    { id: 'DEPOT_WEST',        type: 'DEPOT',              label: 'Inland Depot West', facilityNames: ['Inland Depot West'] }
+    { id: 'PORT_MERIDIAN',        type: 'PORT',               region: 'PORT',    label: 'Port Meridian',          facilityNames: ['Cross-dock A', 'Cross-dock B'] },
+    { id: 'GATE_NORTH',           type: 'CHECKPOINT',         region: 'PORT',    label: 'North Gate',             facilityNames: ['North Gate'] },
+    { id: 'GATE_SOUTH',           type: 'CHECKPOINT',         region: 'PORT',    label: 'South Gate',             facilityNames: ['South Gate'] },
+    { id: 'YARD_QUAYSIDE',        type: 'WAREHOUSE',          region: 'PORT',    label: 'Quayside yard',          facilityNames: ['Yard 1 (quayside)'] },
+    { id: 'YARD_EMPTIES',         type: 'WAREHOUSE',          region: 'PORT',    label: 'Empties yard',           facilityNames: ['Yard 2 (empties)'] },
+    { id: 'YARD_OVERFLOW',        type: 'WAREHOUSE',          region: 'PORT',    label: 'Overflow yard',          facilityNames: ['Yard 3 (overflow)'] },
+    { id: 'HUB_REGIONAL_WEST',    type: 'REGIONAL_HUB',       region: 'WEST',    label: 'Regional Hub West',      facilityNames: [] },
+    { id: 'FC_NORTH',             type: 'FULFILLMENT_CENTER', region: 'NORTH',   label: 'FC North',               facilityNames: [] },
+    { id: 'FC_CENTRAL',           type: 'FULFILLMENT_CENTER', region: 'CENTRAL', label: 'FC Central',             facilityNames: [] },
+    { id: 'DEPOT_OST',            type: 'DEPOT',              region: 'CENTRAL', label: 'Inland Depot Ost',       facilityNames: ['Inland Depot Ost'] },
+    { id: 'DEPOT_SUD',            type: 'DEPOT',              region: 'SOUTH',   label: 'Inland Depot Sud',       facilityNames: ['Inland Depot Sud'] },
+    { id: 'GATE_EAST',            type: 'CHECKPOINT',         region: 'PORT',    label: 'East Gate',              facilityNames: ['East Gate'] },
+    { id: 'YARD_REEFER',          type: 'WAREHOUSE',          region: 'PORT',    label: 'Reefer yard',            facilityNames: ['Yard 4 (reefer)'] },
+    { id: 'YARD_BONDED',          type: 'WAREHOUSE',          region: 'PORT',    label: 'Bonded yard',            facilityNames: ['Yard 5 (bonded)'] },
+    { id: 'YARD_INSPECTION',      type: 'WAREHOUSE',          region: 'PORT',    label: 'Inspection yard',        facilityNames: ['Yard 6 (inspection)'] },
+    { id: 'HUB_REGIONAL_EAST',    type: 'REGIONAL_HUB',       region: 'EAST',    label: 'Regional Hub East',      facilityNames: ['Cross-dock C (east)'] },
+    { id: 'FC_SOUTH',             type: 'FULFILLMENT_CENTER', region: 'SOUTH',   label: 'FC South',               facilityNames: ['FC South dock'] },
+    { id: 'FC_EAST',              type: 'FULFILLMENT_CENTER', region: 'EAST',    label: 'FC East',                facilityNames: [] },
+    { id: 'DEPOT_NORD',           type: 'DEPOT',              region: 'NORTH',   label: 'Inland Depot Nord',      facilityNames: ['Inland Depot Nord'] },
+    { id: 'DEPOT_WEST',           type: 'DEPOT',              region: 'WEST',    label: 'Inland Depot West',      facilityNames: ['Inland Depot West'] },
+    /* Slice 83. Ten more places, and the reason for each is the same reason:
+       at 20 nodes and 26 edges the network was very nearly a tree, so between
+       most pairs of places there was exactly one path. A single path means a
+       truck's route can never be one of several plausible ways it might have
+       gone, and an investigation with no alternative explanation available to
+       it is not an investigation. These ten, and the roads that come with
+       them, exist to make more than one answer possible. */
+    { id: 'GATE_CENTRAL',         type: 'CHECKPOINT',         region: 'CENTRAL', label: 'Central Gate',           facilityNames: ['Central Gate'] },
+    { id: 'GATE_BORDER_EAST',     type: 'CHECKPOINT',         region: 'EAST',    label: 'East Border Gate',       facilityNames: ['East Border Gate'] },
+    { id: 'HUB_REGIONAL_CENTRAL', type: 'REGIONAL_HUB',       region: 'CENTRAL', label: 'Regional Hub Central',   facilityNames: ['Cross-dock D (central)'] },
+    { id: 'HUB_REGIONAL_SOUTH',   type: 'REGIONAL_HUB',       region: 'SOUTH',   label: 'Regional Hub South',     facilityNames: ['Cross-dock E (south)'] },
+    { id: 'FC_WEST',              type: 'FULFILLMENT_CENTER', region: 'WEST',    label: 'FC West',                facilityNames: ['FC West dock'] },
+    { id: 'FC_NORTHEAST',         type: 'FULFILLMENT_CENTER', region: 'EAST',    label: 'FC Northeast',           facilityNames: ['FC Northeast dock'] },
+    { id: 'DEPOT_NORDWEST',       type: 'DEPOT',              region: 'WEST',    label: 'Inland Depot Nordwest',  facilityNames: ['Inland Depot Nordwest'] },
+    { id: 'DEPOT_SUDOST',         type: 'DEPOT',              region: 'SOUTH',   label: 'Inland Depot Sudost',    facilityNames: ['Inland Depot Sudost'] },
+    { id: 'YARD_TRANSIT_NORTH',   type: 'WAREHOUSE',          region: 'NORTH',   label: 'North transit yard',     facilityNames: ['Yard 7 (transit north)'] },
+    /* Deliberately unsited, like the fulfilment centres above it: a place with
+       no facility entity has no observation coverage at all, so a movement
+       there lands in facilityEngine's unsited bucket. That bucket has to stay
+       reachable for the panels that report it to be about anything. */
+    { id: 'YARD_CUSTOMS',         type: 'WAREHOUSE',          region: 'PORT',    label: 'Customs yard',           facilityNames: [] }
   ];
 
   /* THE EDGES. Undirected road segments. `distanceKm` is declared per edge;
@@ -180,7 +235,47 @@ const FWWorldGraph = (() => {
     { from: 'HUB_REGIONAL_WEST', to: 'DEPOT_WEST',        distanceKm: 58,  speedClass: 'ROAD' },
     { from: 'DEPOT_SUD',         to: 'FC_SOUTH',          distanceKm: 33,  speedClass: 'ROAD' },
     { from: 'FC_SOUTH',          to: 'DEPOT_WEST',        distanceKm: 49,  speedClass: 'ROAD' },
-    { from: 'FC_NORTH',          to: 'DEPOT_NORD',        distanceKm: 63,  speedClass: 'ROAD' }
+    { from: 'FC_NORTH',          to: 'DEPOT_NORD',        distanceKm: 63,  speedClass: 'ROAD' },
+    /* Slice 83: 26 roads over 20 places was a near-tree, and a tree has exactly
+       one path between any two places. These 34 give the graph cycles, which is
+       what makes an alternative route a thing that exists rather than a thing
+       the map wishes for. Seven are intra-port -- the port had a spine and now
+       has a mesh -- and the rest join the ten new places into the regional
+       network in more than one direction each. */
+    { from: 'PORT_MERIDIAN',        to: 'YARD_CUSTOMS',          distanceKm: 0.35, speedClass: 'SITE' },
+    { from: 'YARD_CUSTOMS',         to: 'YARD_BONDED',           distanceKm: 0.45, speedClass: 'SITE' },
+    { from: 'YARD_CUSTOMS',         to: 'GATE_EAST',             distanceKm: 0.55, speedClass: 'SITE' },
+    { from: 'YARD_REEFER',          to: 'YARD_QUAYSIDE',         distanceKm: 0.7,  speedClass: 'SITE' },
+    { from: 'YARD_OVERFLOW',        to: 'GATE_NORTH',            distanceKm: 0.95, speedClass: 'SITE' },
+    { from: 'YARD_EMPTIES',         to: 'GATE_SOUTH',            distanceKm: 1.05, speedClass: 'SITE' },
+    { from: 'YARD_INSPECTION',      to: 'YARD_EMPTIES',          distanceKm: 1.15, speedClass: 'SITE' },
+    { from: 'GATE_NORTH',           to: 'YARD_TRANSIT_NORTH',    distanceKm: 24,   speedClass: 'ROAD' },
+    { from: 'YARD_TRANSIT_NORTH',   to: 'FC_NORTH',              distanceKm: 39,   speedClass: 'ROAD' },
+    { from: 'YARD_TRANSIT_NORTH',   to: 'DEPOT_NORD',            distanceKm: 47,   speedClass: 'ROAD' },
+    { from: 'GATE_SOUTH',           to: 'HUB_REGIONAL_SOUTH',    distanceKm: 36,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_SOUTH',   to: 'DEPOT_SUD',             distanceKm: 28,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_SOUTH',   to: 'FC_SOUTH',              distanceKm: 41,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_SOUTH',   to: 'DEPOT_SUDOST',          distanceKm: 53,   speedClass: 'ROAD' },
+    { from: 'DEPOT_SUDOST',         to: 'FC_CENTRAL',            distanceKm: 62,   speedClass: 'ROAD' },
+    { from: 'DEPOT_SUDOST',         to: 'DEPOT_OST',             distanceKm: 44,   speedClass: 'ROAD' },
+    { from: 'GATE_EAST',            to: 'GATE_BORDER_EAST',      distanceKm: 31,   speedClass: 'ROAD' },
+    { from: 'GATE_BORDER_EAST',     to: 'HUB_REGIONAL_EAST',     distanceKm: 26,   speedClass: 'ROAD' },
+    { from: 'GATE_BORDER_EAST',     to: 'FC_NORTHEAST',          distanceKm: 43,   speedClass: 'ROAD' },
+    { from: 'FC_NORTHEAST',         to: 'DEPOT_NORD',            distanceKm: 51,   speedClass: 'ROAD' },
+    { from: 'FC_NORTHEAST',         to: 'FC_EAST',               distanceKm: 34,   speedClass: 'ROAD' },
+    { from: 'GATE_NORTH',           to: 'GATE_CENTRAL',          distanceKm: 45,   speedClass: 'ROAD' },
+    { from: 'GATE_CENTRAL',         to: 'HUB_REGIONAL_CENTRAL',  distanceKm: 22,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_CENTRAL', to: 'FC_CENTRAL',            distanceKm: 29,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_CENTRAL', to: 'HUB_REGIONAL_WEST',     distanceKm: 57,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_CENTRAL', to: 'HUB_REGIONAL_EAST',     distanceKm: 64,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_CENTRAL', to: 'DEPOT_OST',             distanceKm: 48,   speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_WEST',    to: 'FC_WEST',               distanceKm: 33,   speedClass: 'ROAD' },
+    { from: 'FC_WEST',              to: 'DEPOT_NORDWEST',        distanceKm: 37,   speedClass: 'ROAD' },
+    { from: 'DEPOT_NORDWEST',       to: 'DEPOT_WEST',            distanceKm: 42,   speedClass: 'ROAD' },
+    { from: 'DEPOT_NORDWEST',       to: 'FC_NORTH',              distanceKm: 66,   speedClass: 'ROAD' },
+    { from: 'FC_WEST',              to: 'FC_SOUTH',              distanceKm: 58,   speedClass: 'ROAD' },
+    { from: 'DEPOT_WEST',           to: 'HUB_REGIONAL_SOUTH',    distanceKm: 46,   speedClass: 'ROAD' },
+    { from: 'FC_CENTRAL',           to: 'FC_EAST',               distanceKm: 52,   speedClass: 'ROAD' }
   ];
 
   /* THE ROUTES. Ordered node sequences. Every consecutive pair must be an
@@ -208,7 +303,25 @@ const FWWorldGraph = (() => {
     { id: 'INSPECTION_SHUTTLE', label: 'Quayside to the quay the long way, through inspection and bond',
       nodes: ['YARD_QUAYSIDE', 'YARD_INSPECTION', 'YARD_BONDED', 'YARD_REEFER', 'PORT_MERIDIAN'] },
     { id: 'NORD_RETURN', label: 'Inland Depot Nord back to the port via FC North',
-      nodes: ['DEPOT_NORD', 'FC_NORTH', 'HUB_REGIONAL_WEST', 'GATE_NORTH', 'PORT_MERIDIAN'] }
+      nodes: ['DEPOT_NORD', 'FC_NORTH', 'HUB_REGIONAL_WEST', 'GATE_NORTH', 'PORT_MERIDIAN'] },
+    /* Slice 83. Five more routes, chosen so that ALTERNATIVES exist rather than
+       merely more destinations. Inland Depot Ost is now reachable three ways
+       (PORT_TO_DEPOT_OST west, EAST_TO_DEPOT_OST east, CENTRAL_CORRIDOR through
+       the central hub, and SOUTHERN_CORRIDOR through Sudost makes four); Inland
+       Depot Nord two ways (PORT_TO_DEPOT_NORD, BORDER_RUN, TRANSIT_NORTH_RUN);
+       FC South two. routeAlternatives() below measures this rather than leaving
+       it as a claim in a comment, and the point of it is that a truck's route
+       stops being the only way it could have got where it is. */
+    { id: 'CENTRAL_CORRIDOR', label: 'Port Meridian to Inland Depot Ost through the central hub',
+      nodes: ['PORT_MERIDIAN', 'GATE_NORTH', 'GATE_CENTRAL', 'HUB_REGIONAL_CENTRAL', 'FC_CENTRAL', 'DEPOT_OST'] },
+    { id: 'SOUTHERN_CORRIDOR', label: 'Port Meridian to Inland Depot Ost the southern way, via Sudost',
+      nodes: ['PORT_MERIDIAN', 'GATE_SOUTH', 'HUB_REGIONAL_SOUTH', 'DEPOT_SUDOST', 'DEPOT_OST'] },
+    { id: 'BORDER_RUN', label: 'Port Meridian to Inland Depot Nord over the eastern border gate',
+      nodes: ['PORT_MERIDIAN', 'GATE_EAST', 'GATE_BORDER_EAST', 'FC_NORTHEAST', 'DEPOT_NORD'] },
+    { id: 'WESTERN_CORRIDOR', label: 'Port Meridian to Inland Depot West via FC West and Nordwest',
+      nodes: ['PORT_MERIDIAN', 'GATE_NORTH', 'HUB_REGIONAL_WEST', 'FC_WEST', 'DEPOT_NORDWEST', 'DEPOT_WEST'] },
+    { id: 'TRANSIT_NORTH_RUN', label: 'Port Meridian to Inland Depot Nord through the north transit yard',
+      nodes: ['PORT_MERIDIAN', 'GATE_NORTH', 'YARD_TRANSIT_NORTH', 'FC_NORTH', 'DEPOT_NORD'] }
   ];
 
   /* WHICH NODE TYPES A LIFECYCLE STAGE CAN OCCUR AT.
@@ -245,7 +358,9 @@ const FWWorldGraph = (() => {
     'Edge distances are chosen so that moves inside a site and legs between sites differ by about two orders of magnitude. That ratio is the only property any consumer depends on.',
     'Traverse duration is distance divided by one of two declared speed classes, so a distance and a duration in this graph cannot disagree with each other. It also means duration carries no information the distance does not already carry.',
     'The graph is undirected: an edge can be traversed either way and costs the same in both directions. One-way restrictions, turn bans and asymmetric legs are not modelled.',
-    'Four of the eleven nodes carry no seeded facility entity, because entityEngine.seedPort creates nine facilities and this build seeds no more. Movements at those nodes would have no observation coverage at all. See nodeCoverage().',
+    'Some nodes carry no seeded facility entity, because entityEngine.seedPort creates a fixed list of facilities and this build seeds no more. Movements at those nodes would have no observation coverage at all. The count is deliberately not restated here -- nodeCoverage() measures it, and a literal in this list went six sessions being wrong.',
+    'A region is a label on a node and nothing more. It is not a country, jurisdiction, customs area, border or risk class, and crossing one is not a risk factor. Nothing in this codebase weights anything by region. See REGIONS.',
+    'The graph has cycles, so between most pairs of places more than one path exists, and more than one declared route reaches several destinations. That is deliberate: a single path makes an alternative explanation impossible. routeAlternatives() measures it.',
     'Which node types a lifecycle stage can occur at is declared once here and projected into facilityEngine.STAGE_SITES. The projection de-duplicates, so several node types can share one archetype without widening any site pool.'
   ];
 
@@ -324,6 +439,7 @@ const FWWorldGraph = (() => {
     const edgeSpec = o.edges || EDGE_SPEC;
     const routeSpec = o.routes || ROUTE_SPEC;
     const speeds = o.speedClasses || SPEED_CLASSES;
+    const regionNames = o.regionNames || REGION_NAMES;
     const distanceScale = o.distanceScale || DISTANCE_SCALE;
     const durationScale = o.durationScale || DURATION_SCALE;
 
@@ -350,8 +466,25 @@ const FWWorldGraph = (() => {
         throw new Error('worldGraph: node ' + n.id + ' has type "' + n.type + '", which is not one of the ' +
           NODE_TYPES.length + ' declared node types (' + NODE_TYPES.join(', ') + ')');
       }
+      /* A node with no region, or with one REGIONS does not declare, would be
+         grouped nowhere: it would fall out of every per-region report while the
+         report still printed a total, so a reader would see a denominator that
+         does not add up and no error anywhere. */
+      if (regionNames.indexOf(n.region) < 0) {
+        throw new Error('worldGraph: node ' + n.id + ' is in region "' + n.region + '", which is not one of the ' +
+          regionNames.length + ' declared regions (' + regionNames.join(', ') + '). A node grouped nowhere ' +
+          'silently drops out of every per-region count while the total still includes it.');
+      }
       byId[n.id] = n;
     });
+    /* And the other direction, on assertArchetypeJoin's precedent: a region name
+       declared here that no node is in is a name that reads like a part of the
+       network and is not one. */
+    const emptyRegions = regionNames.filter(r => !nodes.some(n => n.region === r));
+    if (emptyRegions.length) {
+      throw new Error('worldGraph: region(s) ' + emptyRegions.join(', ') + ' are declared in REGIONS and no node ' +
+        'is in them. A region with no places in it reads like a part of the network that exists.');
+    }
 
     const seen = {};
     const edges = edgeSpec.map(e => {
@@ -375,12 +508,20 @@ const FWWorldGraph = (() => {
         throw new Error('worldGraph: edge ' + key + ' names speed class "' + e.speedClass +
           '", which is not declared in SPEED_CLASSES. A duration derived from an undeclared speed has no unit.');
       }
+      /* fromRegion/toRegion/crossesRegion are DERIVED from the two nodes, never
+         declared per edge, because two hand-written copies of one fact are two
+         chances for them to disagree with the nodes and nothing able to notice.
+         crossesRegion is a description of the road, not a property of the traffic
+         on it: it carries no risk, no delay and no coverage meaning. */
       return {
         key, from: e.from, to: e.to,
         distanceKm: e.distanceKm,
         speedClass: e.speedClass,
         impliedSpeedKmh: cls.kmh,
-        traverseSeconds: Math.round((e.distanceKm / cls.kmh) * 3600)
+        traverseSeconds: Math.round((e.distanceKm / cls.kmh) * 3600),
+        fromRegion: byId[e.from].region,
+        toRegion: byId[e.to].region,
+        crossesRegion: byId[e.from].region !== byId[e.to].region
       };
     });
 
@@ -678,12 +819,96 @@ const FWWorldGraph = (() => {
     };
   }
 
+  /* COVERAGE BY REGION, measured. Two things a reader will assume and both are
+     false: that a region has a coverage level, and that the regions are alike.
+     Coverage is a property of the FACILITY at a node, so a region containing a
+     gatehouse and a fulfilment centre contains two very different coverages;
+     and a region with no facility at all has no coverage rather than zero
+     coverage, which is a different sentence. This reports what is there and
+     names what it is not, in the same shape as nodeCoverage(). */
+  function regionCoverage(facilities) {
+    const g = graph();
+    const names = Array.isArray(facilities) ? facilities.map(f => f.name) : null;
+    const rows = REGION_NAMES.map(r => {
+      const inRegion = g.nodes.filter(n => n.region === r);
+      const sited = inRegion.filter(n => n.facilityNames.length);
+      const seeded = names ? inRegion.filter(n => n.facilityNames.some(fn => names.indexOf(fn) >= 0)) : null;
+      return {
+        region: r, nodes: inRegion.length,
+        nodesWithFacility: sited.length,
+        nodesWithoutFacility: inRegion.length - sited.length,
+        nodeTypes: Array.from(new Set(inRegion.map(n => n.type))).sort(),
+        facilityNames: inRegion.reduce((a, n) => a.concat(n.facilityNames), []),
+        seededHere: seeded ? seeded.length : null
+      };
+    });
+    return {
+      state: names ? 'MEASURED' : 'MEASURED_TOPOLOGY_ONLY',
+      regions: rows.length, nodes: g.nodes.length, rows: rows,
+      denominator: 'nodes in this graph, grouped by the region label each one declares',
+      nodesUngrouped: g.nodes.filter(n => REGION_NAMES.indexOf(n.region) < 0).length,
+      means: 'how many places this build groups into each region, and how many of them carry a facility entity at all.',
+      doesNotMean: 'that a region has an observation coverage, a risk level or a quality. Coverage belongs to the ' +
+        'facility at a node -- see facilityEngine.ARCHETYPES -- and the node types listed per region below are ' +
+        'deliberately mixed, so no single number could describe a region even if one were wanted. A region with no ' +
+        'facility has NO coverage, which is not the same claim as coverage of zero.'
+    };
+  }
+
+  /* HOW MANY WAYS THERE ARE, measured. The graph was a near-tree until Slice 83
+     and a tree has exactly one path between any two places, which means a
+     truck's route is the only way it could have gone and an alternative
+     explanation is not available to anybody. This measures whether that is
+     still true, in two independent ways: the cycle count of the graph itself,
+     and how many DECLARED routes reach the same destination from the same
+     origin. Both are reported; neither is asserted here. */
+  function routeAlternatives(opts) {
+    const g = (opts && opts.graph) || graph();
+    const cycles = g.edges.length - g.nodes.length + 1;
+    const byPair = {};
+    g.routes.forEach(r => {
+      const key = r.nodes[0] + ' -> ' + r.nodes[r.nodes.length - 1];
+      (byPair[key] = byPair[key] || []).push(r.id);
+    });
+    const pairs = Object.keys(byPair).map(k => ({ pair: k, routes: byPair[k].slice(), count: byPair[k].length }));
+    const multi = pairs.filter(p => p.count > 1);
+    /* Destination-only, because a truck's observable end point is where it
+       arrived and not which origin a dispatcher chose. */
+    const byDest = {};
+    g.routes.forEach(r => {
+      const d = r.nodes[r.nodes.length - 1];
+      (byDest[d] = byDest[d] || []).push(r.id);
+    });
+    const destMulti = Object.keys(byDest).filter(d => byDest[d].length > 1);
+    return {
+      state: 'MEASURED',
+      nodes: g.nodes.length, edges: g.edges.length, routes: g.routes.length,
+      independentCycles: cycles,
+      isTree: cycles <= 0,
+      originDestinationPairs: pairs.length,
+      pairsWithMoreThanOneRoute: multi.length,
+      pairsWithMoreThanOneRouteNamed: multi,
+      destinationsReachedByMoreThanOneRoute: destMulti.sort(),
+      crossRegionEdges: g.edges.filter(e => e.crossesRegion).length,
+      withinRegionEdges: g.edges.filter(e => !e.crossesRegion).length,
+      means: 'how much choice the topology and the route table contain: the number of independent cycles in the ' +
+        'graph, and the declared routes that share an origin and a destination or just a destination.',
+      doesNotMean: 'that any truck ever chooses between them. journeyEngine assigns a route and walks its legs in ' +
+        'order; it does not search, compare or re-plan, and nothing in this build deviates from an assigned route. ' +
+        'What these numbers say is that MORE THAN ONE ROUTE EXISTS to the same place -- which is what makes "it ' +
+        'could have gone another way" a statement about the world rather than about the map. It is not evidence ' +
+        'that anything did.'
+    };
+  }
+
   return {
     NODE_TYPES, ARCHETYPE_OF_NODE_TYPE, NODES, EDGE_SPEC, ROUTE_SPEC, STAGE_NODE_TYPES,
+    REGIONS, REGION_NAMES,
     SPEED_CLASSES, DISTANCE_SCALE, DURATION_SCALE, FACILITY_NODE, ASSUMPTIONS, NOT_MODELLED,
     build, graph, node, nodeType, archetypeOfNode, nodesOfType, portNode,
     edge, edges, edgeKey, traverseSeconds, neighbours, route, routes,
     assertArchetypeJoin, archetypesForStage, stageSites, assertStageCoverage,
-    nodeForFacilityName, assertFacilitiesResolve, nodeCoverage, summary
+    nodeForFacilityName, assertFacilitiesResolve, nodeCoverage, summary,
+    regionCoverage, routeAlternatives
   };
 })();

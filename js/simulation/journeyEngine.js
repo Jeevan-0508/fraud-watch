@@ -894,14 +894,28 @@ const FWJourneyEngine = (() => {
   /* Every stage every node can hold, over every route in both directions, with
      how the node is used. `asTerminus` without `asIntermediate` is the shape
      that pins a node to the head of the lifecycle for the whole run. */
+  /* SLICE 83 FOUND THE DENOMINATOR BUG. This enumeration used to be built ONLY
+     from the route table, so its keys were the nodes some route walks -- and
+     every caller reads its length as "every node in the graph". That held by
+     coincidence for eighty sessions, because until Slice 83 every declared node
+     happened to sit on a route. Slice 83 added YARD_CUSTOMS, a node that sits on
+     edges but on no route, and the count silently became 29 of 30 while
+     observability() went on reporting it as `nodes`. A place no route reaches is
+     exactly the kind of hole this report exists to name, and it was the one thing
+     the report could not see. Every graph node is seeded first now; a node no
+     route walks keeps an empty stage list and says `onNoRoute` about itself. */
   function stagesByNode(lifecycle) {
     const list = assertLifecycle(lifecycle);
+    const g = requireWorldGraph('the node-stage enumeration');
     const out = {};
-    const touch = (id) => (out[id] = out[id] || { nodeId: id, stages: [], asStart: 0, asIntermediate: 0, asEnd: 0 });
+    const touch = (id) => (out[id] = out[id] ||
+      { nodeId: id, stages: [], asStart: 0, asIntermediate: 0, asEnd: 0, onNoRoute: true });
+    g.graph().nodes.forEach(n => touch(n.id));
     routes().forEach(r => DIRECTIONS.forEach(d => {
       const pass = routePass(list, r.id, d);
       pass.nodes.forEach((id, i) => {
         const row = touch(id);
+        row.onNoRoute = false;
         if (i === 0) row.asStart += 1;
         else if (i === pass.nodes.length - 1) row.asEnd += 1;
         else row.asIntermediate += 1;
@@ -936,9 +950,15 @@ const FWJourneyEngine = (() => {
      terminus-only node needs a route to continue through it, while an intermediate
      one needs a disruption-eligible stage at the point a route hands it. */
   function blindCauses(blindSited) {
-    const term = blindSited.filter(r => r.terminusOnly).map(r => r.nodeId);
-    const mid = blindSited.filter(r => !r.terminusOnly).map(r => r.nodeId);
+    const unrouted = blindSited.filter(r => r.onNoRoute).map(r => r.nodeId);
+    const term = blindSited.filter(r => !r.onNoRoute && r.terminusOnly).map(r => r.nodeId);
+    const mid = blindSited.filter(r => !r.onNoRoute && !r.terminusOnly).map(r => r.nodeId);
     const parts = [];
+    if (unrouted.length) {
+      parts.push(unrouted.join(', ') + (unrouted.length === 1 ? ' is a node' : ' are nodes') +
+        ' NO ROUTE WALKS AT ALL, so no truck is ever placed there and the blindness has nothing to do with which ' +
+        'stages a disruption is rolled in -- it needs a route, not a gate change.');
+    }
     if (term.length) {
       parts.push(term.join(', ') + (term.length === 1 ? ' is a node' : ' are nodes') +
         ' no route passes THROUGH, which since Slice 72 means a truck standing there always holds the head of ' +
@@ -973,7 +993,10 @@ const FWJourneyEngine = (() => {
       return { nodeId: id, nodeType: node.type, facilities: node.facilityNames.slice(),
         stages: row.stages, observableStages: observableStages,
         observable: observableStages.length > 0,
-        terminusOnly: row.asIntermediate === 0,
+        onNoRoute: row.onNoRoute,
+        /* A node no route walks is not a terminus. It held `asIntermediate === 0`
+           and so read as one, which named the wrong repair. */
+        terminusOnly: !row.onNoRoute && row.asIntermediate === 0,
         use: { asStart: row.asStart, asIntermediate: row.asIntermediate, asEnd: row.asEnd } };
     });
     const blindSited = rows.filter(r => !r.observable && r.facilities.length);
@@ -983,7 +1006,11 @@ const FWJourneyEngine = (() => {
       state: 'MEASURED', nodes: rows.length, rows: rows,
       seededFacilities: facilities, unobservableFacilities: blindFacilities,
       unobservableSited: blindSited.map(r => ({ nodeId: r.nodeId, facilities: r.facilities, stages: r.stages,
-        terminusOnly: r.terminusOnly })),
+        terminusOnly: r.terminusOnly, onNoRoute: r.onNoRoute })),
+      /* Reported whether or not anything stands there, because an unrouted node is a
+         gap in the route table rather than a gap in coverage, and the two get fixed
+         in different files. */
+      nodesOnNoRoute: rows.filter(r => r.onNoRoute).map(r => r.nodeId),
       unobservableEmptyNodes: rows.filter(r => !r.observable && !r.facilities.length).map(r => r.nodeId),
       /* Two different reasons produce a blind sited node, and the note used to give
          only one of them: "each is a node no route passes THROUGH". That held while
@@ -993,7 +1020,8 @@ const FWJourneyEngine = (() => {
          stages no disruption is rolled in. Reporting one cause for both absences
          would name the wrong repair. */
       unobservableTerminusOnly: blindSited.filter(r => r.terminusOnly).map(r => r.nodeId),
-      unobservableIntermediate: blindSited.filter(r => !r.terminusOnly).map(r => r.nodeId),
+      unobservableIntermediate: blindSited.filter(r => !r.onNoRoute && !r.terminusOnly).map(r => r.nodeId),
+      unobservableUnrouted: blindSited.filter(r => r.onNoRoute).map(r => r.nodeId),
       note: blindFacilities
         ? blindFacilities + ' of the ' + facilities + ' facilities this build seeds stand at one of ' +
           blindSited.length + ' node(s) -- ' + blindSited.map(r => r.nodeId).join(', ') + ' -- that hold only ' +

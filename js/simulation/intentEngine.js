@@ -86,12 +86,24 @@ const FWIntentEngine = (() => {
 
   /* HOW MANY ACTORS. A count, not a share: eight trucks are crewed in this
      build, so a percentage here would imply a distribution over a population
-     that has eight members. Two is chosen so the planned population is a
-     minority of the crewed fleet and the unplanned baseline stays the bulk of
+     that had eight members when this was written. The count is chosen so the
+     planned population is a minority of the crewed fleet and the unplanned baseline stays the bulk of
      what the signal layer sees -- the same reasoning that keeps
      DISRUPTION_CHANCE_PER_TICK low. It is not a fraud rate: it changes who
      acts with intent, never how often anything happens. */
-  const PLANNED_ACTOR_COUNT = 2;
+  /* SCALED BY SLICE 83, NOT RE-BALANCED. Two was chosen against a crewed fleet of
+     eight. Slice 81 tripled the fleet to twenty-four and left this at two, which
+     quietly cut the planned share of the fleet from 25% to 8% -- and it showed:
+     measured over 60 sim-days at 24 trucks, the two actors between them were
+     granted 256 opportunities, fired 3 steps, completed no plan, and BOTH ended
+     the run dormant (`summary().dormantActorIds`), because an unplanned
+     DRIVER_CHANGED moved each of them off the truck they started on and the plan
+     goes with the person. Two actors in a fleet of twenty-four is a sample of one
+     bad day. Six holds the original 25% share, so the unplanned baseline is still
+     the bulk of what the signal layer sees. This still changes who acts with
+     intent and never how often anything happens: the opportunity rate is
+     behaviorEngine's and is untouched. */
+  const PLANNED_ACTOR_COUNT = 6;
 
   /* Drawn from its own stream, offset from the sim seed, so choosing the actors
      consumes none of the randomness behaviorEngine spends on movement and
