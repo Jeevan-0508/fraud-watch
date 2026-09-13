@@ -553,18 +553,31 @@ Capture at 1600×1000 or wider, no music, and no cut that implies a capability w
 
 ## Screenshots
 
-**Not yet captured.** The five that would carry the most weight, and what each is there to prove:
+Captured from the live build. Every figure visible in these is the one the simulation had at that moment,
+not a mock-up.
 
-| # | Shot | What it proves |
-|---|---|---|
-| 1 | Live Freight Network, several trucks placed, one with an active-signal ring | A world exists and is running |
-| 2 | Truck selected — in-map read-out with linked entities and live signals | Entities are persistent and inspectable |
-| 3 | An open case in the MO Intelligence Center with its evidence chain and record-check findings | Investigation is real work with real failure modes |
-| 4 | Novelty classification, plus the matched taxonomy pattern with its documented false positives | Fraud reasoning against published patterns |
-| 5 | Sites & Observation Bias — raw beside coverage-adjusted, with the refused card | Risk maturity: the bias is shown, not corrected away |
+![Live Freight Network](docs/live-sim.png)
 
-*These need capturing on a full-width display and are not in the repository yet. No image is linked
-above, so nothing here renders broken.*
+**Live Sim** — day 10 of a seeded run, 13,077 events recorded. 8 trucks over 30 places, 60 roads and 15
+routes; 7 on a road, 1 standing at a place, 25 active signals, 8 cases open. Three trucks are at high
+attention — a ring is an order to look in, not a finding.
+
+![Fraud Network View and the exposure model](docs/fraud-network.png)
+
+**Fraud Network View, and the model's refusals** — 28 case-linked entities, 88 connections, 4 groups of
+which 3 span more than one case. A connection means *appeared together in a case*, not an accusation, and
+the panel says so. Below it: exposure attached to open cases at €730k–€3.0M as a band that is deliberately
+not narrowed, beside a card naming the figures this model **will not** produce — expected loss, loss
+avoided, whether a band is still live.
+
+![Port Meridian](docs/port-meridian.png)
+
+**Port Meridian** — the arcade layer over the same data. Score 2,190, streak 7, level 5, 16 of 88
+intercepted. The amber line is the build being honest that this record predates uncalled cases being
+counted separately, so its buckets are reported as stored rather than guessed.
+
+Still to capture: a truck selected with its in-map entity read-out, and an open case in the MO Intelligence
+Center with its evidence chain.
 
 ## Real-world relevance
 
