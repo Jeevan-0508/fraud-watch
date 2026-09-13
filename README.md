@@ -1,6 +1,41 @@
 <p align="center"><img src="assets/jk-brand-banner.png" alt="Jeevan Siddhabhaktula — Risk. Governance. AI." width="280"></p>
 
-# Fraud Watch
+<div align="center">
+
+```
+███████╗██████╗  █████╗ ██╗   ██╗██████╗     ██╗    ██╗ █████╗ ████████╗ ██████╗██╗  ██╗
+██╔════╝██╔══██╗██╔══██╗██║   ██║██╔══██╗    ██║    ██║██╔══██╗╚══██╔══╝██╔════╝██║  ██║
+█████╗  ██████╔╝███████║██║   ██║██║  ██║    ██║ █╗ ██║███████║   ██║   ██║     ███████║
+██╔══╝  ██╔══██╗██╔══██║██║   ██║██║  ██║    ██║███╗██║██╔══██║   ██║   ██║     ██╔══██║
+██║     ██║  ██║██║  ██║╚██████╔╝██████╔╝    ╚███╔███╔╝██║  ██║   ██║   ╚██████╗██║  ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝      ╚══╝╚══╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
+```
+
+### LIVING FREIGHT-RISK SIMULATION ENVIRONMENT
+
+*Observable behaviour → signals → investigation — and the analyst never sees ground truth*
+
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Phaser](https://img.shields.io/badge/Phaser-3.80-8b5cf6?style=for-the-badge)
+![Chart.js](https://img.shields.io/badge/Chart.js-4-ff6384?style=for-the-badge&logo=chartdotjs&logoColor=white)
+![No build step](https://img.shields.io/badge/Build_step-NONE-22c55e?style=for-the-badge)
+![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-LIVE-22c55e?style=for-the-badge&logo=github)
+![MIT](https://img.shields.io/badge/Licence-MIT-38bdf8?style=for-the-badge)
+
+<table>
+<tr><td align="center">🎮</td><td align="center">🔍</td><td align="center">🗺️</td><td align="center">📐</td></tr>
+<tr>
+<td align="center"><a href="https://jeevan-0508.github.io/fraud-watch/"><b>PLAY NOW</b></a></td>
+<td align="center"><a href="docs/case-study.md"><b>CASE STUDY</b></a></td>
+<td align="center"><a href="#the-investigation-model"><b>HOW IT THINKS</b></a></td>
+<td align="center"><a href="#architecture"><b>ARCHITECTURE</b></a></td>
+</tr>
+<tr><td align="center">Browser</td><td align="center">Worked example</td><td align="center">Signals → cases</td><td align="center">Engines &amp; data flow</td></tr>
+</table>
+
+</div>
 
 ## A Living Freight-Fraud Investigation Simulator
 
