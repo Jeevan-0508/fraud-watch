@@ -82,6 +82,58 @@ const FWSimDebug = (() => {
     }
   }
 
+  /* WHETHER THIS PAGE LOAD IS A NEW RUN OR THE LAST ONE CONTINUED. Written once
+     by boot(), read by the warm-start decision and by the line the header
+     prints. Nothing else may key off it. */
+  let resumed = { resumed: false, refusal: 'NOT_BOOTED' };
+
+  /* WHY THE HEADER SAYS WHICH. A resumed run opens on day 3 with cases already
+     in the queue, and without a line saying so that is indistinguishable from a
+     simulation that invented three days of history on load. The refusals are
+     printed too: "nothing was saved" and "this browser would not let the app
+     store anything" are different facts, and the second one is the one worth
+     knowing before spending an hour on a run that will not survive a refresh. */
+  const RESUME_NOTE = {
+    NO_SAVE: 'Fresh run — nothing was saved from a previous visit.',
+    UNAVAILABLE: 'Fresh run — this browser is not letting the page store anything, so this run will not survive a refresh.',
+    UNREADABLE: 'Fresh run — the saved run could not be read back.',
+    WRONG_VERSION: 'Fresh run — the saved run was written by an older version of this build.',
+    INCOMPLETE: 'Fresh run — the saved run was missing part of the world.',
+    NO_STORE: 'Fresh run — saving is not available in this build.',
+    RESTORE_REFUSED: 'Fresh run — the saved run was refused.'
+  };
+
+  function reportResume() {
+    const el = document.getElementById('sim-resume-note');
+    if (!el) return;
+    el.textContent = resumed.resumed
+      ? `Resumed the saved run — day ${resumed.day}, ${resumed.cases} case${resumed.cases === 1 ? '' : 's'} already open.`
+      : (RESUME_NOTE[resumed.refusal] || RESUME_NOTE.RESTORE_REFUSED);
+  }
+
+  /* THE SAVE CADENCE IS THE STORE'S, NOT THIS PANEL'S. This only wires it: the
+     throttled save rides the tick every other renderer rides, and the flush
+     rides both page-exit events because one of them fires on desktop and the
+     other is the one mobile browsers actually deliver. */
+  function registerSaving() {
+    if (!window.FWLiveSimStore) return;
+    FWSimRunner.onTick((state) => { FWLiveSimStore.maybeSave(state); });
+    const flush = () => { FWLiveSimStore.flush(FWSimRunner.getState()); };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    const btn = document.getElementById('sim-fresh-btn');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        /* Deliberately destructive and deliberately confirmed. Without this the
+           saved run is a trap: a player who wants to start over has no way to
+           ask for it, because every reload now continues. */
+        if (typeof window.confirm === 'function' && !window.confirm('Discard the saved run and start a new world? This cannot be undone.')) return;
+        FWLiveSimStore.clear();
+        if (window.location && typeof window.location.reload === 'function') window.location.reload();
+      });
+    }
+  }
+
   /* One sim-hour. Chosen as the smallest interval measured to place every truck
      (0 of 8 at hour 0, 8 of 8 at hour 1), not as a round number that looked
      right. */
@@ -90,12 +142,25 @@ const FWSimDebug = (() => {
   function boot() {
     if (booted) return;
     booted = true;
-    FWSimRunner.boot();
+    /* A REFRESH USED TO BE A NEW WORLD. The player who fast-forwarded to day 3
+       and reloaded got day 1, no cases, no discovered combinations, and nothing
+       said that had happened. The store decides: a compatible snapshot is
+       continued; anything else (no save, refused storage, an older shape) falls
+       through to the fresh boot that has always been here. */
+    const loaded = window.FWLiveSimStore ? FWLiveSimStore.load() : { ok: false, refusal: 'NO_STORE', snapshot: null };
+    const restored = loaded.ok ? FWSimRunner.restore(loaded.snapshot) : null;
+    resumed = restored
+      ? { resumed: true, day: restored.clock.day, cases: restored.moEngine.mos.size }
+      : { resumed: false, refusal: loaded.refusal || 'RESTORE_REFUSED' };
+    if (!restored) FWSimRunner.boot();
     FWSimRunner.onTick(render);
     if (window.FWMoIntelligence) {
       FWMoIntelligence.init();
       FWSimRunner.onTick(FWMoIntelligence.render);
     }
+    // Booted after the panel it exports from, because it binds a control that
+    // lives in that panel's header.
+    if (window.FWCaseExport) FWCaseExport.init();
     if (window.FWEntityInspector) {
       FWEntityInspector.init();
       FWSimRunner.onTick((state) => { if (FWEntityInspector.isOpen()) FWEntityInspector.render(state); });
@@ -144,7 +209,12 @@ const FWSimDebug = (() => {
        exactly as they would have happened with nobody watching, by the same
        tick path, and the clock says so -- the header opens on hour 1 rather than
        hour 0 and does not pretend otherwise. */
-    FWSimRunner.fastForward(WARM_START_SECONDS);
+    /* The warm start is for a world that has not started. A resumed run has
+       already had hours happen in it, so advancing it again would add an hour of
+       simulation nobody asked for on every refresh. */
+    if (!resumed.resumed) FWSimRunner.fastForward(WARM_START_SECONDS);
+    reportResume();
+    registerSaving();
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());

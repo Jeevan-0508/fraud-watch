@@ -115,6 +115,7 @@
             </div>
             <button id="sim-pause-btn" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-200">&#9208; Pause</button>
             <button id="sim-ff-btn" title="Advance the simulation one sim-hour, instantly" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-200">&#9193; +1h</button>
+            <button id="sim-fresh-btn" title="Discard the saved run and start a new world" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] uppercase tracking-wide text-slate-300">New run</button>
           </div>
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-[9px] font-semibold uppercase tracking-wide text-slate-600">View</span>
@@ -127,6 +128,7 @@
           </div>
         </div>
       </div>
+      <p id="sim-resume-note" class="text-[10px] text-slate-500 mb-1"></p>
       <p id="freight-map-stats" class="text-[10px] text-slate-500 mb-2"></p>
       <p id="fm-camera" class="text-[10px] text-slate-500 mb-2"></p>
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-3">
@@ -255,8 +257,12 @@
     <div class="mt-3 bg-[#0b0f14] border border-slate-800 rounded-2xl p-3" id="mo-intel-root">
       <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wide">MO Intelligence Center</h3>
-        <span id="mo-intel-summary" class="text-[10px] text-slate-500"></span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="mo-intel-summary" class="text-[10px] text-slate-500"></span>
+          <button id="mo-export-csv" title="Download the cases this filter is showing, one row each, as a CSV spreadsheet" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200">Export list (CSV)</button>
+        </div>
       </div>
+      <p id="mo-export-note" class="text-[10px] text-slate-500 mb-1"></p>
       <div class="text-[10px] text-slate-500 mb-1">Status</div>
       <div id="mo-intel-status-tabs" class="flex gap-1 mb-2 flex-wrap"></div>
       <div class="text-[10px] text-slate-500 mb-1">Discovery classification</div>
@@ -421,9 +427,11 @@
 <script src="js/simulation/outcomeEngine.js"></script>
 <script src="js/simulation/exposureModel.js"></script>
 <script src="js/simulation/analyticsEngine.js"></script>
+<script src="js/systems/livesim-store.js"></script>
 <script src="js/simulation/simRunner.js"></script>
 <script src="js/ui/sim-debug.js"></script>
 <script src="js/ui/mo-intelligence.js"></script>
+<script src="js/ui/case-export.js"></script>
 <script src="js/ui/entity-inspector.js"></script>
 <script src="js/ui/freight-map.js"></script>
 <script src="js/simulation/networkEngine.js"></script>

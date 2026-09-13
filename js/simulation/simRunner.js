@@ -8,6 +8,7 @@ const FWSimRunner = (() => {
 
   let state = null;
   let intervalHandle = null;
+  let lastRestore = null;
   const listeners = [];
 
   function absoluteNow(clock) {
@@ -102,6 +103,37 @@ const FWSimRunner = (() => {
     }
   }
 
+  /* RESTORING A SAVED RUN. Two steps, in this order and no other: the runner
+     creates a run from the saved seed exactly as a fresh boot does, and then the
+     store writes the saved fields into it. That order is the point. boot() is
+     what builds the world, including the parts of it that only this module and
+     behaviorEngine are allowed to consult; the store fills the containers boot
+     just made and never makes any of its own, so nothing it read out of storage
+     can arrive as a structure some later reader could mistake for the run's own.
+
+     A failed restore is a fresh run, not a broken one: if the snapshot is
+     refused, or applying it throws, this re-boots from scratch and returns null
+     so the caller can take its normal first-run path (warm start included). */
+  function restore(snapshot) {
+    if (!snapshot || !window.FWLiveSimStore) return null;
+    const compat = FWLiveSimStore.compatible(snapshot);
+    if (!compat.ok) return null;
+    try {
+      boot(snapshot.seed);
+      const applied = FWLiveSimStore.applyTo(state, snapshot);
+      if (!applied.ok) { state = null; boot(); return null; }
+      lastRestore = applied;
+      return state;
+    } catch (e) {
+      state = null;
+      boot();
+      lastRestore = { ok: false, why: String((e && e.message) || e) };
+      return null;
+    }
+  }
+
+  function restoreReport() { return lastRestore; }
+
   function start() {
     if (intervalHandle || !state) return;
     let last = Date.now();
@@ -126,5 +158,5 @@ const FWSimRunner = (() => {
      for a position a truck passes through in less than one chunk may never be
      observed in it. intentEngine quotes the figure and the suite reconciles the
      quote against this one. */
-  return { boot, start, stop, tick, fastForward, onTick, getState, absoluteNow, TICK_MS, FF_CHUNK };
+  return { boot, restore, restoreReport, start, stop, tick, fastForward, onTick, getState, absoluteNow, TICK_MS, FF_CHUNK };
 })();

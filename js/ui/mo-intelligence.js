@@ -58,6 +58,16 @@ const FWMoIntelligence = (() => {
           handleInvestigation(investBtn.dataset.moId, investBtn.dataset.moInvest);
           return;
         }
+        const exportBtn = e.target.closest('[data-mo-export]');
+        if (exportBtn) {
+          if (window.FWCaseExport) FWCaseExport.exportCase(exportBtn.dataset.moExport);
+          return;
+        }
+        const printBtn = e.target.closest('[data-mo-print]');
+        if (printBtn) {
+          if (window.FWCaseExport) FWCaseExport.printCase(printBtn.dataset.moPrint);
+          return;
+        }
         const viewBtn = e.target.closest('[data-mo-view]');
         if (viewBtn) {
           const id = viewBtn.dataset.moView;
@@ -574,9 +584,15 @@ const FWMoIntelligence = (() => {
     </div>`;
   }
 
-  function renderCard(mo) {
-    const isOpen = expanded.has(mo.id);
-    const detail = isOpen ? `
+  /* THE EXPANDED DETAIL, AS ONE NAMED BLOCK. It was inline in renderCard until
+     the export needed it. The export is a transcription of this exact string --
+     not a second assembly of the same sections in the same order, which is the
+     version of this feature that drifts: a section added here and forgotten
+     there produces a file that quietly says less than the panel, and a section
+     added there and not here produces a file that says more, which is the
+     serious direction. One producer, two consumers. */
+  function detailHtml(mo) {
+    return `
       <div class="mt-2 pt-2 border-t border-slate-800">
         ${renderExecutiveSummary(mo)}
         ${renderTimeline(mo)}
@@ -588,7 +604,12 @@ const FWMoIntelligence = (() => {
         ${renderVerdictOutcome(mo)}
         ${renderCountermeasures(mo)}
         ${renderActions(mo)}
-      </div>` : '';
+      </div>`;
+  }
+
+  function renderCard(mo) {
+    const isOpen = expanded.has(mo.id);
+    const detail = isOpen ? detailHtml(mo) : '';
 
     return `<div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2">
       <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
@@ -598,6 +619,8 @@ const FWMoIntelligence = (() => {
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${classificationBadgeClass(mo.classification)}">${classificationLabel(mo.classification)}</span>
           <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${statusBadgeClass(mo.status)}">${mo.status.replace(/_/g, ' ')}</span>
           <button data-mo-view="${mo.id}" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-700 hover:bg-slate-600 text-white">${isOpen ? 'HIDE' : 'VIEW'}</button>
+          <button data-mo-export="${mo.id}" title="Download this case as a self-contained HTML file" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">EXPORT</button>
+          <button data-mo-print="${mo.id}" title="Open the print dialog for this case, where it can be saved as a PDF" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">PRINT</button>
         </div>
       </div>
       <div class="text-xs text-white">${mo.title || 'Unclassified pattern'}</div>
@@ -633,5 +656,14 @@ const FWMoIntelligence = (() => {
     els.list.innerHTML = mos.map(renderCard).join('');
   }
 
-  return { init, render, setFilter, handleAction, handleInvestigation };
+  /* PUBLISHED FOR THE EXPORT, and deliberately only these. detailHtml is the
+     panel's own detail markup, visibleCases is the list this panel is currently
+     showing (filter and sort included, so an export of "the list" is the list),
+     filterState is what that filter was, and fmtSimTime is this module's clock
+     formatting -- exported rather than copied so a file and the panel cannot
+     print the same instant two different ways. */
+  return { init, render, setFilter, handleAction, handleInvestigation,
+    detailHtml, fmtSimTime,
+    visibleCases: filteredSorted,
+    filterState: () => ({ status: statusFilter, classification: classFilter }) };
 })();
