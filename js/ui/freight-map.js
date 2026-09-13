@@ -358,8 +358,230 @@ const FWFreightMap = (() => {
     means: 'this truck currently carries at least one active signal.',
     doesNotMean: 'that fraud occurred, that a case exists, or that anything has been confirmed. A signal is an ' +
       'observation with a lifetime; most of them expire without ever being correlated with a second one.',
-    caseIsSeparate: 'whether a case exists is moEngine\'s answer and is counted separately in the header.'
+    caseIsSeparate: 'whether a case exists is moEngine\'s answer and is counted separately in the header.',
+    supersededBy: 'ATTENTION_LEVELS. The flag above is still what one truck marker draws, and it is still one '
+      + 'boolean; the ladder below is the ORDER a reader is asked to look in, and it is a presentation of state '
+      + 'this module already had rather than a second opinion about any of it.'
   };
+
+  /* THE ATTENTION LADDER, and the four things it is not.
+
+     One boolean told a reader that a truck carried a signal. It could not tell
+     them which of twenty-four trucks to look at first, because with a boolean
+     they are all either on or off. This ladder orders them. It is a DISPLAY
+     ORDER and nothing else: every rung is read from a value another module
+     already wrote, no rung computes a score, and no rung is a probability, a
+     risk rating, a priority assigned by anyone, or a queue that anything works
+     through.
+
+     The rungs, and whose answer each one is:
+
+       NORMAL          signalEngine says no signal is active on this truck, and
+                       moEngine names it in no open case.
+       WATCH           signalEngine says at least one signal is active.
+       ACTIVE          moEngine names it in a case whose status is in that
+                       module's own OPEN_STATUSES set.
+       HIGH_ATTENTION  the same, and EITHER an analyst has escalated that case
+                       (moEngine's own ESCALATED status) OR the band moEngine put
+                       on it is one of the two highest its confidenceLabel can
+                       return.
+
+     WHY THE TOP RUNG HAS TWO DOORS, AND WHAT MEASURING IT FOUND.
+
+     It was first written with the band door only, and the band door is EMPTY.
+     Measured at seed 12345 over 20 sim-days: 36 cases, banded MINIMAL 24,
+     WATCH 8, ELEVATED 4, and SUBSTANTIAL and STRONG never once. Of those 36,
+     exactly ONE was open, banded MINIMAL. So a four-rung ladder built on the
+     band alone advertises a rung that this world cannot light -- a legend with a
+     colour in it a reader will never see, which is the precise fault this whole
+     pass exists to remove.
+
+     Lowering the threshold to ELEVATED does not fix it: the four ELEVATED cases
+     were all closed, and a dismissed case raising a truck's rung would be the
+     ladder pointing at a movement this simulation has already finished with.
+
+     So the second door is the analyst's own. ESCALATED is a status moEngine
+     already has and only a reader's press ever sets. In an untouched run nothing
+     is escalated and the rung is legitimately empty; the moment a reader
+     escalates a case, the truck it names climbs to the top of the ladder and the
+     map says so. That is a rung a reader can reach, driven by state that already
+     existed, and it is the correct behaviour for the surface: the top of a
+     control tower's attention order should be what its operator put there.
+
+     The band is moEngine's word, off mo.confidenceBand, which only
+     confidenceLabel ever writes. This module does not re-band anything and does
+     not know what the thresholds are.
+
+     WHY A HIGHER RUNG IS NOT A WORSE TRUCK. A case exists because two signal
+     types were correlated. A band is high because the index moEngine keeps ran
+     high. Neither is a finding, neither is a confirmation, and a truck sitting
+     at HIGH_ATTENTION has had nothing established about it -- it has been
+     looked at by more of this simulation's machinery than its neighbours, which
+     is a fact about the machinery. Most cases in a run end DISMISSED, and a
+     dismissed case is a case this world opened and then could not support. */
+  const ATTENTION_LEVELS = {
+    NORMAL:         { rank: 0, from: 'signalEngine and moEngine, both negative',
+      means: 'no signal is active on this truck and no open case names it.' },
+    WATCH:          { rank: 1, from: 'signalEngine.getActiveSignals',
+      means: 'at least one signal is active on this truck. Most expire without ever meeting a second one.' },
+    ACTIVE:         { rank: 2, from: 'moEngine.OPEN_STATUSES',
+      means: 'a case that names this truck is open. A case is a correlation of signal types, not a finding.' },
+    HIGH_ATTENTION: { rank: 3,
+      from: 'mo.status === ESCALATED, or mo.confidenceBand in the two highest bands moEngine declares',
+      means: 'an open case naming this truck has been escalated by an analyst, or carries one of the two '
+        + 'highest bands moEngine declares.',
+      measured: { seed: 12345, days: 20, cases: 36, openCases: 1,
+        bands: { MINIMAL: 24, WATCH: 8, ELEVATED: 4, SUBSTANTIAL: 0, STRONG: 0 },
+        reachedByBandInAnUntouchedRun: 0,
+        note: 'the band door is empty in an untouched run and that is a fact about how readily moEngine '
+          + 'dismisses, not a display fault. The escalation door is what a reader can actually reach.' } }
+  };
+
+  /* The one status that lifts an open case to the top rung on its own. It is
+     moEngine's word and only an analyst press writes it, and it is checked
+     against that module's own open set at first frame -- a status this map
+     treated as escalated that moEngine considers closed would be a rung lit for
+     a case nobody is working. */
+  const ESCALATED_STATUS = 'ESCALATED';
+
+  /* The two bands that lift ACTIVE to HIGH_ATTENTION, named rather than
+     inlined, and checked against moEngine's own list at load by
+     assertAttentionLadder -- so a sixth band, or a rename, fails here instead
+     of quietly demoting every case to ACTIVE for the rest of the project. */
+  const HIGH_ATTENTION_BANDS = ['SUBSTANTIAL', 'STRONG'];
+
+  const ATTENTION_TONE = {
+    NORMAL:         { ring: null,      label: null,             stroke: null },
+    WATCH:          { ring: 'dashed',  label: 'WATCH',          stroke: '#f59e0b' },
+    ACTIVE:         { ring: 'solid',   label: 'ACTIVE',         stroke: '#fb923c' },
+    HIGH_ATTENTION: { ring: 'double',  label: 'HIGH ATTENTION', stroke: '#f87171' }
+  };
+
+  function assertAttentionLadder(levels, tones, bands, declaredBands, openStatuses) {
+    const L = levels || ATTENTION_LEVELS;
+    const T = tones || ATTENTION_TONE;
+    const B = bands || HIGH_ATTENTION_BANDS;
+    const names = Object.keys(L);
+    const ranks = names.map(n => L[n].rank);
+    if (new Set(ranks).size !== ranks.length) {
+      throw new Error('freight-map: two attention rungs share a rank, so the order a reader is asked to look in ' +
+        'is not an order');
+    }
+    names.forEach(n => {
+      if (!T[n]) {
+        throw new Error('freight-map: attention rung ' + n + ' has no declared tone, so it would draw as the rung ' +
+          'below it while claiming to be a rung of its own');
+      }
+      if (!L[n].means || !L[n].from) {
+        throw new Error('freight-map: attention rung ' + n + ' does not say what it means or whose answer it is');
+      }
+    });
+    /* The bands are moEngine's, so they are checked against moEngine's list and
+       not against a copy kept here. A band named here that module cannot return
+       is a rung nothing will ever reach. */
+    const declared = declaredBands || (window.FWMoEngine && FWMoEngine.CONFIDENCE_BAND &&
+      FWMoEngine.CONFIDENCE_BAND.tone ? Object.keys(FWMoEngine.CONFIDENCE_BAND.tone) : null);
+    if (declared) {
+      B.forEach(b => {
+        if (declared.indexOf(b) === -1) {
+          throw new Error('freight-map: "' + b + '" is not a band moEngine declares (' + declared.join(', ') +
+            '), so no case can ever reach HIGH_ATTENTION through it');
+        }
+      });
+    }
+    /* The escalated status has to be one moEngine calls OPEN. If it were ever
+       moved to the closed set, this map would be lifting trucks to the top rung
+       for cases nobody is working on. */
+    const open = openStatuses || (window.FWMoEngine && FWMoEngine.OPEN_STATUSES ? FWMoEngine.OPEN_STATUSES : null);
+    if (open && !open.has(ESCALATED_STATUS)) {
+      throw new Error('freight-map: "' + ESCALATED_STATUS + '" is not a status moEngine treats as open, so the top ' +
+        'attention rung would be lit for cases nobody is working on');
+    }
+    return { rungs: names.length, escalatedStatusChecked: !!open, bandsChecked: declared ? B.length : 0,
+      bandsUnchecked: declared ? 0 : B.length,
+      whyUnchecked: declared ? null : 'moEngine was not loaded when this module initialised, so the bands were ' +
+        'taken as written rather than checked against the module that writes them' };
+  }
+
+  /* THE RUNG LADDER the journey strip labels rows with.
+
+     The brief this was built for asked that a reader never be shown a signal
+     that looks like a finding, and the way to do that is to name the rung on
+     every row. Five rungs, and the last two share one timestamp on purpose:
+
+       OBSERVATION  an event eventEngine stamped with a severity its own
+                    severityBasis calls routine.
+       EVENT        an event whose severity that same module calls a disruption.
+       SIGNAL       a signal signalEngine currently holds as active, at its
+                    createdAt.
+       CORRELATED   two or more signal types were correlated.
+       CASE         a case exists.
+
+     CORRELATED AND CASE ARE THE SAME INSTANT IN THIS SIMULATION. moEngine opens
+     a case AT the correlation -- there is no state between the two, and no
+     timestamp that separates them. So the strip draws ONE row for both and says
+     so, rather than drawing two rows a reader would read as two things that
+     happened at two times. Inventing a gap to make a prettier ladder would be
+     inventing a step in an investigation.
+
+     mo.firstObserved is NOT that instant: it is the earliest of the case's own
+     signals, which is always earlier, and it is already covered by the SIGNAL
+     rows. Drawing it again as a case row would double-count one moment. */
+  const RUNGS = {
+    OBSERVATION: { rank: 0, from: 'FWEventEngine.severityBasis === ROUTINE',
+      means: 'something was recorded. Nothing about it was flagged.' },
+    EVENT:       { rank: 1, from: 'FWEventEngine.severityBasis === DISRUPTION',
+      means: 'what was recorded carried a severity eventEngine declares a disruption.' },
+    SIGNAL:      { rank: 2, from: 'FWSignalEngine.getActiveSignals, at signal.createdAt',
+      means: 'an observation with a lifetime is attached to this entity. It is not a finding and most expire.' },
+    CORRELATED:  { rank: 3, from: 'mo.openedAt -- the instant moEngine correlated the signal types',
+      means: 'more than one signal type was seen on the same entity inside one window.',
+      sharesTimestampWith: 'CASE' },
+    CASE:        { rank: 4, from: 'mo.openedAt and mo.status',
+      means: 'a case is on the record with a status. A status is a state of an examination, not a verdict.' }
+  };
+
+  const RUNG_TONE = {
+    OBSERVATION: 'border-slate-700 text-slate-500',
+    EVENT:       'border-amber-500/60 text-amber-200',
+    SIGNAL:      'border-sky-500/60 text-sky-200',
+    CORRELATED:  'border-orange-500/70 text-orange-200',
+    CASE:        'border-rose-500/70 text-rose-200'
+  };
+
+  const RUNG_LADDER = {
+    order: ['OBSERVATION', 'EVENT', 'SIGNAL', 'CORRELATED', 'CASE'],
+    doesNotMean: 'A row further up this ladder is not stronger evidence of anything. The ladder is the ORDER '
+      + 'this simulation\'s machinery touched a movement in, and a movement can reach the top of it and be '
+      + 'dismissed -- most are.',
+    sharedTimestamp: 'CORRELATED and CASE are one instant here, drawn as one row, because moEngine opens a case '
+      + 'at the correlation and nothing separates them.'
+  };
+
+  function assertRungLadder(rungs, tones, ladder) {
+    const R = rungs || RUNGS;
+    const T = tones || RUNG_TONE;
+    const L = ladder || RUNG_LADDER;
+    const names = Object.keys(R);
+    if (L.order.length !== names.length) {
+      throw new Error('freight-map: the rung ladder lists ' + L.order.length + ' rungs but ' + names.length +
+        ' are declared, so a reader would be shown a row on a rung the ladder does not order');
+    }
+    L.order.forEach((n, i) => {
+      if (!R[n]) throw new Error('freight-map: ladder names rung ' + n + ', which is not declared');
+      if (R[n].rank !== i) {
+        throw new Error('freight-map: rung ' + n + ' has rank ' + R[n].rank + ' but sits at position ' + i +
+          ' in the ladder');
+      }
+      if (!T[n]) throw new Error('freight-map: rung ' + n + ' has no declared tone');
+    });
+    const shared = names.filter(n => R[n].sharesTimestampWith);
+    if (!shared.length) {
+      throw new Error('freight-map: no rung declares the shared timestamp, but the strip draws one row for two ' +
+        'rungs; the reason has to be on the register a reader can find, not only in a comment');
+    }
+    return { rungs: names.length, sharedTimestampRungs: shared.length };
+  }
 
   /* WHAT THE IN-MAP CARD IS, AND WHAT IT MUST NOT BECOME.
 
@@ -832,6 +1054,151 @@ const FWFreightMap = (() => {
     };
   }
 
+  /* ONE PASS over the case register, for every question this frame asks of it.
+
+     Three surfaces used to walk mos.values() separately -- the header for its
+     open count, the entity card for the cases naming one truck, and now the
+     attention ladder for every truck at once. Three walks of the same map on
+     every tick is three times the work and, worse, three chances to partition
+     it differently. This walks it once and every reader on the frame takes its
+     answer from the same object.
+
+     `derived: false` is a real state and not an empty result: if moEngine is not
+     loaded there is nothing to say about cases, and saying "no cases" would be a
+     claim. Every caption downstream distinguishes the two. */
+  let BANDS_VERIFIED = null;
+  function bandsVerified() { return BANDS_VERIFIED; }
+
+  function caseIndexOf(state) {
+    const idx = { byTruck: {}, openTotal: 0, total: 0, derived: false };
+    if (!state || !state.moEngine || !state.moEngine.mos || !window.FWMoEngine || !FWMoEngine.OPEN_STATUSES) {
+      return idx;
+    }
+    idx.derived = true;
+    /* THE BAND CHECK, RUN ONCE, HERE, AND NOT AT LOAD TIME.
+
+       assertAttentionLadder wanted to compare HIGH_ATTENTION_BANDS against
+       moEngine's own declared band list at module load, and could not: at the
+       moment this file is evaluated the case module has been evaluated but has
+       not yet been published on window, so the check took the bands as written
+       and said so on LADDER_CHECK.bandsUnchecked. A guard that reports itself
+       unchecked is honest but it is not a guard.
+
+       So it runs on the first frame that actually finds a case register, which is
+       the first moment the answer exists, and it runs once. If a future edit
+       renames a band or adds a sixth, this throws on the first frame instead of
+       quietly holding every case at ACTIVE for the rest of the project. */
+    if (!BANDS_VERIFIED) {
+      BANDS_VERIFIED = assertAttentionLadder(null, null, null,
+        FWMoEngine.CONFIDENCE_BAND && FWMoEngine.CONFIDENCE_BAND.tone
+          ? Object.keys(FWMoEngine.CONFIDENCE_BAND.tone) : null,
+        FWMoEngine.OPEN_STATUSES);
+    }
+    state.moEngine.mos.forEach(m => {
+      idx.total++;
+      const open = FWMoEngine.OPEN_STATUSES.has(m.status);
+      if (open) idx.openTotal++;
+      const tid = m.entities && m.entities.truckId;
+      if (!tid) return;
+      const e = idx.byTruck[tid] || (idx.byTruck[tid] = { open: 0, closed: 0, high: 0, openIds: [], caseIds: [] });
+      e.caseIds.push(m.id);
+      if (!open) { e.closed++; return; }
+      e.open++;
+      e.openIds.push(m.id);
+      if (m.status === ESCALATED_STATUS || HIGH_ATTENTION_BANDS.indexOf(m.confidenceBand) >= 0) e.high++;
+    });
+    return idx;
+  }
+
+  /* The rung one truck sits on. Reads two answers and computes nothing. A truck
+     whose signals were not derived at all returns null rather than NORMAL --
+     NORMAL asserts signalEngine looked and found none, and a surface with no
+     signalEngine has not looked. */
+  function attentionOf(p, entry) {
+    if (entry && entry.high > 0) return 'HIGH_ATTENTION';
+    if (entry && entry.open > 0) return 'ACTIVE';
+    if (p.signalCount === null || p.signalCount === undefined) return null;
+    return p.signalCount > 0 ? 'WATCH' : 'NORMAL';
+  }
+
+  /* WHAT IS IN A CASE'S PART OF THE NETWORK, and how little of it is guessed.
+
+     Case Focus dims the world and leaves one case's part of it lit. Everything
+     it lights comes from a relationship that already exists:
+
+       the truck        mo.entities.truckId, written by moEngine when it opened
+       the route        that truck's OWN journey, read through selectedRoute --
+                        the route it was assigned, not a path chosen here
+       the places       the nodes of that route, in that route's order
+       the roads        that route's leg keys, which are worldGraph's edge keys
+       the site         mo.entities.facilityId, and ONLY when moEngine attached
+                        one, which it does only when every signal in the case
+                        was seen at the same place
+
+     NOTHING ELSE IS LIT. Not the other trucks of the same carrier, not the
+     other cases at the same place, not the neighbouring roads. Every one of
+     those is a relationship a reader would take as this simulation's claim that
+     the two are connected, and none of them is.
+
+     A site is matched to a node by the facility NAME, because that is the only
+     link worldGraph and entityEngine share -- worldGraph lists facilityNames at
+     each node and entityEngine seeds facilities with those names. When the name
+     matches no node the site is reported unplaced rather than dropped: a case
+     attached to a place the map cannot find is worth knowing about. */
+  function focusOf(state, lay, caseId) {
+    if (!caseId) return null;
+    if (!state || !state.moEngine || !state.moEngine.mos) {
+      return { caseId, resolved: false, why: 'NO_CASE_REGISTER', truckIds: [], nodeIds: [], edgeKeys: [] };
+    }
+    const mo = state.moEngine.mos.get(caseId);
+    if (!mo) {
+      return { caseId, resolved: false, why: 'CASE_NOT_ON_RECORD', truckIds: [], nodeIds: [], edgeKeys: [] };
+    }
+    const ent = mo.entities || {};
+    const EE = window.FWEntityEngine || null;
+    const truck = ent.truckId && EE ? EE.get(state.registry, 'truck', ent.truckId) : null;
+    let route = null;
+    try { route = truck ? selectedRoute(truck, lay) : null; } catch (e) { route = null; }
+    let siteNodeId = null, siteName = null, sitePlaced = null;
+    if (ent.facilityId && EE) {
+      const fac = EE.get(state.registry, 'facility', ent.facilityId);
+      if (fac && fac.name) {
+        siteName = fac.name;
+        const hit = lay.nodes.filter(n => (n.facilityNames || []).indexOf(fac.name) >= 0)[0];
+        siteNodeId = hit ? hit.id : null;
+        sitePlaced = !!hit;
+      }
+    }
+    const nodeIds = route ? route.nodes.map(n => n.id) : [];
+    if (siteNodeId && nodeIds.indexOf(siteNodeId) === -1) nodeIds.push(siteNodeId);
+    const open = window.FWMoEngine && FWMoEngine.OPEN_STATUSES
+      ? FWMoEngine.OPEN_STATUSES.has(mo.status) : null;
+    return {
+      caseId, resolved: true, why: null,
+      status: mo.status, open,
+      band: mo.confidenceBand || null,
+      classification: mo.classification || null,
+      title: mo.title || null,
+      openedAt: mo.openedAt === undefined ? null : mo.openedAt,
+      firstObserved: mo.firstObserved === undefined ? null : mo.firstObserved,
+      signalTypes: Array.from(new Set((mo.evidence || []).map(e => e.signalType).filter(Boolean))),
+      truckIds: ent.truckId ? [ent.truckId] : [],
+      driverId: ent.driverId || null,
+      trailerId: ent.trailerId || null,
+      carrierId: ent.carrierId || null,
+      facilityId: ent.facilityId || null,
+      siteName, siteNodeId, sitePlaced,
+      route: route ? { routeId: route.routeId, label: route.label, legs: route.legs } : null,
+      nodeIds,
+      edgeKeys: route ? route.legKeys.slice() : [],
+      /* Named on the object a reader can print, not only in the comment above. */
+      lightsOnly: 'the case truck, that truck\'s own assigned route, the places on it, and the one site '
+        + 'moEngine attached if it attached one',
+      neverLights: 'other trucks of the same carrier, other cases at the same place, and roads the route does '
+        + 'not use -- each of those would be a connection this simulation has not made'
+    };
+  }
+
   /* ---------------------------------------------------------------------- */
   /* ONE FRAME                                                              */
   /* ---------------------------------------------------------------------- */
@@ -926,6 +1293,99 @@ const FWFreightMap = (() => {
     };
   }
 
+  /* Which rung an event row sits on. Two of the three answers eventEngine's own
+     severityBasis can give map onto a rung; the third does not and returns null.
+     A severity this program does not declare is not known to be routine, and
+     putting it on the routine rung would be the exact claim BASIS_TONE already
+     refuses to make in colour. */
+  function rungOf(basis) {
+    if (basis === 'DISRUPTION') return 'EVENT';
+    if (basis === 'ROUTINE') return 'OBSERVATION';
+    return null;
+  }
+
+  /* THE SELECTED JOURNEY'S OWN LADDER, and the two things it cannot show.
+
+     One truck, everything this simulation currently holds about it, in time
+     order, each row named for its rung. Three sources, all already open:
+
+       events   the published rolling list, filtered to this entity
+       signals  signalEngine's active set for this truck, at each createdAt
+       cases    the cases whose entities.truckId is this truck, at openedAt
+
+     WHAT IT CANNOT SHOW, stated on the object rather than left as a gap:
+
+     1. OLDER EVENTS. The published list is a ring buffer of a few dozen rows
+        over a stream that records tens of thousands per run. One truck's events
+        leave it within seconds of sim-time. So the event section here is
+        usually EMPTY, and that emptiness is the buffer having moved on -- not a
+        truck nothing happened to. `eventsAreAWindow` says so and every caption
+        repeats it, because a reader who takes an empty section for a quiet
+        truck has been misled by a data structure.
+
+     2. EXPIRED SIGNALS. getActiveSignals returns what is active NOW. A signal
+        that expired is gone from it, including signals that were correlated into
+        a case that is still open. So the SIGNAL rows can be fewer than the
+        signal types the CASE row was built from, and that is not a
+        contradiction -- it is a case outliving its evidence's lifetime, which is
+        the normal shape of this simulation.
+
+     Sorted ASCENDING. The world strip runs newest-first because it is a feed;
+     a journey is a story and reads forwards. */
+  function journeyTimelineOf(state, truckId, opts) {
+    const o = opts || {};
+    const out = { truckId: truckId || null, rows: [], eventRows: 0, signalRows: 0, caseRows: 0,
+      undeclaredRows: 0, feedHeld: 0, signalsDerived: false, casesDerived: false,
+      eventsAreAWindow: 'the event rows are whatever of this truck\'s events are still in the short rolling list '
+        + 'the simulation publishes. Older ones have left it. An empty event section is that list having moved '
+        + 'on, not a truck nothing was recorded against.',
+      signalsAreActiveOnly: 'only signals still active are listed. A case can name signal types whose signals '
+        + 'have since expired, so a case row is not required to have a signal row behind it here.' };
+    if (!state || !truckId) return out;
+    const now = o.now === undefined ? absoluteNow(state.clock) : o.now;
+
+    const feed = state.recentEvents || [];
+    out.feedHeld = feed.length;
+    feed.filter(ev => ev.entityId === truckId).forEach(ev => {
+      const basis = window.FWEventEngine ? FWEventEngine.severityBasis(ev.severity).basis : 'UNDECLARED';
+      const rung = rungOf(basis);
+      if (rung === null) out.undeclaredRows++; else out.eventRows++;
+      out.rows.push({ t: ev.timestamp, rung, basis, kind: 'EVENT_RECORD',
+        label: String(ev.type).replace(/_/g, ' '), detail: null });
+    });
+
+    const EE = window.FWEntityEngine || null;
+    const truck = EE ? EE.get(state.registry, 'truck', truckId) : null;
+    if (truck && window.FWSignalEngine) {
+      out.signalsDerived = true;
+      FWSignalEngine.getActiveSignals(truck, now).forEach(sg => {
+        out.signalRows++;
+        out.rows.push({ t: sg.createdAt, rung: 'SIGNAL', basis: null, kind: 'SIGNAL',
+          label: String(sg.type).replace(/_/g, ' '),
+          detail: FWSignalEngine.formatReliability ? FWSignalEngine.formatReliability(sg.reliability) : null });
+      });
+    }
+
+    if (state.moEngine && state.moEngine.mos && window.FWMoEngine && FWMoEngine.OPEN_STATUSES) {
+      out.casesDerived = true;
+      state.moEngine.mos.forEach(m => {
+        if (!m.entities || m.entities.truckId !== truckId) return;
+        out.caseRows++;
+        const types = Array.from(new Set((m.evidence || []).map(e => e.signalType).filter(Boolean)));
+        out.rows.push({ t: m.openedAt, rung: 'CASE', alsoRung: 'CORRELATED', basis: null, kind: 'CASE',
+          caseId: m.id, status: m.status, band: m.confidenceBand || null,
+          open: FWMoEngine.OPEN_STATUSES.has(m.status),
+          label: types.length + ' signal type' + (types.length === 1 ? '' : 's') + ' correlated',
+          detail: types.map(t => String(t).replace(/_/g, ' ')).join(', ') || null });
+      });
+    }
+
+    out.rows.sort((a, b) => (a.t - b.t) || (RUNGS[a.rung] ? RUNGS[a.rung].rank : -1) -
+      (RUNGS[b.rung] ? RUNGS[b.rung].rank : -1));
+    out.shown = out.rows.length;
+    return out;
+  }
+
   function frame(state, opts) {
     if (!state) return null;
     const o = opts || {};
@@ -943,6 +1403,15 @@ const FWFreightMap = (() => {
       return p;
     });
     stackAtNodes(placements);
+
+    /* One walk of the case register, before anything reads it. */
+    const cases = caseIndexOf(state);
+    placements.forEach(p => {
+      const entry = cases.derived ? (cases.byTruck[p.truckId] || null) : null;
+      p.attention = attentionOf(p, entry);
+      p.openCaseCount = entry ? entry.open : (cases.derived ? 0 : null);
+      p.openCaseIds = entry ? entry.openIds.slice() : [];
+    });
 
     const drawn = placements.filter(p => p.drawn);
     const atNode = drawn.filter(p => p.kind === 'AT_NODE');
@@ -962,10 +1431,15 @@ const FWFreightMap = (() => {
       sited: n.facilityNames.length > 0
     }));
 
-    let openCases = null;
-    if (state.moEngine && window.FWMoEngine && FWMoEngine.OPEN_STATUSES) {
-      openCases = Array.from(state.moEngine.mos.values()).filter(m => FWMoEngine.OPEN_STATUSES.has(m.status)).length;
-    }
+    const openCases = cases.derived ? cases.openTotal : null;
+
+    /* The census the header reads. Counted over the DRAWN trucks, because that
+       is the population a reader can see, and stated with that denominator. */
+    const attentionCounts = { NORMAL: 0, WATCH: 0, ACTIVE: 0, HIGH_ATTENTION: 0, NOT_DERIVED: 0 };
+    drawn.forEach(p => {
+      const k = p.attention === null || p.attention === undefined ? 'NOT_DERIVED' : p.attention;
+      attentionCounts[k] = (attentionCounts[k] || 0) + 1;
+    });
 
     const selectedTruck = selectedId ? trucks.filter(t => t.id === selectedId)[0] || null : null;
 
@@ -978,7 +1452,33 @@ const FWFreightMap = (() => {
       selectedTruckId: selectedId,
       selectedRoute: selectedTruck ? selectedRoute(selectedTruck, lay) : null,
       selectedEntity: selectedTruck ? entityCardFor(selectedTruck, state, now) : null,
+      /* WHAT THIS SIMULATION CALLS A JOURNEY, and what it does not give one.
+
+         A journey here is a route id, a direction, a leg index and the seconds
+         elapsed ON THAT LEG. There is NO journey id and NO journey start
+         timestamp anywhere in journeyEngine, so this object reports neither and
+         says so instead. The Journey Inspector prints the route and direction
+         as the journey's identity, because that is the identity the simulation
+         actually has, and prints the elapsed time as what it is -- time on the
+         current leg, not time since departure. Summing the declared durations
+         of the completed legs would produce a plausible total that is a PLAN,
+         not an elapsed time, and it would be read as the second. */
+      selectedJourney: !selectedTruck || !selectedTruck.journey ? null : {
+        routeId: selectedTruck.journey.routeId,
+        direction: selectedTruck.journey.direction,
+        legIndex: selectedTruck.journey.legIndex,
+        legElapsedSeconds: selectedTruck.journey.legElapsed,
+        dwelling: !!selectedTruck.journey.dwelling,
+        hasJourneyId: false,
+        hasStartTimestamp: false,
+        whyNoElapsedTotal: 'journeyEngine records elapsed time per leg and no departure timestamp, so the time '
+          + 'since this journey began is not a number this simulation holds. The figure shown is time on the '
+          + 'current leg.'
+      },
+      selectedJourneyTimeline: selectedId ? journeyTimelineOf(state, selectedId, { now }) : null,
       timeline: timelineOf(state),
+      focus: focusOf(state, lay, o.focusCaseId !== undefined ? o.focusCaseId : focusCaseId),
+      attentionCounts,
       counts: {
         trucks: trucks.length,
         drawn: drawn.length,
@@ -1147,6 +1647,7 @@ const FWFreightMap = (() => {
   let els = {};
   let staticBuilt = false;
   let selectedTruckId = null;
+  let focusCaseId = null;
   const markers = new Map();      // truck id -> { g, state, watched, selected }
   let lastActivitySig = '';
   let lastRouteSig = '';
@@ -1157,6 +1658,7 @@ const FWFreightMap = (() => {
   let lastTimelineSig = null;
   let lastCameraSig = null;
   let lastHealthSig = null;
+  let lastFocusSig = null;
   /* cx/cy null means "the centre of the drawing", so an untouched camera holds no
      coordinate of its own that could drift out of step with the layout. */
   let camera = { scale: CAMERA.minScale, cx: null, cy: null };
@@ -1464,6 +1966,7 @@ const FWFreightMap = (() => {
       roadCentrelines(layout) +
       '<g id="fm-road-labels">' + roadLabels + '</g>' +
       '<g id="fm-route"></g>' +
+      '<g id="fm-focus-chain"></g>' +
       placeHalos(layout) +
       '<g id="fm-places">' + places + '</g>' +
       '<g id="fm-place-labels">' + placeLabels + '</g>' +
@@ -1512,6 +2015,11 @@ const FWFreightMap = (() => {
           return;
         }
         const target = e.target && e.target.closest ? e.target.closest('[data-truck-id]') : null;
+        /* A press anywhere on the map leaves Case Focus. A reader pointing at the
+           network is no longer pointing at the case, and leaving the world dimmed
+           around a case they have navigated away from would be the interface
+           holding an opinion after the reader changed theirs. */
+        if (focusCaseId) clearFocus();
         if (!target) { select(null); if (window.FWSimRunner) render(FWSimRunner.getState()); return; }
         const id = target.dataset ? target.dataset.truckId : target.getAttribute('data-truck-id');
         select(id === selectedTruckId ? null : id);
@@ -1528,6 +2036,17 @@ const FWFreightMap = (() => {
     }
     if (els.expand) {
       els.expand.addEventListener('click', () => { expandSelected(); });
+    }
+    /* Delegated on the panel, not bound to the button: the banner is rewritten on
+       every frame that changes it, and a listener bound to the element would be
+       bound to an element that no longer exists one tick later. */
+    if (els.selection) {
+      els.selection.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('#fm-focus-clear') : null;
+        if (!btn) return;
+        clearFocus();
+        if (window.FWSimRunner) render(FWSimRunner.getState());
+      });
     }
     wireCamera();
     return els;
@@ -1613,6 +2132,31 @@ const FWFreightMap = (() => {
   function select(id) { selectedTruckId = id || null; return selectedTruckId; }
   function selected() { return selectedTruckId; }
 
+  /* CASE FOCUS. Entering it selects the case's truck as well, because the panel
+     beside the map answers "what is this movement" and a reader who has just
+     asked about a case is asking about that movement. Leaving it does not
+     deselect: the truck is still a fair thing to be pointing at once the rest of
+     the network comes back up.
+
+     This writes two ids in this module and nothing else anywhere. It does not
+     touch the case, does not change its status, does not advance the clock, and
+     does not ask the simulation for anything -- everything the focus draws is
+     re-derived from simulation state on the next frame, so a case whose truck
+     finishes its journey mid-focus is drawn where the simulation now says it is
+     rather than where it was when the reader pressed. */
+  function focus(caseId, opts) {
+    const o = opts || {};
+    focusCaseId = caseId || null;
+    if (focusCaseId && o.select !== false && window.FWSimRunner) {
+      const st = FWSimRunner.getState();
+      const fo = st ? focusOf(st, defaultLayout(), focusCaseId) : null;
+      if (fo && fo.truckIds.length) selectedTruckId = fo.truckIds[0];
+    }
+    return focusCaseId;
+  }
+  function focused() { return focusCaseId; }
+  function clearFocus() { focusCaseId = null; return null; }
+
   function markerFor(p) {
     let m = markers.get(p.truckId);
     if (!m) {
@@ -1643,15 +2187,43 @@ const FWFreightMap = (() => {
       /* The heading is part of the signature. Without it a truck that turned a
          corner kept the body it was drawn with on the previous leg, because
          nothing else about it had changed. */
-      const sig = p.viewState + '|' + (p.watched ? 'W' : '-') + '|' + (p.selected ? 'S' : '-') +
+      /* The chain flag is an attribute, not a redraw: entering Case Focus dims
+         the world with ONE class on the svg and this attribute is what the
+         stylesheet keeps lit. No marker is rebuilt to be dimmed, which is why a
+         focus costs the same whether four trucks are drawn or forty. */
+      const inChain = !!(f.focus && f.focus.resolved && f.focus.truckIds.indexOf(p.truckId) >= 0);
+      if (m.chain !== inChain) {
+        m.chain = inChain;
+        /* Written as "1" or "0" rather than set and removed. The stylesheet keys
+           on [data-chain="1"], so "0" is off just as absence is, and one method
+           on one element is a smaller surface than two -- attribute removal is
+           the one DOM call this module would otherwise make that its own test
+           harness does not implement, and a render path that only works in a real
+           browser is a render path nothing checks. */
+        m.g.setAttribute('data-chain', inChain ? '1' : '0');
+      }
+      const sig = p.viewState + '|' + (p.attention || 'x') + '|' + (p.selected ? 'S' : '-') +
         '|' + (heading === null ? 'x' : heading);
       if (m.sig === sig) return;
       m.sig = sig;
       const st = VIEW_STATE_STYLE[p.viewState];
-      const ring = p.watched
-        ? '<circle r="10" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="2 2"/>' : '';
+      /* One ring per rung, and the rung is read off the frame. A dashed ring is
+         a signal with a lifetime, a solid ring is an open case, and a doubled
+         ring is an open case in one of moEngine's two highest bands. NORMAL
+         draws no ring at all -- the quiet majority stays quiet, which is the
+         only reason the loud minority reads as loud. */
+      const tone = p.attention ? ATTENTION_TONE[p.attention] : null;
+      let ring = '';
+      if (tone && tone.ring === 'dashed') {
+        ring = '<circle r="10" fill="none" stroke="' + tone.stroke + '" stroke-width="1.2" stroke-dasharray="2 2"/>';
+      } else if (tone && tone.ring === 'solid') {
+        ring = '<circle r="10" fill="none" stroke="' + tone.stroke + '" stroke-width="1.4"/>';
+      } else if (tone && tone.ring === 'double') {
+        ring = '<circle r="10" fill="none" stroke="' + tone.stroke + '" stroke-width="1.4"/>' +
+          '<circle r="13.5" fill="none" stroke="' + tone.stroke + '" stroke-width="1" opacity="0.5"/>';
+      }
       const halo = p.selected
-        ? '<circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1" opacity="0.85"/>' : '';
+        ? '<circle r="17" fill="none" stroke="#e2e8f0" stroke-width="1" opacity="0.85"/>' : '';
       /* The rings and the label are OUTSIDE the rotation. A watched ring that
          turned with the truck would still be a circle, but the id label would
          have ended up upside down on every westbound leg. */
@@ -1660,7 +2232,7 @@ const FWFreightMap = (() => {
         : '<g transform="rotate(' + heading + ')">' + truckBody(st) + '</g>';
       m.g.innerHTML =
         halo + ring + body +
-        (p.selected ? '<text x="0" y="-18" text-anchor="middle" font-size="9" fill="#e2e8f0">' + esc(p.truckId) +
+        (p.selected ? '<text x="0" y="-21" text-anchor="middle" font-size="9" fill="#e2e8f0">' + esc(p.truckId) +
           '</text>' : '');
     });
   }
@@ -1697,21 +2269,92 @@ const FWFreightMap = (() => {
     }).join('');
   }
 
+  /* CASE FOCUS, drawn in two moves and no more.
+
+     MOVE ONE is a class on the svg element. The stylesheet drops the opacity of
+     the road layer, the place layer, both label layers, the occupancy badges and
+     the legend in one declaration, and drops every truck marker except the ones
+     carrying data-chain. That is the whole dim: no element is rebuilt, no list
+     of markers is queried out of the document, and the cost does not grow with
+     the size of the world. A world of four hundred trucks would dim in the same
+     one attribute write.
+
+     MOVE TWO is this small layer. The dim takes the chain's PLACES and their
+     LABELS down with everything else -- they live in the shared layers -- so the
+     ones that belong to the case are re-asserted here, brightly, and nowhere
+     else. The route's roads are not re-asserted because renderRoute already
+     draws them into a layer the dim does not touch, and drawing them twice would
+     be two paths to one road.
+
+     The layer holds at most one ring and one label per node on one route, plus
+     one site marker. It is rewritten only when the focused case, or the route
+     under it, actually changes. */
+  function renderFocus(f) {
+    const fo = f.focus;
+    const on = !!(fo && fo.resolved);
+    if (els.svg && els.svg.classList) {
+      els.svg.classList.toggle('fw-focus', on);
+      /* A plain selection dims too, but far less: a reader who clicked a truck
+         is asking about it, not investigating a case, and burying the network
+         they clicked it out of would answer a question they did not ask. */
+      els.svg.classList.toggle('fw-select', !on && !!f.selectedTruckId);
+    }
+    const host = document.getElementById('fm-focus-chain');
+    if (!host) return;
+    const sig = !on ? '' : [fo.caseId, fo.status, fo.siteNodeId, fo.nodeIds.join('>')].join('|');
+    if (sig === lastFocusSig) return;
+    lastFocusSig = sig;
+    if (!on) { host.innerHTML = ''; return; }
+    const byId = f.layout.byId;
+    const parts = fo.nodeIds.map(id => {
+      const n = byId[id];
+      if (!n) return '';
+      const isSite = id === fo.siteNodeId;
+      return '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + (n.style.size + (isSite ? 9 : 5)) + '" ' +
+        'fill="none" stroke="' + (isSite ? '#f87171' : '#38bdf8') + '" stroke-width="' + (isSite ? 1.6 : 1) +
+        '" opacity="' + (isSite ? 0.9 : 0.55) + '"/>' +
+        '<text x="' + n.x + '" y="' + (n.y + n.style.size + 13) + '" text-anchor="middle" font-size="10" ' +
+        'fill="#e2e8f0">' + esc(n.label) + '</text>' +
+        (isSite ? '<text x="' + n.x + '" y="' + (n.y - n.style.size - 13) + '" text-anchor="middle" ' +
+          'font-size="8" fill="#fca5a5">SIGNALS SEEN HERE</text>' : '');
+    }).join('');
+    host.innerHTML = parts;
+  }
+
   function renderHeader(f) {
     if (els.clock) {
+      /* The shift chip came from the second clock this page used to carry, in
+         sim-debug. That clock is gone -- it printed this same day, time, shift and
+         speed a few hundred pixels above -- and the chip came here rather than
+         being dropped with it, so removing a duplicate cost the page nothing. */
       els.clock.innerHTML = '<b class="text-white">Day ' + f.clock.day + '</b> · ' + f.clock.timeOfDay +
-        ' · <span class="uppercase">' + esc(f.clock.shift) + '</span> · <span class="text-sky-400">' +
+        ' · <span class="uppercase shift-chip shift-chip-' + esc(f.clock.shift) + '">' +
+        esc(f.clock.shift) + '</span> · <span class="text-sky-400">' +
         (f.clock.running ? f.clock.speed + 'x' : 'PAUSED') + '</span>';
     }
     if (els.stats) {
       const c = f.counts;
       const cases = c.openCases === null ? 'open cases not derived here' : c.openCases + ' open case' +
         (c.openCases === 1 ? '' : 's');
-      els.stats.textContent =
+      /* WHERE TO LOOK, before what there is. The census used to open on how many
+         trucks were drawn, which is a fact about the drawing. It now opens on the
+         rungs, because that is the question a reader arriving at this map has --
+         and it is stated over the DRAWN trucks, which is the population they can
+         see, rather than over the fleet, which it is not. */
+      const a = f.attentionCounts || {};
+      const rungs = [
+        a.HIGH_ATTENTION ? a.HIGH_ATTENTION + ' at high attention' : null,
+        a.ACTIVE ? a.ACTIVE + ' named by an open case' : null,
+        a.WATCH ? a.WATCH + ' carrying an active signal' : null,
+        a.NOT_DERIVED ? a.NOT_DERIVED + ' whose rung was not derived' : null
+      ].filter(Boolean);
+      const ladderLine = rungs.length
+        ? 'Of the ' + c.drawn + ' trucks drawn: ' + rungs.join(', ') + '. The rest are on no rung.'
+        : 'None of the ' + c.drawn + ' trucks drawn is on a rung above normal right now.';
+      els.stats.textContent = ladderLine + ' A rung is an order to look in, not a finding — ' +
         c.drawn + ' of ' + c.trucks + ' trucks on the network · ' + c.inTransit + ' on a road · ' +
-        c.atNode + ' standing at a place · ' + c.watchedTrucks + ' carrying an active signal (' +
-        c.activeSignals + ' signals) · ' + cases + ' · ' + c.facilitiesOnMap + ' places · ' + c.roads +
-        ' roads · ' + c.routes + ' routes';
+        c.atNode + ' standing at a place · ' + c.activeSignals + ' active signals · ' + cases +
+        ' · ' + c.facilitiesOnMap + ' places · ' + c.roads + ' roads · ' + c.routes + ' routes';
     }
   }
 
@@ -1739,14 +2382,61 @@ const FWFreightMap = (() => {
       : (p.signalCount === 0
         ? 'no active signal'
         : p.signalCount + ' active signal' + (p.signalCount === 1 ? '' : 's') + ' — ' + ATTENTION.doesNotMean);
-    els.selection.innerHTML =
-      '<div class="text-[11px] text-white font-mono mb-1">' + esc(p.truckId) + ' · ' + esc(p.viewState) + '</div>' +
-      '<div class="text-[10px] text-slate-400 mb-1">' + where + '</div>' +
-      '<div class="text-[10px] text-slate-500 mb-1">' + chain + '</div>' +
-      (r ? '<div class="text-[10px] text-slate-600 mb-1">' + esc(r.label) + ' · ' + r.distanceKm + ' km end to end · leg ' + (p.legIndex + 1) + ' of ' + r.legs + '</div>' : '') +
+    /* The rung, as a word beside the marker's ring, so the two cannot be read as
+       different things. Both are p.attention. */
+    const at = p.attention;
+    const tone = at ? ATTENTION_TONE[at] : null;
+    const badge = !at
+      ? '<span class="fm-rung-badge text-slate-500">RUNG NOT DERIVED</span>'
+      : (tone && tone.label
+        ? '<span class="fm-rung-badge" style="color:' + tone.stroke + ';border-color:' + tone.stroke + '33">' +
+          tone.label + '</span>'
+        : '<span class="fm-rung-badge text-slate-500">NORMAL</span>');
+
+    const j = f.selectedJourney;
+    const journeyLine = !j
+      ? '<div class="text-[10px] text-slate-600">This truck is running no journey, so it has no route, no origin ' +
+        'and no destination to report.</div>'
+      : '<div class="text-[10px] text-slate-400">' + esc(j.routeId) + ' · ' + esc(j.direction) +
+        (r ? ' · leg ' + (p.legIndex + 1) + ' of ' + r.legs + ' · ' + r.distanceKm + ' km end to end' : '') +
+        '</div>' +
+        '<div class="text-[10px] text-slate-600">' + Math.round(j.legElapsedSeconds / 60) + ' min elapsed on this ' +
+        'leg. There is no journey id and no departure timestamp in this simulation, so the route and direction ' +
+        'above are the journey\'s identity and the figure is leg time, not time since departure.</div>';
+
+    const fo = f.focus;
+    const focusBanner = !fo ? '' : (fo.resolved
+      ? '<div class="fm-focus-banner">' +
+        '<div class="flex items-center justify-between gap-2">' +
+        '<span class="text-[10px] tracking-widest text-rose-300 uppercase">Case focus</span>' +
+        '<button id="fm-focus-clear" class="text-[10px] text-slate-400 hover:text-white underline">' +
+        'Show the whole network</button></div>' +
+        '<div class="text-[10px] text-slate-300 font-mono mt-0.5">' + esc(fo.caseId) + '</div>' +
+        '<div class="text-[10px] text-slate-400">' + esc(fo.status) +
+        (fo.band ? ' · band ' + esc(fo.band) : '') +
+        (fo.classification ? ' · ' + esc(String(fo.classification).replace(/_/g, ' ')) : '') + '</div>' +
+        '<div class="text-[9px] text-slate-500 mt-0.5">Lit: ' + esc(fo.lightsOnly) + '. Never lit: ' +
+        esc(fo.neverLights) + '.</div>' +
+        (fo.siteName && fo.sitePlaced === false
+          ? '<div class="text-[9px] text-fuchsia-300 mt-0.5">This case names the site "' + esc(fo.siteName) +
+            '", which matches no place on the map, so the site is not lit anywhere.</div>' : '') +
+        '</div>'
+      : '<div class="fm-focus-banner"><div class="text-[10px] text-slate-400">A case was focused (' +
+        esc(fo.caseId) + ') but it is not on the record this frame was read from (' + esc(fo.why) +
+        '), so nothing is lit for it. <button id="fm-focus-clear" class="underline hover:text-white">Clear' +
+        '</button></div></div>');
+
+    els.selection.innerHTML = focusBanner +
+      '<div class="flex items-baseline justify-between gap-2 mb-1">' +
+      '<span class="text-[11px] text-white font-mono">' + esc(p.truckId) + '</span>' + badge + '</div>' +
+      '<div class="text-[10px] text-slate-300 mb-1">' + esc(p.viewState) + ' — ' + where + '</div>' +
+      journeyLine +
+      '<div class="text-[10px] text-slate-500 my-1">' + chain + '</div>' +
       '<div class="text-[10px] text-amber-300/80">' + sig + '</div>' +
-      '<div class="text-[10px] text-slate-600 mt-1">Lifecycle stage: ' + esc(p.status) + '. The visual state above ' +
-      'is that stage restated for where the truck is, not a second opinion about it.</div>';
+      '<div class="text-[9px] text-slate-600 mt-1">Lifecycle stage: ' + esc(p.status) + '. The visual state above ' +
+      'is that stage restated for where the truck is, not a second opinion about it. ' +
+      esc(ATTENTION_LEVELS[at] ? ATTENTION_LEVELS[at].means : 'The rung was not derived on this surface.') +
+      '</div>';
   }
 
   /* Tone per severity basis, keyed on the three answers eventEngine's own
@@ -1772,7 +2462,7 @@ const FWFreightMap = (() => {
     lastCardSig = sig;
     if (!e) {
       els.entityCard.innerHTML = '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">' +
-        'Selected movement</div><p class="text-[10px] text-slate-500 italic">Nothing is selected. Choosing a ' +
+        'Entities and signals</div><p class="text-[10px] text-slate-500 italic">Nothing is selected. Choosing a ' +
         'truck on the map reads out what it is linked to right now and what is currently observed about it, ' +
         'without leaving the network.</p>';
       return;
@@ -1811,11 +2501,12 @@ const FWFreightMap = (() => {
           e.cases.closed + ' closed'
         : 'No correlated case names this truck.');
 
-    const head = '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Selected movement</div>';
+    /* The id and the lifecycle state used to be repeated here. They are three
+       lines above, in the inspector head, and the same fact printed twice a
+       hand's width apart reads as two facts. */
+    const head = '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Entities and signals</div>';
     const sub = k => '<div class="text-[10px] font-semibold text-slate-400 uppercase mt-2 mb-1">' + k + '</div>';
     els.entityCard.innerHTML = head +
-      '<div class="text-[11px] text-white font-mono">' + esc(e.truckId) + '</div>' +
-      '<div class="text-[10px] text-slate-400">' + esc(e.statusLabel) + '</div>' +
       sub('Currently linked to') + links +
       sub('Active signals (' + (e.signalCount === null ? 'not counted here' : e.signalCount) + ')') + signalsHtml +
       sub('Cases naming it') +
@@ -1826,11 +2517,66 @@ const FWFreightMap = (() => {
       'simulation state this card was read from.</p>';
   }
 
+  /* One row of either strip. The rung is a WORD on the row and a border colour
+     beside it, never a colour alone: a reader who cannot tell sky from orange is
+     otherwise being shown a ladder they cannot climb. */
+  function rungRow(r, label) {
+    const rung = r.rung || 'UNDECLARED';
+    const tone = RUNG_TONE[rung] || 'border-fuchsia-500/60 text-fuchsia-200';
+    return '<div class="shrink-0 border-l-2 ' + tone + ' pl-1.5 pr-2 py-0.5">' +
+      '<div class="text-[9px] text-slate-500 font-mono">' + clockLabel(r.t) + '</div>' +
+      '<div class="text-[8px] tracking-widest uppercase opacity-80">' +
+      (r.alsoRung ? esc(r.alsoRung) + ' → ' + esc(rung) : esc(rung)) + '</div>' +
+      '<div class="text-[10px] leading-tight whitespace-nowrap text-slate-300">' + esc(label) + '</div>' +
+      (r.detail ? '<div class="text-[9px] text-slate-500 whitespace-nowrap">' + esc(r.detail) + '</div>' : '') +
+      '</div>';
+  }
+
+  /* The selected journey's ladder. Replaces the world strip while something is
+     selected, in the same box, because two strips side by side would be two
+     things a reader has to work out the difference between. Deselecting brings
+     the world strip straight back. */
+  function renderJourneyTimeline(f) {
+    const jt = f.selectedJourneyTimeline;
+    const head = '<div class="text-[10px] font-semibold text-slate-400 uppercase mb-1">' +
+      'Journey ladder · ' + esc(jt.truckId) + '</div>';
+    if (!jt.shown) {
+      els.timeline.innerHTML = head + '<p class="text-[10px] text-slate-500 italic">Nothing is currently held ' +
+        'about this movement on any rung. ' + esc(jt.eventsAreAWindow) + '</p>';
+      return;
+    }
+    const rows = jt.rows.map(r => rungRow(r, r.label)).join('');
+    const ladder = RUNG_LADDER.order.map(k =>
+      '<span class="' + (RUNG_TONE[k] || '').split(' ').slice(1).join(' ') + '">' + k + '</span>').join(
+      ' <span class="text-slate-700">›</span> ');
+    els.timeline.innerHTML = head +
+      '<div class="text-[9px] mb-1">' + ladder + '</div>' +
+      '<div class="flex items-stretch gap-2 overflow-x-auto scrollbar-thin pb-1">' + rows + '</div>' +
+      '<p class="text-[9px] text-slate-500 mt-1">' + jt.eventRows + ' recorded event' +
+      (jt.eventRows === 1 ? '' : 's') + ', ' + (jt.signalsDerived ? jt.signalRows + ' active signal' +
+        (jt.signalRows === 1 ? '' : 's') : 'signals not derived here') + ', ' +
+      (jt.casesDerived ? jt.caseRows + ' case' + (jt.caseRows === 1 ? '' : 's') : 'cases not derived here') +
+      ', oldest first.' +
+      (jt.undeclaredRows ? ' ' + jt.undeclaredRows + ' row' + (jt.undeclaredRows === 1 ? '' : 's') +
+        ' carry a severity this program does not declare, so they sit on no rung.' : '') +
+      ' ' + esc(jt.eventsAreAWindow) + ' ' + esc(jt.signalsAreActiveOnly) + ' ' + esc(RUNG_LADDER.doesNotMean) +
+      ' ' + esc(RUNG_LADDER.sharedTimestamp) + '</p>';
+  }
+
   function renderTimeline(f) {
     if (!els.timeline) return;
+    const jt = f.selectedJourneyTimeline;
+    if (jt && jt.truckId) {
+      const jsig = 'J|' + jt.truckId + '|' + jt.shown + '|' + jt.eventRows + '|' + jt.signalRows + '|' +
+        jt.caseRows + '|' + (jt.rows[0] ? jt.rows[0].t + '/' + jt.rows[0].rung : '-');
+      if (jsig === lastTimelineSig) return;
+      lastTimelineSig = jsig;
+      renderJourneyTimeline(f);
+      return;
+    }
     const tl = f.timeline;
     const first = tl.rows[0];
-    const sig = tl.shown + '|' + tl.held + '|' + tl.totalSoFar + '|' +
+    const sig = 'W|' + tl.shown + '|' + tl.held + '|' + tl.totalSoFar + '|' +
       (first ? first.t + '/' + first.type + '/' + first.entityId : '-');
     if (sig === lastTimelineSig) return;
     lastTimelineSig = sig;
@@ -1840,11 +2586,8 @@ const FWFreightMap = (() => {
         'yet in this run. An empty strip is an empty record, not a quiet network.</p>';
       return;
     }
-    const rows = tl.rows.map(r =>
-      '<div class="shrink-0 border-l-2 ' + (BASIS_TONE[r.basis] || BASIS_TONE.ROUTINE) + ' pl-1.5 pr-2 py-0.5">' +
-      '<div class="text-[9px] text-slate-500 font-mono">' + clockLabel(r.t) + '</div>' +
-      '<div class="text-[10px] leading-tight whitespace-nowrap">' + esc(String(r.type).replace(/_/g, ' ')) + '</div>' +
-      '<div class="text-[9px] text-slate-500 font-mono">' + esc(r.entityId) + '</div></div>').join('');
+    const rows = tl.rows.map(r => rungRow({ t: r.t, rung: rungOf(r.basis), detail: r.entityId },
+      String(r.type).replace(/_/g, ' '))).join('');
     const totalClause = tl.totalSoFar === null ? ''
       : ', out of ' + tl.totalSoFar + ' recorded since this run began';
     const undeclaredClause = tl.undeclared
@@ -1887,6 +2630,7 @@ const FWFreightMap = (() => {
     els.svg.setAttribute('viewBox', box.viewBox);
     renderRoute(f);
     renderActivity(f);
+    renderFocus(f);
     renderTrucks(f);
     renderHeader(f);
     renderSelection(f);
@@ -2064,6 +2808,8 @@ const FWFreightMap = (() => {
   const STYLE_CHECK = assertNodeStyles();
   const EDGE_CHECK = assertEdgeStyles();
   const VIEW_CHECK = assertViewStates();
+  const LADDER_CHECK = assertAttentionLadder();
+  const RUNG_CHECK = assertRungLadder();
 
   return {
     LAYOUT_SCALE, LAYOUT, DECOR, TRUCK_ART, headingOf, truckBody,
@@ -2079,6 +2825,11 @@ const FWFreightMap = (() => {
     PORT_DRILL, portDrillTarget, openWorld,
     hopDepths, buildLayout, defaultLayout, placementFor, stackAtNodes, selectedRoute, frame,
     entityCardFor, timelineOf, clockLabel, expandSelected,
+    ATTENTION_LEVELS, ATTENTION_TONE, HIGH_ATTENTION_BANDS, ESCALATED_STATUS,
+    assertAttentionLadder, LADDER_CHECK,
+    attentionOf, caseIndexOf, focusOf, bandsVerified,
+    RUNGS, RUNG_TONE, RUNG_LADDER, assertRungLadder, RUNG_CHECK, rungOf, journeyTimelineOf,
+    focus, focused, clearFocus,
     staticSvg, init, render, select, selected, summary
   };
 })();

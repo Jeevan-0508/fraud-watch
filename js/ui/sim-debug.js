@@ -44,7 +44,6 @@ const FWSimDebug = (() => {
   function init() {
     els = {
       root: document.getElementById('sim-root'),
-      clock: document.getElementById('sim-clock'),
       speedBtns: document.querySelectorAll('#sim-speed-controls .sim-speed-btn'),
       pauseBtn: document.getElementById('sim-pause-btn'),
       ffBtn: document.getElementById('sim-ff-btn'),
@@ -260,15 +259,28 @@ const FWSimDebug = (() => {
     if (cls) els.root.classList.add(cls);
   }
 
+  /* THE CLOCK READ-OUT THIS MODULE USED TO OWN IS GONE, AND WHY.
+
+     There were two clocks on this page. This one and the one in the map header
+     printed the same day, the same time, the same shift and the same speed, a few
+     hundred pixels apart, and a reader who noticed both had to work out whether
+     they were two clocks or one. The map header keeps its clock, because that is
+     where the drawing it describes is; this module no longer reaches for
+     #sim-clock at all, and index.html no longer declares it, so nothing here
+     looks up an element the page does not have.
+
+     WHAT THIS FUNCTION STILL DOES, and the bug that made keeping it necessary.
+
+     The shift tint over the whole Live Sim view was applied inside this function
+     BELOW a `if (!els.clock) return` guard. So the tint on an entire view was
+     conditional on one small text node existing, and deleting that text node as a
+     duplicate would silently have taken the tint with it -- a visual change with
+     no visible cause, in a module nobody would have thought to look in. The tint
+     is a property of the view and not of a clock line, so it is applied first and
+     unconditionally, and it is all this function does now. The name is kept
+     because the caller and the render order are unchanged. */
   function renderClock(state) {
-    if (!els.clock) return;
-    const c = state.clock;
-    const shift = c.shift();
-    applyShiftTint(shift);
-    els.clock.innerHTML =
-      `<b class="text-white">Day ${c.day}</b> · ${c.timeOfDay()} · ` +
-      `<span class="uppercase shift-chip shift-chip-${shift}">${shift}</span> · ` +
-      `<span class="text-sky-400">${c.running ? c.speed + 'x' : 'PAUSED'}</span>`;
+    applyShiftTint(state.clock.shift());
   }
 
   function renderCounts(state) {

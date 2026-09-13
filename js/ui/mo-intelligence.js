@@ -71,7 +71,24 @@ const FWMoIntelligence = (() => {
         const viewBtn = e.target.closest('[data-mo-view]');
         if (viewBtn) {
           const id = viewBtn.dataset.moView;
-          if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+          const opening = !expanded.has(id);
+          if (opening) expanded.add(id); else expanded.delete(id);
+          /* Opening a case here also puts the MAP into Case Focus on it, and
+             closing it releases the map again. The two surfaces were previously
+             unconnected: a reader could read a case in full here and have no way
+             to see which part of the network it was about, because this panel
+             names entities and the map draws places and neither pointed at the
+             other.
+
+             Nothing is handed over but the case id. freight-map re-derives the
+             truck, the route and the site from the same simulation state it draws
+             everything else from, so this panel cannot tell the map something the
+             map would not have worked out itself, and the two cannot disagree
+             about which movement a case is about. */
+          if (window.FWFreightMap) {
+            if (opening) FWFreightMap.focus(id); else FWFreightMap.clearFocus();
+            if (window.FWSimRunner) FWFreightMap.render(FWSimRunner.getState());
+          }
           render(FWSimRunner.getState());
         }
       });

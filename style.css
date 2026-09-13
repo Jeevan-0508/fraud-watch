@@ -91,3 +91,71 @@ body { background: #05070a; font-family: 'Inter', system-ui, sans-serif; }
 .shift-chip-morning{background:rgba(56,189,248,.18);color:#7dd3fc}
 .shift-chip-peak{background:rgba(245,158,11,.18);color:#fcd34d}
 .shift-chip-evening{background:rgba(234,88,12,.18);color:#fdba74}
+
+/* ---- Slice 85: control-tower legibility ----------------------------------
+   CASE FOCUS IS ONE CLASS. Entering it writes `fw-focus` on the svg element
+   and nothing else: no marker is rebuilt, no list of elements is walked, and
+   the cost of dimming does not grow with the number of trucks or places drawn.
+   The layers named below are the ones staticSvg builds once; #fm-route and
+   #fm-focus-chain are deliberately absent from the list, because those two ARE
+   the lit chain.
+
+   fw-select is the same mechanism at a much lower strength. A reader who
+   clicked one truck is asking about it; burying the network they clicked it out
+   of would answer a question they did not ask. */
+#freight-map-svg #fm-roads,
+#freight-map-svg #fm-road-labels,
+#freight-map-svg #fm-places,
+#freight-map-svg #fm-place-labels,
+#freight-map-svg #fm-activity,
+#freight-map-svg #fm-legend,
+#freight-map-svg .fm-truck { transition: opacity .32s ease }
+
+#freight-map-svg.fw-focus #fm-roads,
+#freight-map-svg.fw-focus #fm-road-labels,
+#freight-map-svg.fw-focus #fm-places,
+#freight-map-svg.fw-focus #fm-place-labels,
+#freight-map-svg.fw-focus #fm-activity,
+#freight-map-svg.fw-focus #fm-legend { opacity: .16 }
+#freight-map-svg.fw-focus .fm-truck { opacity: .12 }
+#freight-map-svg.fw-focus .fm-truck[data-chain="1"] { opacity: 1 }
+
+#freight-map-svg.fw-select .fm-truck { opacity: .5 }
+#freight-map-svg.fw-select .fm-truck[data-chain="1"] { opacity: 1 }
+
+/* The lit chain fades IN once when a case is focused, and then holds still.
+   Nothing on this layer pulses: a marker that keeps moving after the reader has
+   arrived is asking for attention it has already been given. */
+#fm-focus-chain { animation: fmChainIn .38s ease-out both }
+@keyframes fmChainIn { from { opacity: 0 } to { opacity: 1 } }
+
+.fm-rung-badge {
+  font-size: .58rem; letter-spacing: .1em; text-transform: uppercase;
+  border: 1px solid #1c2531; border-radius: .3rem; padding: .05rem .3rem;
+  white-space: nowrap;
+}
+.fm-focus-banner {
+  border-left: 2px solid #f87171; background: rgba(248,113,113,.06);
+  padding: .35rem .5rem; margin-bottom: .5rem; border-radius: 0 .35rem .35rem 0;
+}
+
+/* NOISE REDUCTION. Seven panels below the map each carried a 1px slate border
+   and a 1rem radius, which gave a calibration ledger the same visual weight as
+   the network. They keep their own background and lose the box: one hairline at
+   the top is enough to separate two panels, and the map is the only thing on
+   the page still drawn inside a border. Nothing is hidden and nothing is
+   removed -- the panels are exactly as reachable as before. */
+.fw-panel { border: 0; border-top: 1px solid #131a24; border-radius: 0; padding-left: 0; padding-right: 0 }
+.fw-panel > h3 { letter-spacing: .12em }
+
+/* Long explanatory prose collapses behind a summary rather than being deleted.
+   The full text is one press away and is still in the document for anything
+   that reads it. */
+.fw-note > summary {
+  cursor: pointer; list-style: none; color: #64748b; font-size: .625rem;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.fw-note > summary::-webkit-details-marker { display: none }
+.fw-note > summary::before { content: "\203a "; display: inline-block; transition: transform .2s ease }
+.fw-note[open] > summary::before { transform: rotate(90deg) }
+.fw-note > div { color: #64748b; font-size: .625rem; line-height: 1.5; margin-top: .35rem }
