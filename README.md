@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/jk-brand-banner.png" alt="Jeevan Siddhabhaktula — Risk. Governance. AI." width="280"></p>
+
 # Fraud Watch
 
 ## A Living Freight-Fraud Investigation Simulator
