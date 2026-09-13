@@ -182,17 +182,34 @@ const FWEventEngine = (() => {
   // ctx (optional): { shift } — normal traffic volume follows the shift's
   // throughput multiplier (Phase 37), so 03:00 is genuinely quieter than
   // 14:00 instead of the port running flat around the clock.
+  /* The fleet size the ~1-roll-per-30-sim-seconds rate above was calibrated
+     at. It is a DENOMINATOR, not a target or a limit: nothing refuses a fleet
+     of any other size, and entityEngine.POPULATION_SCALE owns how big the
+     fleet actually is. */
+  const FLEET_REFERENCE = 8;
+
   function step(engine, registry, timestamp, dtSeconds, ctx = {}) {
     const emitted = [];
     const throughput = (ctx.shift && window.FWShiftEngine)
       ? FWShiftEngine.throughputMultiplier(ctx.shift) : 1;
-    const rollBudget = Math.max(1, Math.round(dtSeconds / 30)); // ~1 roll per 30 sim-seconds
+    /* THE ROLL BUDGET IS PER FLEET, NOT PER PORT (Slice 81).
+
+       It used to be Math.round(dtSeconds / 30) and nothing else, so the whole
+       port emitted about one roll per 30 sim-seconds and each roll picked ONE
+       random truck. Measured consequence: raising the fleet from 8 trucks to
+       24 left total event volume flat and cut observations per truck to a
+       third. A port with three times the trucks records three times the gate
+       scans and dock stamps; it does not record the same number spread
+       thinner. FLEET_REFERENCE names the fleet size the 1-per-30s rate was
+       calibrated at so the old behaviour is recoverable and the number is not
+       a bare literal. */
+    const trucks = FWEntityEngine.all(registry, 'truck');
+    if (!trucks.length) return emitted;
+    const rollBudget = Math.max(1, Math.round((dtSeconds / 30) * (trucks.length / FLEET_REFERENCE)));
     const chance = Math.min(0.9, dtSeconds > 0 ? 0.35 * throughput : 0);
 
     for (let i = 0; i < rollBudget; i++) {
       if (!engine.rng.chance(chance)) continue;
-      const trucks = FWEntityEngine.all(registry, 'truck');
-      if (!trucks.length) continue;
       const truck = engine.rng.pick(trucks);
       const type = engine.rng.pick(NORMAL_EVENT_TYPES);
       const metadata = { summary: type.replace(/_/g, ' ').toLowerCase() };
@@ -208,7 +225,7 @@ const FWEventEngine = (() => {
     return emitted;
   }
 
-  return { createEngine, emit, step, NORMAL_EVENT_TYPES, LOG_CAP,
+  return { createEngine, emit, step, NORMAL_EVENT_TYPES, LOG_CAP, FLEET_REFERENCE,
     EVENT_SEVERITY, SEVERITY_SPACES, SEVERITY_BASIS, severityBasis,
     isEventSeverity, isDisruptionSeverity,
     assertEventSeverityDeclared, assertSeveritySpacesDistinct };

@@ -34,7 +34,15 @@
 const FWMoEngine = (() => {
   const CREATE_THRESHOLD = 3.5;      // combined weight*reliability needed to open an MO
   const MIN_SIGNAL_TYPES = 2;        // require a chain of >=2 distinct signal kinds
-  const DISMISS_IDLE_SECONDS = 3600; // unresolved + quiet this long -> fades on its own
+  /* How long an unresolved case stays open with no new signal before the
+     engine fades it. It was 3600 -- one sim-hour -- and measured over 336
+     sim-hours that left a case open for a median of 2.5 hours and the case
+     list empty for about 95% of the run. An hour of quiet is not a stale
+     case: a real queue holds an unresolved case for at least a shift, and
+     the case can only be reviewed by someone who is looking at the time it
+     happens to exist. Raising this does NOT change how many cases open, only
+     how long an unreviewed one stays visible before it lapses unjudged. */
+  const DISMISS_IDLE_SECONDS = 28800; // 8 sim-hours -- one shift of quiet
 
   const OPEN_STATUSES = new Set(['NEW', 'MONITORING', 'INVESTIGATING', 'ESCALATED']);
   const CLOSED_STATUSES = new Set(['CONFIRMED', 'DISMISSED', 'FALSE_POSITIVE', 'RESOLVED']);

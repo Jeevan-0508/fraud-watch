@@ -389,6 +389,7 @@ const FWSimDebug = (() => {
 
   function renderMOs(state) {
     if (!els.moList) return;
+    const MO_LIST_CAP = 12;
     const mos = Array.from(state.moEngine.mos.values())
       .sort((a, b) => b.lastObserved - a.lastObserved);
 
@@ -472,7 +473,20 @@ const FWSimDebug = (() => {
       els.moList.innerHTML = summaryHtml + '<p class="text-slate-600 text-xs italic">No open cases yet — normal traffic only.</p>';
       return;
     }
-    els.moList.innerHTML = summaryHtml + mos.slice(0, 12).map(mo => {
+    /* THE PANEL SHOWS TWELVE AND THERE ARE MORE THAN TWELVE NOW (Slice 81).
+
+       This was `mos.slice(0, 12)` with nothing said about the other cases. At
+       the fleet size this build shipped with there were rarely twelve, so the
+       cut never bit; measured at the fleet size it ships with NOW there are
+       routinely thirty-odd, and the panel was dropping two thirds of them
+       silently while its own summary counted all of them. A list that is a
+       subset of its own headline has to name the subset. */
+    const shown = mos.slice(0, MO_LIST_CAP);
+    const cutNote = mos.length > shown.length
+      ? `<p class="text-amber-500/80 text-[10px] mb-2">Showing the ${shown.length} most recently observed of
+         ${mos.length} cases. The counts above are over all ${mos.length}, not over these ${shown.length}.</p>`
+      : '';
+    els.moList.innerHTML = summaryHtml + cutNote + shown.map(mo => {
       const fpScope = mo.falsePositives || { items: [], note: '' };
       const fp = (fpScope.items || [])
         .map(f => `<li>${typeof f === 'string' ? f : (f.looks_like || JSON.stringify(f))}</li>`).join('');

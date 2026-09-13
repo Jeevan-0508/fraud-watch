@@ -198,6 +198,53 @@ const FWFreightMap = (() => {
     CHECKPOINT:         { shape: 'triangle', size: 11, fill: '#1c1917', stroke: '#fbbf24', label: 'Gate' }
   };
 
+  /* THE SCENERY (Slice 82).
+
+     Everything in this table is DECORATION and carries no simulation meaning
+     whatsoever. The grid is not a coordinate system, the glow is not a
+     measurement, the road casing is not a width and the ground tint is not
+     terrain, weather, land, water or a region. worldGraph has no coordinates
+     at all (see LAYOUT_SCALE), so nothing drawn here could be converted back
+     into one even in principle.
+
+     It is declared as a table rather than written inline for the same reason
+     every other number in this build is: a reader who finds `r + 9` inside a
+     template string has no way to tell a halo radius from a distance. */
+  const DECOR = {
+    kind: 'VIEW',
+    scope: 'purely cosmetic SVG drawn under the roads and places',
+    means: 'nothing. It exists so twenty places and twenty-six roads read as a network at a glance.',
+    doesNotMean: 'terrain, land, water, geography, a coordinate grid, a scale bar, a road width, a region, ' +
+      'weather, time of day, congestion, risk, or any quantity the simulation holds.',
+    grid: { step: 48, stroke: '#0d1622', width: 0.5 },
+    ground: { top: '#080f18', bottom: '#04070b' },
+    portGlow: { radius: 210, colour: '#0ea5e9', opacity: 0.1 },
+    casing: { extra: 5.5, stroke: '#0a1220' },
+    centreline: { stroke: '#2c4a70', width: 0.7, dash: '7 11', appliesTo: 'ROAD' },
+    halo: { ringExtra: 9, ringOpacity: 0.2, fillExtra: 4, fillOpacity: 0.07 }
+  };
+
+  /* A TRUCK MARKER IS A SILHOUETTE, AND IT POINTS THE WAY IT IS GOING.
+
+     It used to be a 12x8 rectangle, which at twenty-four trucks on twenty-six
+     roads read as identical dots and gave a reader no way to see which way any
+     of them was travelling. The parts below are drawn in a local space facing
+     +x and the whole group is rotated to the heading of the leg the truck is
+     on -- and the heading comes from the two DRAWN node positions, so it is a
+     fact about the picture and not a direction the simulation stated. A truck
+     standing at a node has no leg and is drawn unrotated. */
+  const TRUCK_ART = {
+    kind: 'VIEW',
+    scope: 'the shape of one truck marker, in SVG user units, facing +x before rotation',
+    doesNotMean: 'a size, a length, a load, a speed or a bearing in the simulation. journeyEngine owns the ' +
+      'position; the rotation is derived from where two places are DRAWN and nothing else.',
+    trailer: { x: -7, y: -3.6, w: 9, h: 7.2, rx: 1 },
+    cab: { x: 2, y: -3, w: 4.6, h: 6, rx: 1.2 },
+    wheels: [-4.6, 0.4, 4],
+    wheelR: 1.25,
+    unrotatedWhen: 'the truck is AT_NODE, so there is no leg to take a heading from'
+  };
+
   /* Road styling by the edge's DECLARED speed class, so the two kinds of road
      in this graph read differently without a second table saying which is
      which. SITE edges are yard moves of a few hundred metres; ROAD edges are
@@ -388,15 +435,23 @@ const FWFreightMap = (() => {
        The published list is a 40-row ring buffer over a stream that is
        overwhelmingly routine traffic, so a 14-row window onto it is mostly
        routine traffic. Sampled at seed 12345 over 200 hourly frames: 2800 rows,
-       of which 42 carried the disruption severity -- 1.5% of rows, and 16.0% of
-       windows held at least one, never more than three. That is the honest
+       of which 38 carried the disruption severity -- 1.4% of rows, and 13.5% of
+       windows held at least one, never more than two. That is the honest
        shape of this surface and it is not a fault to be tuned away: a strip
        that reliably showed a disruption would be a strip that had stopped being
        chronological. Which is exactly why every caption states how many of the
        shown rows carried one, instead of leaving a reader to assume the visible
-       rows are the interesting ones. */
-    measured: { seed: 12345, frames: 200, rowsSampled: 2800, disruptionRows: 42,
-      windowsWithADisruption: 32, mostInOneWindow: 3 },
+       rows are the interesting ones.
+
+       RE-MEASURED AFTER SLICE 81, and it moved the wrong way on purpose-free
+       grounds: 42 -> 38 disruption rows, 32 -> 27 windows, most-in-one-window
+       3 -> 2. Tripling the fleet tripled the event stream, but the ring buffer
+       and this window are both fixed sizes, so the same 14 rows now cover about
+       a third as much simulated time and catch fewer of the rare rows. A bigger
+       world made this surface LESS likely to show a disruption, not more, and
+       the caption is the only reason a reader is not misled by that. */
+    measured: { seed: 12345, frames: 200, rowsSampled: 2800, disruptionRows: 38,
+      windowsWithADisruption: 27, mostInOneWindow: 2 },
     cap: 14
   };
 
@@ -1287,6 +1342,76 @@ const FWFreightMap = (() => {
       .replace(/"/g, '&quot;');
   }
 
+  /* The scenery, built from DECOR. Drawn once, under everything, and it is
+     never consulted again -- nothing reads it back. */
+  function terrainDefs(layout) {
+    const port = layout.byId[need(WG, 'FWWorldGraph', 'the scenery').portNode().id];
+    return '<defs>' +
+      '<linearGradient id="fm-ground" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="' + DECOR.ground.top + '"/>' +
+      '<stop offset="1" stop-color="' + DECOR.ground.bottom + '"/></linearGradient>' +
+      '<pattern id="fm-grid" width="' + DECOR.grid.step + '" height="' + DECOR.grid.step +
+      '" patternUnits="userSpaceOnUse">' +
+      '<path d="M ' + DECOR.grid.step + ' 0 L 0 0 0 ' + DECOR.grid.step + '" fill="none" stroke="' +
+      DECOR.grid.stroke + '" stroke-width="' + DECOR.grid.width + '"/></pattern>' +
+      '<radialGradient id="fm-port-glow">' +
+      '<stop offset="0" stop-color="' + DECOR.portGlow.colour + '" stop-opacity="' + DECOR.portGlow.opacity + '"/>' +
+      '<stop offset="1" stop-color="' + DECOR.portGlow.colour + '" stop-opacity="0"/></radialGradient>' +
+      '</defs>' +
+      '<g id="fm-terrain" aria-hidden="true">' +
+      '<rect x="0" y="0" width="' + layout.width + '" height="' + layout.height + '" fill="url(#fm-ground)"/>' +
+      '<rect x="0" y="0" width="' + layout.width + '" height="' + layout.height + '" fill="url(#fm-grid)"/>' +
+      (port ? '<circle cx="' + port.x + '" cy="' + port.y + '" r="' + DECOR.portGlow.radius +
+        '" fill="url(#fm-port-glow)"/>' : '') +
+      '</g>';
+  }
+
+  function roadCasing(layout) {
+    return '<g id="fm-road-casing" aria-hidden="true">' + layout.edges.map(e =>
+      '<line x1="' + e.x1 + '" y1="' + e.y1 + '" x2="' + e.x2 + '" y2="' + e.y2 + '" stroke="' +
+      DECOR.casing.stroke + '" stroke-width="' + (e.style.width + DECOR.casing.extra) +
+      '" stroke-linecap="round"/>').join('') + '</g>';
+  }
+
+  function roadCentrelines(layout) {
+    const c = DECOR.centreline;
+    return '<g id="fm-road-centrelines" aria-hidden="true">' +
+      layout.edges.filter(e => e.speedClass === c.appliesTo).map(e =>
+        '<line x1="' + e.x1 + '" y1="' + e.y1 + '" x2="' + e.x2 + '" y2="' + e.y2 + '" stroke="' + c.stroke +
+        '" stroke-width="' + c.width + '" stroke-dasharray="' + c.dash + '"/>').join('') + '</g>';
+  }
+
+  function placeHalos(layout) {
+    const h = DECOR.halo;
+    return '<g id="fm-place-halos" aria-hidden="true">' + layout.nodes.map(n =>
+      '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + (n.style.size + h.fillExtra) + '" fill="' +
+      n.style.stroke + '" opacity="' + h.fillOpacity + '"/>' +
+      '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + (n.style.size + h.ringExtra) + '" fill="none" stroke="' +
+      n.style.stroke + '" stroke-width="0.8" opacity="' + h.ringOpacity + '"/>').join('') + '</g>';
+  }
+
+  /* The heading of the leg a truck is on, in degrees, from the two DRAWN node
+     positions. Returns null when there is no leg -- an AT_NODE truck points
+     nowhere, and guessing a direction for it would be inventing one. */
+  function headingOf(p, byId) {
+    if (!p || p.kind !== 'ON_LEG' || !p.from || !p.to || !byId) return null;
+    const a = byId[p.from], b = byId[p.to];
+    if (!a || !b) return null;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    if (dx === 0 && dy === 0) return null;
+    return Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
+  }
+
+  function truckBody(st) {
+    const t = TRUCK_ART.trailer, c = TRUCK_ART.cab;
+    return '<rect x="' + t.x + '" y="' + t.y + '" width="' + t.w + '" height="' + t.h + '" rx="' + t.rx +
+      '" fill="' + st.fill + '" stroke="' + st.stroke + '" stroke-width="1.2"/>' +
+      '<rect x="' + c.x + '" y="' + c.y + '" width="' + c.w + '" height="' + c.h + '" rx="' + c.rx +
+      '" fill="' + st.stroke + '" opacity="0.85"/>' +
+      TRUCK_ART.wheels.map(cx => '<circle cx="' + cx + '" cy="' + (TRUCK_ART.trailer.h / 2 + 0.6) + '" r="' +
+        TRUCK_ART.wheelR + '" fill="#0b1220" stroke="' + st.stroke + '" stroke-width="0.6"/>').join('');
+  }
+
   /* Drawn once. Roads, places and the legend do not change while the app runs,
      because worldGraph is built at load and nothing mutates it -- so rebuilding
      them every tick would be work with no result. Only the three live groups
@@ -1329,9 +1454,13 @@ const FWFreightMap = (() => {
         'text-anchor="middle" font-size="8" fill="#7dd3fc">INSIDE THIS PORT \u203a</text></g>'
       : '';
     return '<rect x="0" y="0" width="' + layout.width + '" height="' + layout.height + '" fill="#05070a"/>' +
+      terrainDefs(layout) +
+      roadCasing(layout) +
       '<g id="fm-roads">' + roads + '</g>' +
+      roadCentrelines(layout) +
       '<g id="fm-road-labels">' + roadLabels + '</g>' +
       '<g id="fm-route"></g>' +
+      placeHalos(layout) +
       '<g id="fm-places">' + places + '</g>' +
       '<g id="fm-place-labels">' + placeLabels + '</g>' +
       '<g id="fm-activity"></g>' +
@@ -1500,11 +1629,18 @@ const FWFreightMap = (() => {
      element is destroyed and recreated, nothing queries the document for a
      list of markers, and the roads and places are never touched. */
   function renderTrucks(f) {
+    const byId = {};
+    (f.nodes || []).forEach(n => { byId[n.id] = n; });
     f.trucks.forEach(p => {
       if (!p.drawn) return;
       const m = markerFor(p);
       m.g.setAttribute('transform', 'translate(' + p.drawX + ',' + p.drawY + ')');
-      const sig = p.viewState + '|' + (p.watched ? 'W' : '-') + '|' + (p.selected ? 'S' : '-');
+      const heading = headingOf(p, byId);
+      /* The heading is part of the signature. Without it a truck that turned a
+         corner kept the body it was drawn with on the previous leg, because
+         nothing else about it had changed. */
+      const sig = p.viewState + '|' + (p.watched ? 'W' : '-') + '|' + (p.selected ? 'S' : '-') +
+        '|' + (heading === null ? 'x' : heading);
       if (m.sig === sig) return;
       m.sig = sig;
       const st = VIEW_STATE_STYLE[p.viewState];
@@ -1512,10 +1648,14 @@ const FWFreightMap = (() => {
         ? '<circle r="10" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="2 2"/>' : '';
       const halo = p.selected
         ? '<circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1" opacity="0.85"/>' : '';
+      /* The rings and the label are OUTSIDE the rotation. A watched ring that
+         turned with the truck would still be a circle, but the id label would
+         have ended up upside down on every westbound leg. */
+      const body = heading === null
+        ? '<g>' + truckBody(st) + '</g>'
+        : '<g transform="rotate(' + heading + ')">' + truckBody(st) + '</g>';
       m.g.innerHTML =
-        halo + ring +
-        '<rect x="-6" y="-4" width="12" height="8" rx="1.5" fill="' + st.fill + '" stroke="' + st.stroke +
-        '" stroke-width="1.2"/>' +
+        halo + ring + body +
         (p.selected ? '<text x="0" y="-18" text-anchor="middle" font-size="9" fill="#e2e8f0">' + esc(p.truckId) +
           '</text>' : '');
     });
@@ -1922,7 +2062,9 @@ const FWFreightMap = (() => {
   const VIEW_CHECK = assertViewStates();
 
   return {
-    LAYOUT_SCALE, LAYOUT, GROUND_TRUTH_SEPARATION, NOT_RENDERED, NOT_DRAWN,
+    LAYOUT_SCALE, LAYOUT, DECOR, TRUCK_ART, headingOf, truckBody,
+    terrainDefs, roadCasing, roadCentrelines, placeHalos,
+    GROUND_TRUTH_SEPARATION, NOT_RENDERED, NOT_DRAWN,
     NODE_STYLE, EDGE_STYLE, VIEW_STATES, STAGE_VIEW, VIEW_STATE_STYLE, ATTENTION,
     ENTITY_CARD, TIMELINE_VIEW, BASIS_TONE,
     ARRIVING_WINDOW_SECONDS, STYLE_CHECK, EDGE_CHECK, VIEW_CHECK,

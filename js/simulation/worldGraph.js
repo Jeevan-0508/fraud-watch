@@ -118,14 +118,17 @@ const FWWorldGraph = (() => {
      handling facilities and sit at the PORT node; the two gates, three yards
      and two inland depots each get the node their role calls for.
 
-     Four nodes carry no seeded facility (the regional hub and both
-     fulfilment centres, plus nothing else). That is a real, measurable fact
-     about this build and not an oversight: a node with no facility entity
-     has no observation coverage, so a movement there would land in
-     facilityEngine's unsited bucket rather than being charged to a site.
-     Seeding facilities at them is Phase D's job (scale the node count and
-     the fleet); asserting it here would fail against the world that ships.
-     nodeCoverage() measures it rather than leaving it to be noticed. */
+     SOME nodes carry no seeded facility -- Regional Hub West, FC North,
+     FC Central and FC East. The COUNT is deliberately not restated here as a
+     literal: the previous wording said "four" while listing three and stayed
+     wrong through six sessions. nodeCoverage() measures it instead.
+     That state is deliberate, not an oversight: a node with no facility
+     entity has no observation coverage, so a movement there lands in
+     facilityEngine's unsited bucket rather than being charged to a site, and
+     the unsited bucket has to stay reachable for the panels that report it
+     to be about anything. Slice 81 sited the seven new places that a gate,
+     yard, hub-east or depot role requires and deliberately left the
+     fulfilment centres unsited. */
   const NODES = [
     { id: 'PORT_MERIDIAN',     type: 'PORT',               label: 'Port Meridian',     facilityNames: ['Cross-dock A', 'Cross-dock B'] },
     { id: 'GATE_NORTH',        type: 'CHECKPOINT',         label: 'North Gate',        facilityNames: ['North Gate'] },
@@ -137,7 +140,16 @@ const FWWorldGraph = (() => {
     { id: 'FC_NORTH',          type: 'FULFILLMENT_CENTER', label: 'FC North',          facilityNames: [] },
     { id: 'FC_CENTRAL',        type: 'FULFILLMENT_CENTER', label: 'FC Central',        facilityNames: [] },
     { id: 'DEPOT_OST',         type: 'DEPOT',              label: 'Inland Depot Ost',  facilityNames: ['Inland Depot Ost'] },
-    { id: 'DEPOT_SUD',         type: 'DEPOT',              label: 'Inland Depot Sud',  facilityNames: ['Inland Depot Sud'] }
+    { id: 'DEPOT_SUD',         type: 'DEPOT',              label: 'Inland Depot Sud',  facilityNames: ['Inland Depot Sud'] },
+    { id: 'GATE_EAST',         type: 'CHECKPOINT',         label: 'East Gate',         facilityNames: ['East Gate'] },
+    { id: 'YARD_REEFER',       type: 'WAREHOUSE',          label: 'Reefer yard',       facilityNames: ['Yard 4 (reefer)'] },
+    { id: 'YARD_BONDED',       type: 'WAREHOUSE',          label: 'Bonded yard',       facilityNames: ['Yard 5 (bonded)'] },
+    { id: 'YARD_INSPECTION',   type: 'WAREHOUSE',          label: 'Inspection yard',   facilityNames: ['Yard 6 (inspection)'] },
+    { id: 'HUB_REGIONAL_EAST', type: 'REGIONAL_HUB',       label: 'Regional Hub East', facilityNames: ['Cross-dock C (east)'] },
+    { id: 'FC_SOUTH',          type: 'FULFILLMENT_CENTER', label: 'FC South',          facilityNames: ['FC South dock'] },
+    { id: 'FC_EAST',           type: 'FULFILLMENT_CENTER', label: 'FC East',           facilityNames: [] },
+    { id: 'DEPOT_NORD',        type: 'DEPOT',              label: 'Inland Depot Nord', facilityNames: ['Inland Depot Nord'] },
+    { id: 'DEPOT_WEST',        type: 'DEPOT',              label: 'Inland Depot West', facilityNames: ['Inland Depot West'] }
   ];
 
   /* THE EDGES. Undirected road segments. `distanceKm` is declared per edge;
@@ -153,7 +165,22 @@ const FWWorldGraph = (() => {
     { from: 'FC_NORTH',          to: 'FC_CENTRAL',        distanceKm: 55,  speedClass: 'ROAD' },
     { from: 'FC_CENTRAL',        to: 'DEPOT_OST',         distanceKm: 37,  speedClass: 'ROAD' },
     { from: 'HUB_REGIONAL_WEST', to: 'DEPOT_SUD',         distanceKm: 61,  speedClass: 'ROAD' },
-    { from: 'GATE_SOUTH',        to: 'DEPOT_SUD',         distanceKm: 74,  speedClass: 'ROAD' }
+    { from: 'GATE_SOUTH',        to: 'DEPOT_SUD',         distanceKm: 74,  speedClass: 'ROAD' },
+    { from: 'GATE_EAST',         to: 'PORT_MERIDIAN',     distanceKm: 0.6, speedClass: 'SITE' },
+    { from: 'PORT_MERIDIAN',     to: 'YARD_REEFER',       distanceKm: 0.4, speedClass: 'SITE' },
+    { from: 'YARD_REEFER',       to: 'YARD_BONDED',       distanceKm: 0.5, speedClass: 'SITE' },
+    { from: 'YARD_BONDED',       to: 'YARD_INSPECTION',   distanceKm: 0.4, speedClass: 'SITE' },
+    { from: 'YARD_INSPECTION',   to: 'GATE_EAST',         distanceKm: 0.7, speedClass: 'SITE' },
+    { from: 'YARD_QUAYSIDE',     to: 'YARD_INSPECTION',   distanceKm: 0.9, speedClass: 'SITE' },
+    { from: 'YARD_OVERFLOW',     to: 'GATE_SOUTH',        distanceKm: 1.1, speedClass: 'SITE' },
+    { from: 'GATE_EAST',         to: 'HUB_REGIONAL_EAST', distanceKm: 38,  speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_EAST', to: 'FC_EAST',           distanceKm: 52,  speedClass: 'ROAD' },
+    { from: 'FC_EAST',           to: 'DEPOT_NORD',        distanceKm: 44,  speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_EAST', to: 'FC_CENTRAL',        distanceKm: 71,  speedClass: 'ROAD' },
+    { from: 'HUB_REGIONAL_WEST', to: 'DEPOT_WEST',        distanceKm: 58,  speedClass: 'ROAD' },
+    { from: 'DEPOT_SUD',         to: 'FC_SOUTH',          distanceKm: 33,  speedClass: 'ROAD' },
+    { from: 'FC_SOUTH',          to: 'DEPOT_WEST',        distanceKm: 49,  speedClass: 'ROAD' },
+    { from: 'FC_NORTH',          to: 'DEPOT_NORD',        distanceKm: 63,  speedClass: 'ROAD' }
   ];
 
   /* THE ROUTES. Ordered node sequences. Every consecutive pair must be an
@@ -168,7 +195,20 @@ const FWWorldGraph = (() => {
     { id: 'DEPOT_SUD_RETURN', label: 'Inland Depot Sud back to the port via the regional hub',
       nodes: ['DEPOT_SUD', 'HUB_REGIONAL_WEST', 'GATE_NORTH', 'PORT_MERIDIAN'] },
     { id: 'YARD_SHUTTLE', label: 'Overflow yard to the quay, inside the port',
-      nodes: ['YARD_OVERFLOW', 'YARD_EMPTIES', 'YARD_QUAYSIDE', 'PORT_MERIDIAN'] }
+      nodes: ['YARD_OVERFLOW', 'YARD_EMPTIES', 'YARD_QUAYSIDE', 'PORT_MERIDIAN'] },
+    { id: 'PORT_TO_DEPOT_NORD', label: 'Port Meridian to Inland Depot Nord, out the east gate',
+      nodes: ['PORT_MERIDIAN', 'GATE_EAST', 'HUB_REGIONAL_EAST', 'FC_EAST', 'DEPOT_NORD'] },
+    { id: 'PORT_TO_FC_SOUTH', label: 'Port Meridian to FC South, via Inland Depot Sud',
+      nodes: ['PORT_MERIDIAN', 'GATE_SOUTH', 'DEPOT_SUD', 'FC_SOUTH'] },
+    { id: 'EAST_TO_DEPOT_OST', label: 'Port Meridian to Inland Depot Ost, the eastern way round',
+      nodes: ['PORT_MERIDIAN', 'GATE_EAST', 'HUB_REGIONAL_EAST', 'FC_CENTRAL', 'DEPOT_OST'] },
+    { id: 'WESTERN_LOOP', label: 'The western loop: out the north gate, back in the south',
+      nodes: ['PORT_MERIDIAN', 'GATE_NORTH', 'HUB_REGIONAL_WEST', 'DEPOT_WEST', 'FC_SOUTH',
+        'DEPOT_SUD', 'GATE_SOUTH', 'PORT_MERIDIAN'] },
+    { id: 'INSPECTION_SHUTTLE', label: 'Quayside to the quay the long way, through inspection and bond',
+      nodes: ['YARD_QUAYSIDE', 'YARD_INSPECTION', 'YARD_BONDED', 'YARD_REEFER', 'PORT_MERIDIAN'] },
+    { id: 'NORD_RETURN', label: 'Inland Depot Nord back to the port via FC North',
+      nodes: ['DEPOT_NORD', 'FC_NORTH', 'HUB_REGIONAL_WEST', 'GATE_NORTH', 'PORT_MERIDIAN'] }
   ];
 
   /* WHICH NODE TYPES A LIFECYCLE STAGE CAN OCCUR AT.

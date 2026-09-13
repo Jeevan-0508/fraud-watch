@@ -932,6 +932,26 @@ const FWJourneyEngine = (() => {
      saying that nothing suspicious is ever written down at a place a truck only
      ever starts a trip from. Whether that is right is a question for the
      disruption model and for Phase D's route table, and it now has a number. */
+  /* The two causes, named separately, because they need different repairs: a
+     terminus-only node needs a route to continue through it, while an intermediate
+     one needs a disruption-eligible stage at the point a route hands it. */
+  function blindCauses(blindSited) {
+    const term = blindSited.filter(r => r.terminusOnly).map(r => r.nodeId);
+    const mid = blindSited.filter(r => !r.terminusOnly).map(r => r.nodeId);
+    const parts = [];
+    if (term.length) {
+      parts.push(term.join(', ') + (term.length === 1 ? ' is a node' : ' are nodes') +
+        ' no route passes THROUGH, which since Slice 72 means a truck standing there always holds the head of ' +
+        'the lifecycle.');
+    }
+    if (mid.length) {
+      parts.push(mid.join(', ') + (mid.length === 1 ? ' IS' : ' ARE') + ' passed through, and blind anyway: the ' +
+        'stages a route gives ' + (mid.length === 1 ? 'it' : 'them') + ' are stages no disruption is rolled in, so ' +
+        'standing on a route is not the same as being observable on it.');
+    }
+    return parts.join(' ');
+  }
+
   function observability(lifecycle, disruptionStages) {
     const list = assertLifecycle(lifecycle);
     const g = requireWorldGraph('the observability report');
@@ -962,14 +982,24 @@ const FWJourneyEngine = (() => {
     return {
       state: 'MEASURED', nodes: rows.length, rows: rows,
       seededFacilities: facilities, unobservableFacilities: blindFacilities,
-      unobservableSited: blindSited.map(r => ({ nodeId: r.nodeId, facilities: r.facilities, stages: r.stages })),
+      unobservableSited: blindSited.map(r => ({ nodeId: r.nodeId, facilities: r.facilities, stages: r.stages,
+        terminusOnly: r.terminusOnly })),
       unobservableEmptyNodes: rows.filter(r => !r.observable && !r.facilities.length).map(r => r.nodeId),
+      /* Two different reasons produce a blind sited node, and the note used to give
+         only one of them: "each is a node no route passes THROUGH". That held while
+         the graph had eleven nodes, where every blind site happened to be a terminus,
+         and stopped holding the moment the network grew -- a node can sit in the
+         middle of a route and still be blind, because the stages a route gives it are
+         stages no disruption is rolled in. Reporting one cause for both absences
+         would name the wrong repair. */
+      unobservableTerminusOnly: blindSited.filter(r => r.terminusOnly).map(r => r.nodeId),
+      unobservableIntermediate: blindSited.filter(r => !r.terminusOnly).map(r => r.nodeId),
       note: blindFacilities
         ? blindFacilities + ' of the ' + facilities + ' facilities this build seeds stand at one of ' +
           blindSited.length + ' node(s) -- ' + blindSited.map(r => r.nodeId).join(', ') + ' -- that hold only ' +
-          'stages no disruption is ever rolled in, so nothing can ever be written down about a truck standing there. Each is a node no route passes THROUGH, which since ' +
-          'Slice 72 means it always takes the head of the lifecycle. Before Slice 72 they recorded disruptions only ' +
-          'because the stage was a counter unrelated to where the truck was.'
+          'stages no disruption is ever rolled in, so nothing can ever be written down about a truck standing ' +
+          'there. ' + blindCauses(blindSited) + ' Before Slice 72 they recorded disruptions only because the ' +
+          'stage was a counter unrelated to where the truck was.'
         : 'Every node that carries a seeded facility holds at least one stage a disruption can be rolled in, so no ' +
           'site in this graph is unobservable by construction.'
     };

@@ -784,16 +784,41 @@ const FWEntityEngine = (() => {
     if (entity.history.length > 50) entity.history.shift();
   }
 
-  // Seeds a starter population deterministically from an FWRng instance.
-  // Counts are intentionally small for Slice 1 — this is the substrate,
-  // not the full port population from the product spec.
+  /* Seeds a population deterministically from an FWRng instance.
+
+     THE COUNTS ARE A MEASURED CHOICE, NOT A PLACEHOLDER (Slice 81). They were
+     8 trucks and 6 shipments, described as "intentionally small for Slice 1".
+     Measured at that size: over 336 sim-hours only 5.1% of hours had a single
+     open case, mean concurrent open cases 0.06, most a player would ever see
+     at once 2. The case list -- the app's headline panel -- was therefore
+     empty about 95% of the time, which is a property of the population and
+     not of any renderer. POPULATION_SCALE records what each count drives so a
+     later reader raising one knows what moves.
+
+     Every count is still an `opts` override, and nothing downstream reads
+     these numbers: the suites derive their denominators from the registry. */
+  const POPULATION_SCALE = {
+    kind: 'PARAMETER',
+    scope: 'how many of each entity the world starts with',
+    drives: {
+      trucks: 'journeys in flight, and therefore event volume, signal volume and how many cases exist at once',
+      shipments: 'how many trucks carry declared cargo; a truck with none still moves and still emits',
+      drivers: 'how many distinct people can be swapped onto a truck',
+      trailers: 'how many distinct trailers can be swapped onto a truck',
+      carriers: 'how wide the repeat-entity analysis can spread before it sees the same carrier twice'
+    },
+    doesNotMean: 'anything about fraud rate. Raising the fleet raises the case count because there are more ' +
+      'journeys to observe, not because any per-journey probability changed -- falsePositiveEngine.LEGITIMATE_CHANCE ' +
+      'is untouched by every number here.'
+  };
+
   function seedPort(rng, opts = {}) {
     const reg = createRegistry();
-    const nCarriers = opts.carriers || 6;
-    const nDrivers = opts.drivers || 10;
-    const nTrailers = opts.trailers || 10;
-    const nTrucks = opts.trucks || 8;
-    const nShipments = opts.shipments || 6;
+    const nCarriers = opts.carriers || 8;
+    const nDrivers = opts.drivers || 34;
+    const nTrailers = opts.trailers || 34;
+    const nTrucks = opts.trucks || 24;
+    const nShipments = opts.shipments || 20;
 
     const carrierNames = ['NordTransit', 'BalticFreight Ltd', 'Meridian Cargo Co', 'Continental Haul',
       'Elbe Logistics', 'Vantage Road Freight', 'Solaris Intermodal', 'Harbourline Transport'];
@@ -825,7 +850,23 @@ const FWEntityEngine = (() => {
       { kind: 'YARD', name: 'Yard 2 (empties)' },
       { kind: 'YARD', name: 'Yard 3 (overflow)' },
       { kind: 'REMOTE_DEPOT', name: 'Inland Depot Ost' },
-      { kind: 'REMOTE_DEPOT', name: 'Inland Depot Sud' }
+      { kind: 'REMOTE_DEPOT', name: 'Inland Depot Sud' },
+      // Slice 81: the seven places the expanded network added that a gate,
+      // yard, regional-hub or depot role requires. worldGraph.NODES joins to
+      // these BY NAME, so a name changed here has to be changed there too --
+      // assertFacilitiesResolve is what catches it.
+      { kind: 'GATEHOUSE', name: 'East Gate' },
+      { kind: 'YARD', name: 'Yard 4 (reefer)' },
+      { kind: 'YARD', name: 'Yard 5 (bonded)' },
+      { kind: 'YARD', name: 'Yard 6 (inspection)' },
+      { kind: 'CROSS_DOCK', name: 'Cross-dock C (east)' },
+      { kind: 'REMOTE_DEPOT', name: 'Inland Depot Nord' },
+      { kind: 'REMOTE_DEPOT', name: 'Inland Depot West' },
+      // FC South is where a route ENDS, and journeyEngine refuses a route
+      // terminus that carries no site: a truck parked at an unsited node
+      // reports a null site indistinguishable from one on the open road, so
+      // every journey ending there would be unobservable by construction.
+      { kind: 'CROSS_DOCK', name: 'FC South dock' }
     ];
     facilitySpec.forEach(spec => {
       const id = nextId(reg, 'facility');
@@ -875,7 +916,7 @@ const FWEntityEngine = (() => {
   assertLifecycleVocabulary();
   assertRenderSurfacesDeclared();
 
-  return { createRegistry, nextId, add, get, all, recordHistory, seedPort, plural, KINDS, PLURALS,
+  return { createRegistry, nextId, add, get, all, recordHistory, seedPort, POPULATION_SCALE, plural, KINDS, PLURALS,
     LIFECYCLE_VOCABULARY, declaredStatuses, writableStatuses, neverWritten, statusVocabulary,
     heldStatuses, vocabularyCoverage, formatStatus, statusNote, assertStatusLiteral,
     assertLifecycleVocabulary,
