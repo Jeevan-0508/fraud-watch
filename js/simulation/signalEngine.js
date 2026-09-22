@@ -43,7 +43,8 @@ const FWSignalEngine = (() => {
     EQUIPMENT_CARRIER_MISMATCH: { signalType: 'EQUIPMENT_CARRIER_MISMATCH', weight: 3, reliability: 0.7,  decaySeconds: 3600 },
     DUPLICATE_ASSET_ID:         { signalType: 'DUPLICATE_ASSET_ID',         weight: 3, reliability: 0.65, decaySeconds: 3600 },
     HANDOVER_GAP:               { signalType: 'HANDOVER_GAP',               weight: 2, reliability: 0.55, decaySeconds: 7200 },
-    STAGED_BREAKDOWN:           { signalType: 'STAGED_BREAKDOWN',           weight: 2, reliability: 0.5,  decaySeconds: 5400 }
+    STAGED_BREAKDOWN:           { signalType: 'STAGED_BREAKDOWN',           weight: 2, reliability: 0.5,  decaySeconds: 5400 },
+    ACCOUNT_TAKEOVER:           { signalType: 'ACCOUNT_TAKEOVER',           weight: 3, reliability: 0.6,  decaySeconds: 7200 }
   };
 
   /* Declared, not assumed. The range is asserted against the catalog at load

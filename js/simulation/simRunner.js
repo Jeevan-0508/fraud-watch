@@ -29,7 +29,7 @@ const FWSimRunner = (() => {
     // Phase C: how far the trucks actually travelled, and how often the place
     // they were standing at disagreed with what their lifecycle stage said.
     const journeyTracker = window.FWJourneyEngine ? FWJourneyEngine.createTracker() : null;
-    /* Slice 74: three of the thirteen disruption primitives leave two records
+    /* Slice 74: three of the fourteen disruption primitives leave two records
        instead of one, and how many companion records were actually written --
        against how many composite acts happened -- is a number this build has to
        be able to state with its denominator. */

@@ -64,19 +64,20 @@ const FWShiftEngine = (() => {
     DUPLICATE_ASSET_ID:         { night: 0.8, morning: 1.2, peak: 1.5, evening: 0.9 },
     MANIFEST_CHANGED:           { night: 0.6, morning: 1.3, peak: 1.4, evening: 0.9 },
     FALSE_MILESTONE_STAMP:      { night: 0.7, morning: 1.2, peak: 1.4, evening: 1.0 },
-    EQUIPMENT_CARRIER_MISMATCH: { night: 0.9, morning: 1.2, peak: 1.3, evening: 1.0 }
+    EQUIPMENT_CARRIER_MISMATCH: { night: 0.9, morning: 1.2, peak: 1.3, evening: 1.0 },
+    ACCOUNT_TAKEOVER:           { night: 0.7, morning: 1.2, peak: 1.4, evening: 1.0 }
   };
 
   const FAMILY = {
     concealment: ['TRAILER_SWAPPED', 'STAGED_BREAKDOWN', 'SEAL_MISMATCH', 'HANDOVER_GAP',
       'GPS_SIGNAL_LOST', 'UNEXPECTED_STOP', 'ROUTE_DEVIATION', 'CARRIER_UNRESPONSIVE', 'DRIVER_CHANGED'],
-    transaction: ['DUPLICATE_ASSET_ID', 'MANIFEST_CHANGED', 'FALSE_MILESTONE_STAMP', 'EQUIPMENT_CARRIER_MISMATCH']
+    transaction: ['DUPLICATE_ASSET_ID', 'MANIFEST_CHANGED', 'FALSE_MILESTONE_STAMP', 'EQUIPMENT_CARRIER_MISMATCH', 'ACCOUNT_TAKEOVER']
   };
 
   const ASSUMPTIONS = [
     'Shift multipliers are modeling assumptions, not measured rates — they shape how this simulation behaves, nothing more.',
     'Concealment-driven behaviors (trailer swap, staged breakdown, seal mismatch, handover gap) are weighted toward night and evening: they need an unwitnessed yard.',
-    'Transaction-driven behaviors (manifest change, milestone stamp, duplicate asset ID) are weighted toward staffed hours: they need a live system to act against and daytime volume to blend into.',
+    'Transaction-driven behaviors (manifest change, milestone stamp, duplicate asset ID, account takeover) are weighted toward staffed hours: they need a live system to act against and daytime volume to blend into.',
     'Oversight coverage is the chance an occurrence is recorded at all. Below 100%, some things genuinely happen and leave no record in this sim.',
     'Therefore per-shift counts below measure OBSERVATION, not risk. A low night count is a coverage artefact first and a safety claim never.',
     'Throughput is how much NORMAL traffic moves in a shift. It is not part of the disruption chance and never has been: eventEngine scales ordinary movement volume by it, while behaviorEngine scales the per-tick disruption chance by opportunityScale instead. It is shown here because it shapes the run an analyst is looking at, not because it drives these counts.',

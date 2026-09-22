@@ -67,7 +67,8 @@ const FWMoEngine = (() => {
     EQUIPMENT_CARRIER_MISMATCH: ['impersonation', 'identity', 'takeover', 'hijack', 'operator'],
     DUPLICATE_ASSET_ID: ['spoof', 'telemat', 'position', 'gnss', 'tracker'],
     HANDOVER_GAP: ['pickup', 'collection', 'load theft', 'deception'],
-    STAGED_BREAKDOWN: ['parking', 'roadside', 'curtain', 'truck stop']
+    STAGED_BREAKDOWN: ['parking', 'roadside', 'curtain', 'truck stop'],
+    ACCOUNT_TAKEOVER: ['impersonation', 'identity', 'takeover', 'hijack', 'operator']
   };
 
   /* CONVENTION 30, IN THE TABLE THAT DECIDES WHAT A CASE RESEMBLES.

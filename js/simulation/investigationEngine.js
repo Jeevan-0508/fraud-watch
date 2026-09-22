@@ -82,7 +82,7 @@ const FWInvestigationEngine = (() => {
     CROSS_CHECK_CARRIER_IDENTITY: {
       label: 'Cross-check carrier identity',
       question: 'Is the operating carrier the contracted one, and is it reachable?',
-      covers: ['CARRIER_UNRESPONSIVE', 'EQUIPMENT_CARRIER_MISMATCH'],
+      covers: ['CARRIER_UNRESPONSIVE', 'EQUIPMENT_CARRIER_MISMATCH', 'ACCOUNT_TAKEOVER'],
       effortSeconds: 4500,
       inconclusiveChance: 0.25,
       exculpatoryDelta: -22,
@@ -95,7 +95,10 @@ const FWInvestigationEngine = (() => {
       // what decides whether the check is worth anything is WHERE the
       // signal was observed, not what kind it was. So this action is
       // gated on the case having a site at all (requiresSite) rather than
-      // on its signal composition.
+      // on its signal composition. ACCOUNT_TAKEOVER is the one deliberate
+      // exception: it is a portal/credential event with no physical site
+      // to hold a gate, dock or yard record of it, so it is left out of
+      // this list rather than added by the same blanket reasoning.
       covers: ['UNEXPECTED_STOP', 'ROUTE_DEVIATION', 'DRIVER_CHANGED', 'TRAILER_SWAPPED',
         'MANIFEST_CHANGED', 'SEAL_MISMATCH', 'GPS_SIGNAL_LOST', 'FALSE_MILESTONE_STAMP',
         'CARRIER_UNRESPONSIVE', 'EQUIPMENT_CARRIER_MISMATCH', 'DUPLICATE_ASSET_ID',

@@ -8,15 +8,18 @@
    layer on purpose: SIGNAL != PROOF is enforced by keeping this module
    ignorant of "suspicious" as a concept.
 
-  Six disruption types (FALSE_MILESTONE_STAMP, CARRIER_UNRESPONSIVE,
+  Seven disruption types (FALSE_MILESTONE_STAMP, CARRIER_UNRESPONSIVE,
   EQUIPMENT_CARRIER_MISMATCH, DUPLICATE_ASSET_ID, HANDOVER_GAP,
-  STAGED_BREAKDOWN) are generalized from real ROC/TIO fraud-ticket
-  narratives: patterns like a system delivery stamp firing with no
-  confirmed physical arrival, a carrier going silent after pickup, a
-  pickup performed with equipment registered to a different carrier,
-  a trailer/tractor ID appearing active in two places, a load going
-  unconfirmed at a multi-leg handover, and a driver detaching a
-  trailer off-site after a claimed breakdown. Every real case, carrier
+  STAGED_BREAKDOWN, ACCOUNT_TAKEOVER) are generalized from real
+  freight-fraud investigation records, in two separate passes over two
+  different real samples (see docs/real-world-mo-ingestion.md for
+  both): a system delivery stamp firing with no confirmed physical
+  arrival, a carrier going silent after pickup, a pickup performed
+  with equipment registered to a different carrier, a trailer/tractor
+  ID appearing active in two places, a load going unconfirmed at a
+  multi-leg handover, a driver detaching a trailer off-site after a
+  claimed breakdown, and a carrier's own booking/portal account being
+  used by someone who is not the carrier. Every real case, carrier
   name, SCAC, VRID, ticket ID and person's name was discarded during
   generalization -- only the abstract behavioral shape survived. */
 const FWBehaviorEngine = (() => {
@@ -45,7 +48,7 @@ const FWBehaviorEngine = (() => {
   const DISRUPTION_TYPES = ['UNEXPECTED_STOP', 'ROUTE_DEVIATION', 'DRIVER_CHANGED',
     'TRAILER_SWAPPED', 'MANIFEST_CHANGED', 'SEAL_MISMATCH', 'GPS_SIGNAL_LOST',
     'FALSE_MILESTONE_STAMP', 'CARRIER_UNRESPONSIVE', 'EQUIPMENT_CARRIER_MISMATCH',
-    'DUPLICATE_ASSET_ID', 'HANDOVER_GAP', 'STAGED_BREAKDOWN'];
+    'DUPLICATE_ASSET_ID', 'HANDOVER_GAP', 'STAGED_BREAKDOWN', 'ACCOUNT_TAKEOVER'];
 
   // Kept low deliberately: normal lifecycle progression must vastly
   // outnumber disruptions, or every truck looks suspicious constantly.
@@ -292,6 +295,9 @@ const FWBehaviorEngine = (() => {
       metadata.claimedReason = 'mechanical issue';
       metadata.detachLocation = 'undocumented off-site stop';
       truck.lastCheckpoint = null;
+    } else if (type === 'ACCOUNT_TAKEOVER') {
+      metadata.loginChannel = rng.pick(['load_board_portal', 'carrier_scac_account', 'booking_api_credential']);
+      metadata.credentialAnomaly = rng.pick(['new_device_fingerprint', 'login_from_unregistered_ip_range', 'domain_lookalike_contact_change']);
     }
 
     // Oversight coverage (Phase 37): a disruption that occurs outside
@@ -399,7 +405,7 @@ const FWBehaviorEngine = (() => {
            DISRUPTION_CHANCE_PER_TICK, which this slice did not touch and must
            not: raising it until cases stick is the forbidden shortcut this
            project named in its first audit. What intent changes is which of the
-           thirteen types a granted opportunity spends itself on, so the draw
+           fourteen types a granted opportunity spends itself on, so the draw
            still happens and is discarded when a plan step takes the slot. One
            line of waste buys a claim worth having -- the number of disruption
            opportunities in a run is a property of the rate alone, and a
@@ -444,7 +450,7 @@ const FWBehaviorEngine = (() => {
         if (!ev.unrecorded) {
           emitted.push(ev);
           /* ONE ACT, MORE THAN ONE RECORD (Slice 74, Phase F). Three of the
-             thirteen primitives are described by their own provenance note as two
+             fourteen primitives are described by their own provenance note as two
              observable halves, and the engine recorded one of them. The second
              record lands inside the same sampled interval, is guaranteed
              co-active with the first by actEngine.CO_ACTIVITY, and inherits the

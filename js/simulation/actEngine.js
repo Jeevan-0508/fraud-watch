@@ -28,7 +28,7 @@
    already found a decay window whose behaviour had never actually been shown to
    work. The mismatch is not that the correlation engine is too strict. It is
    that this simulation modelled every disruption as ONE record, and the
-   provenance note for three of its thirteen primitives does not describe one
+   provenance note for three of its fourteen primitives does not describe one
    record. It describes an action with two observable halves.
 
    WHAT THE SOURCE ACTUALLY SAYS. docs/real-world-mo-ingestion.md, verbatim:
@@ -53,7 +53,7 @@
    record" as two separate indicators, both at phase in_transit, both weight 5
    -- two observations of one gate check.
 
-   So the fix is not a constant. It is that three of the thirteen primitives were
+   So the fix is not a constant. It is that three of the fourteen primitives were
    modelled as half of what the source says they are, and the missing half is the
    thing that would have been correlatable.
 
@@ -111,7 +111,7 @@ const FWActEngine = (() => {
      constant being changed. */
   const SAME_ACT_SECONDS = 900;
 
-  /* Three of thirteen. Each row quotes the sentence from
+  /* Three of fourteen. Each row quotes the sentence from
      docs/real-world-mo-ingestion.md it is derived from, because a companion
      record with no source is this module inventing evidence. `companion` is
      always a type behaviorEngine already declares -- asserted, handed in, never
@@ -142,9 +142,9 @@ const FWActEngine = (() => {
     }
   };
 
-  /* THE OTHER TEN, EACH WITH THE REASON IT GETS NOTHING. A table of three
+  /* THE OTHER ELEVEN, EACH WITH THE REASON IT GETS NOTHING. A table of three
      exceptions and a silent remainder is a table that will grow by guesswork.
-     Ten of thirteen primitives are single observable facts and this slice
+     Eleven of fourteen primitives are single observable facts and this slice
      deliberately leaves them that way -- adding a companion to a type whose
      source does not describe one would be manufacturing correlatable evidence,
      which is the same fault as raising the disruption rate, only harder to see. */
@@ -158,13 +158,14 @@ const FWActEngine = (() => {
     GPS_SIGNAL_LOST: 'A telemetry gap is the absence of records, so a second record of it is a contradiction.',
     CARRIER_UNRESPONSIVE: 'The source sentence is "a carrier stops responding ... escalation stalls on silence rather than evidence". Silence is precisely what leaves no second record.',
     DUPLICATE_ASSET_ID: 'The source DOES describe two observations -- "the same identifier appears active in two places at once" -- but the second place is ANOTHER TRUCK, and moEngine correlates per entity, so that record belongs on a different case. Writing it against this truck would be a lie about where it was seen. Named here rather than skipped: it is the one row this slice leaves on the table, and it is Phase D work because it needs the other entity.',
-    HANDOVER_GAP: 'An unconfirmed load is one absence at one handover point. It is also a companion above.'
+    HANDOVER_GAP: 'An unconfirmed load is one absence at one handover point. It is also a companion above.',
+    ACCOUNT_TAKEOVER: 'An account takeover is one recorded fact: an authenticated action taken through a credential that should not have been usable. The source sentence describes no second physical observation, since the whole point of the pattern is that the physical world can look completely ordinary while it happens.'
   };
 
   const RECORD_SCOPE = {
     kind: 'MODEL',
     scope: 'how many records ONE act leaves behind',
-    means: 'three of thirteen disruption primitives are described by their own provenance note as two observable halves, so they now write two records, separated by less than one sampled interval.',
+    means: 'three of fourteen disruption primitives are described by their own provenance note as two observable halves, so they now write two records, separated by less than one sampled interval.',
     doesNotMean: 'that more acts happen, that acts happen more often, or that an act is more likely to be fraudulent. The act rate is DISRUPTION_CHANCE_PER_TICK and this module is never consulted until an act has already been granted and applied.'
   };
 

@@ -24,7 +24,7 @@
       own: PLAN_KINDS is written entirely in behaviorEngine.DISRUPTION_TYPES,
       reconciled against that list at load, and behaviorEngine remains the only
       module that applies a disruption or emits an event. A plan changes WHICH
-      of the thirteen types a granted opportunity spends itself on, and nothing
+      of the fourteen types a granted opportunity spends itself on, and nothing
       else.
    2. It is not an extra disruption budget. behaviorEngine still rolls
       DISRUPTION_CHANCE_PER_TICK exactly once per truck per tick and still draws
@@ -59,7 +59,7 @@
        a truck-held plan would be a plan held by whichever stranger is behind the
        wheel this hour.
      - The PAIR is the shape a collusion MO actually has, and it is not stable in
-       this build: TRAILER_SWAPPED is one of the thirteen disruption types, so a
+       this build: TRAILER_SWAPPED is one of the fourteen disruption types, so a
        pair-keyed plan would dissolve the moment one of its own steps fired.
      - The DRIVER is the only entity that persists across that churn, is already
        recorded on every case moEngine opens (mo.entities.driverId, so a
@@ -257,7 +257,7 @@ const FWIntentEngine = (() => {
     'An actor is a driver. Two of the eight crewed drivers in this build hold a plan; the other six and every spare driver hold none, and a truck whose driver holds none behaves exactly as it did before this module existed.',
     'A plan is chosen once, at boot, from a stream offset from the sim seed, and never changes. Nothing in the simulation can cause an actor to acquire, abandon or alter a plan -- there is no recruitment, no deterrence and no learning of any kind.',
     'A step fires only on an opportunity behaviorEngine has already granted at its own unchanged rate, so a plan redistributes which type a trace carries and never how many traces there are.',
-    'Every step is one of behaviorEngine\'s thirteen disruption types and every position test is answered from journeyEngine.positionOf. This module declares no type and no position of its own.',
+    'Every step is one of behaviorEngine\'s fourteen disruption types and every position test is answered from journeyEngine.positionOf. This module declares no type and no position of its own.',
     'A planned trace is annotated by falsePositiveEngine identically to an unplanned one, so roughly two in three planned traces carry a documented benign cause on record. A plan is not a label.',
     'When a plan has fired all of its steps it re-arms at the first one, because a documented MO is a repeated act rather than a single incident. The lap count is kept.'
   ];
@@ -767,7 +767,7 @@ const FWIntentEngine = (() => {
 
   /* Called from behaviorEngine's load. Both directions are NOT symmetric here on
      purpose: every step type must be a type behaviorEngine can apply, but the
-     reverse is not required -- most of the thirteen types are not part of any
+     reverse is not required -- most of the fourteen types are not part of any
      plan, and they must not be, or the unplanned baseline would be the plan
      vocabulary too. The unused types are reported so the asymmetry is a figure. */
   function assertStepTypesDeclared(disruptionTypes) {

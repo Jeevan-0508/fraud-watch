@@ -89,7 +89,7 @@ this project's own documentation standard is the same defect.
 | "Two worlds live side by side" | Three tabs ship |
 | No mention of the simulation clock, entity registry, event engine, signal catalogue, correlation, MO engine and its classification/status vocabulary, novelty scoring, investigation engine, false-positive engine, outcome and calibration engine, exposure model, denominator-checked analytics, shift and coverage model, away report, network view, or ground-truth separation | All present, most of them substantial |
 | Roadmap tracks Port Meridian phases 1-10 | The work since then is on a different axis entirely and is unmentioned |
-| Does not link `docs/real-world-mo-ingestion.md` | That file is the provenance record for six of the thirteen signal types |
+| Does not link `docs/real-world-mo-ingestion.md` | That file is the provenance record for seven of the fourteen signal types |
 
 The README should be reconciled once the world model lands, not before — otherwise it goes stale again
 immediately.

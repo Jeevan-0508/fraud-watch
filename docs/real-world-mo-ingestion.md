@@ -67,3 +67,51 @@ was read interactively, once, for this generalization. Any future
 "ingest an Excel of real cases" request should follow the same
 process: read for shape, discard identifiers, write new primitives by
 hand, keep only aggregate statistics if any.
+
+## Second pass: ACCOUNT_TAKEOVER
+
+A later session added a seventh primitive to `behaviorEngine.js` / `signalEngine.js` /
+`falsePositiveEngine.js` / `moEngine.js`, from a separate real sample:
+
+- `ACCOUNT_TAKEOVER`: a carrier's own booking or portal account (load board
+  login, SCAC-linked account, booking API credential) is used by someone who
+  is not the carrier, so the physical world (truck, trailer, driver, seal)
+  can look entirely ordinary while the booking action itself was taken
+  through a credential that should not have been usable.
+
+### Source and process, second pass
+
+This was generalized from a manual read of a 93-document sample of real
+Amazon Missing Trailer fraud-investigation records (Word documents and two
+police-report PDFs across two batches), separate from and later than the
+38-ticket CSV sample above. The same one-way process was followed:
+
+1. Read for behavioral shape only, across every paragraph and table in each
+   document, not a keyword scan of the first page.
+2. Every identifying detail was discarded before anything was written down:
+   carrier names/SCACs, VRIDs, case/ticket IDs, dates, dollar amounts,
+   associate names/aliases/logins, GPS coordinates and any document URL or
+   file path. None of that data exists anywhere in this repository, in this
+   file, or in any commit.
+3. What remained was tallied into sixteen recurring abstract mechanism
+   shapes. Most already matched an existing taxonomy pattern or an existing
+   primitive from the first pass (a system stamp with no confirmed physical
+   arrival, a load unconfirmed at an intermodal handover, a duplicate plate,
+   a GPS/telematics gap, a route diversion, and so on) and needed no new
+   code here, only the ten new taxonomy indicators added separately to
+   `freight-fraud-taxonomy` and mirrored into `data/fraud-data.json`.
+   `ACCOUNT_TAKEOVER` was the one recurring shape with no existing primitive
+   to match: none of the fourteen signal types described a credential being
+   used by the wrong party while everything physically observable stayed
+   normal.
+4. The new primitive was written from scratch as an abstract simulation
+   behavior, matched by the same keyword-heuristic convention as every
+   other disruption type in the engine, against the taxonomy pattern it
+   most resembles (Carrier Identity Takeover), not against the source
+   documents.
+
+The "what this explicitly is not" section above applies to this pass too:
+no raw document was ever committed, cached, or processed by a script. The
+93-document sample was read interactively, once, for this generalization,
+and nothing from it exists in this repository beyond the one new primitive
+described here.

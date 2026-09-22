@@ -236,12 +236,12 @@ Claiming otherwise would be the exact failure the project is about — and if I 
 later, I would first need labels, which is precisely what the design refuses to hand the analyst.
 
 **"Does this use real Amazon data?"**
-No. Nothing confidential is in the repository, in any commit. Six of the thirteen behavioral
-primitives were generalized once, manually, from real freight-fraud investigation patterns: read for
-behavioral shape only, with every identifying detail discarded before anything was written down. No raw
-data was ever committed, cached or processed by a script. The provenance note is published in the
-repository — including a correction where I had misread that source and had to revert a constant I had
-changed on the strength of it.
+No. Nothing confidential is in the repository, in any commit. Seven of the fourteen behavioral
+primitives were generalized manually, from real freight-fraud investigation patterns, in two separate
+passes over two different real samples: read for behavioral shape only, with every identifying detail
+discarded before anything was written down. No raw data was ever committed, cached or processed by a
+script. The provenance note is published in the repository, including a correction where I had
+misread the first source and had to revert a constant I had changed on the strength of it.
 
 That second answer is the one I would want to be judged on. The correction is in the repository
 permanently, marked as a correction, because a risk project that quietly fixes its own record is not

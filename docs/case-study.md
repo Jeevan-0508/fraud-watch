@@ -134,19 +134,21 @@ manufactured cases without changing the world.
 
 ## Fraud model
 
-Thirteen disruption types map one-to-one onto thirteen signal types. Seven are generic operational
-anomalies. **Six were generalized from real freight-fraud investigation patterns** — a system arrival
-stamp firing with no confirmed physical arrival; a carrier going silent after pickup; a pickup made
-with equipment registered to a different carrier; one asset identifier active in two places; a load
-unconfirmed at a leg-to-leg handover; a trailer detached off-site after a claimed breakdown.
+Fourteen disruption types map one-to-one onto fourteen signal types. Seven are generic operational
+anomalies. **Seven were generalized from real freight-fraud investigation patterns**, in two separate
+passes over two different real samples: a system arrival stamp firing with no confirmed physical
+arrival; a carrier going silent after pickup; a pickup made with equipment registered to a different
+carrier; one asset identifier active in two places; a load unconfirmed at a leg-to-leg handover; a
+trailer detached off-site after a claimed breakdown; and a carrier's own booking or portal account
+used by someone who is not the carrier.
 
-That generalization was manual, one-way, and done once. Behavioral shape only; every identifying
-detail discarded before anything was written down; no raw data committed, cached or scripted. The
-provenance note, including a correction where an earlier reading of that source was wrong and a
-constant was reverted as a result, is in
+Each generalization pass was manual and one-way. Behavioral shape only; every identifying detail
+discarded before anything was written down; no raw data committed, cached or scripted. The
+provenance note for both passes, including a correction where an earlier reading of the first source
+was wrong and a constant was reverted as a result, is in
 [`real-world-mo-ingestion.md`](real-world-mo-ingestion.md).
 
-Cases are matched against a **public taxonomy** of 12 freight-fraud patterns, 77 indicators, 137
+Cases are matched against a **public taxonomy** of 12 freight-fraud patterns, 87 indicators, 138
 countermeasures and 31 documented false positives. The matcher is explicitly a keyword-resemblance
 heuristic and is described as one. It never invents a pattern, never claims a simulated signal *is* a
 documented indicator, and when nothing matches it reports a gap in the taxonomy's vocabulary rather

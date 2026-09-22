@@ -37,7 +37,8 @@ const FWFalsePositiveEngine = (() => {
     EQUIPMENT_CARRIER_MISMATCH: ['Authorized interlining between partner carriers, paperwork lagged', 'Leased tractor still showing its previous owner in the system'],
     DUPLICATE_ASSET_ID: ['Asset tag reused after decommission, records not yet purged', 'Data entry duplicate, same trailer logged under two run IDs'],
     HANDOVER_GAP: ['Rail terminal backlog delayed the handover scan, load was fine', 'Handover confirmed verbally, system scan just lagged'],
-    STAGED_BREAKDOWN: ['Genuine mechanical failure, repair receipt on file', 'Driver followed roadside-assistance SOP correctly']
+    STAGED_BREAKDOWN: ['Genuine mechanical failure, repair receipt on file', 'Driver followed roadside-assistance SOP correctly'],
+    ACCOUNT_TAKEOVER: ['Legitimate delegate access, new staff onboarded before the contact list was updated', 'Password reset after a routine security rotation, logged by IT']
   };
 
   /* Mutates the event's metadata with a groundTruth block. Only call this for
@@ -47,7 +48,7 @@ const FWFalsePositiveEngine = (() => {
      {legitimate:false}`, so a disruption type with no entry in CAUSES came back
      FRAUDULENT every single time — a 100% base rate for that type against 35%
      for every other, which makes the type label alone a proof of fraud. All
-     thirteen types are catalogued today and it has never fired, but the failure
+     fourteen types are catalogued today and it has never fired, but the failure
      mode is the exact one this project exists to refuse, and it would have been
      silent. A type with no innocent explanation on file is a gap in the model,
      not a finding about the load. */
@@ -144,7 +145,7 @@ const FWFalsePositiveEngine = (() => {
       why: 'annotate() mutates the existing metadata object and adds no top-level field, so every annotated event has the same field count.' },
     severity: { varies: 'CONSTANT_BY_CONSTRUCTION',
       why: 'only disruption events are annotated and every disruption is emitted at severity warn, so this restates the filter that selected the sample.' },
-    type: { varies: 'VARIES', why: 'thirteen disruption types are annotated and both classes draw from all of them.' },
+    type: { varies: 'VARIES', why: 'fourteen disruption types are annotated and both classes draw from all of them.' },
     metadataKeys: { varies: 'VARIES', why: 'each disruption type writes its own metadata keys, independently of the ground truth.' },
     metadataCount: { varies: 'VARIES', why: 'follows the per-type metadata keys.' }
   };
