@@ -13,8 +13,8 @@
       "insider",
       "regulatory"
     ],
-    "indicator_count": 77,
-    "countermeasure_count": 137
+    "indicator_count": 87,
+    "countermeasure_count": 138
   },
   "patterns": [
     {
@@ -89,6 +89,13 @@
           "signal": "Claim is submitted by, or on behalf of, an entity that does not appear anywhere in the contractual chain",
           "observable_in": "Claims file",
           "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "At a multi-leg or intermodal handoff, the booking reference in the system of record becomes decoupled from the physical asset that actually checks in, and the two are never reconciled",
+          "observable_in": "Booking/reference system reconciled against the physical asset ID confirmed at the rail, port or terminal check-in",
+          "weight": 4,
+          "notes": "This is where re-tendering or loss most often escapes detection: not at the original award, but at a leg where custody transfers between systems that do not talk to each other. A mismatch here can persist for weeks if never reconciled."
         }
       ],
       "false_positives": [
@@ -113,7 +120,8 @@
           "Require written disclosure and prior approval of any subcontracting, and make undisclosed re-tendering an express termination event in the transport contract.",
           "Verify operating authority and insurance against the issuing register directly, not against a document supplied by the counterparty.",
           "Cross-check that the entity's declared fleet capacity is consistent with the volume it is being awarded.",
-          "Confirm bank details out of band before the first payment, and treat any later change of bank details as a new verification event."
+          "Confirm bank details out of band before the first payment, and treat any later change of bank details as a new verification event.",
+          "Reconcile the booking reference against the physical asset that actually presents at every multi-leg or intermodal handoff, not only the identifier carried in the booking system."
         ],
         "detective": [
           "Make it mandatory to record tractor plate, trailer plate and driver identity at loading, and reconcile all three against the dispatch confirmation automatically rather than by eye.",
@@ -255,6 +263,26 @@
           "observable_in": "Register of directors and shareholders across entities",
           "weight": 4,
           "notes": "This is what makes the pattern repeatable, and why case records must be kept against people and addresses, not just trading names."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "The same vehicle registration plate is presented for two different movements within a window too short for the vehicle to have plausibly completed the first",
+          "observable_in": "Gate check-in log cross-referenced by plate across concurrent or near-concurrent movements",
+          "weight": 5,
+          "notes": "A hard signal: physically the same plate cannot be in two places performing two deliveries at once."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "Volume accepted by a newly onboarded operator sits persistently just under a tier threshold that would trigger increased scrutiny, then rises sharply once the tier resets",
+          "observable_in": "Volume-over-time profile compared against the operator's tenure-based tier thresholds",
+          "weight": 3,
+          "notes": "Weak alone, but worth flagging when paired with any other pre-award indicator, since it suggests the threshold itself is known and being worked around."
+        },
+        {
+          "phase": "post_event",
+          "signal": "The same vehicle or trailer asset appears across several otherwise-unrelated carrier identities, more than one of which has already been suspended for cause",
+          "observable_in": "Asset registration records cross-referenced across carrier master data",
+          "weight": 4
         }
       ],
       "false_positives": [
@@ -391,6 +419,13 @@
           "observable_in": "Direct verification using details from the register, not from the tender",
           "weight": 5,
           "notes": "Always re-contact using details obtained independently. Contacting the number supplied by the perpetrator simply reaches the perpetrator."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "Two separate individuals independently present valid-looking credentials for the same movement within a short window, each passing identity verification on its own",
+          "observable_in": "Gate or check-in identity log for the movement, compared against the credential history for the assigned driver",
+          "weight": 5,
+          "notes": "Distinct from simple plate mismatch: both credentials individually check out, only the duplication across two people reveals the problem."
         }
       ],
       "false_positives": [
@@ -798,6 +833,13 @@
           "observable_in": "Claim narrative and telematics coverage",
           "weight": 3,
           "notes": "Not an indicator of the crime so much as of a control gap that makes this pattern viable and unattributable."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "A brief unscheduled stop occurs at an unregistered location shortly before final delivery, too short for a rest break but long enough for partial unloading",
+          "observable_in": "Route/telematics stop analysis correlated against the scheduled journey and expected rest requirements",
+          "weight": 4,
+          "notes": "The 'last mile' variant of this pattern: cargo is diverted just before arrival rather than during a long overnight stop, so it is easy to miss if only long stops are reviewed."
         }
       ],
       "false_positives": [
@@ -942,6 +984,13 @@
           "signal": "Seals for a lane are drawn from a range that is not centrally controlled, or the sequence has gaps",
           "observable_in": "Seal issue and reconciliation log",
           "weight": 3
+        },
+        {
+          "phase": "post_event",
+          "signal": "Trailer or container shows evidence of forced physical entry, such as a broken locking mechanism, a pried door or a cut curtain, rather than a defeated or substituted seal",
+          "observable_in": "Physical inspection of the unit at delivery or at an intermediate custody check",
+          "weight": 5,
+          "notes": "Distinct from the stealthier reseal indicators above: a blunt forced-entry event is not trying to look like an intact, undisturbed load, so it points to a different actor profile and a different response (immediate physical recovery effort, not paperwork reconciliation)."
         }
       ],
       "false_positives": [
@@ -1076,6 +1125,13 @@
           "signal": "Telematics unit found disconnected, powered down, or physically shielded on inspection",
           "observable_in": "Vehicle inspection after the event",
           "weight": 5
+        },
+        {
+          "phase": "in_transit",
+          "signal": "A location-based arrival or departure stamp is recorded within seconds of check-in, with no corroborating confirmation from an independent yard or gate system",
+          "observable_in": "Cross-check between an app-based geolocation stamp and an independent yard-management or gate-log record for the same event",
+          "weight": 4,
+          "notes": "Distinct from the position-jump/signal-loss indicators above: here the device is working normally, but the stamp itself is being used as unearned proof of a physical event that an independent system does not corroborate."
         }
       ],
       "false_positives": [
@@ -1218,6 +1274,13 @@
           "signal": "Undisclosed relationship between an employee with award or approval authority and a counterparty",
           "observable_in": "Conflict-of-interest declaration compared against register data",
           "weight": 4
+        },
+        {
+          "phase": "in_transit",
+          "signal": "A driver or check-in credential is used to authorise pickup from two locations that are inconsistent with realistic travel time between them",
+          "observable_in": "Credential/session usage log compared against the geolocation of the device used to authenticate",
+          "weight": 4,
+          "notes": "Usually indicates a shared, sold or stolen credential rather than the named individual acting alone."
         }
       ],
       "false_positives": [
@@ -1365,6 +1428,13 @@
           "observable_in": "Document handling record",
           "weight": 3,
           "notes": "Common in legitimate operations, so weak on its own; it matters because it removes the ability to test the other indicators."
+        },
+        {
+          "phase": "post_event",
+          "signal": "A police or incident report submitted in support of a loss claim does not match the claimed location or timeline when checked against independently obtained records",
+          "observable_in": "Cross-check of the submitted report's stated location and timeline against an independently obtained copy or confirmation from the reporting authority",
+          "weight": 4,
+          "notes": "Always re-verify through the authority directly rather than relying solely on the copy supplied by the party making the claim."
         }
       ],
       "false_positives": [

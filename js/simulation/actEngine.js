@@ -47,11 +47,11 @@
    the operation resolves that disagreement by amending the paperwork to whatever
    actually arrived. A false milestone is a stamp claiming an arrival plus a
    receiving end that never confirmed the load. The taxonomy shipped in
-   data/fraud-data.json says the same thing a second way: FFT-007 lists
-   "Driver identity document does not match the dispatch confirmation" and
-   "Tractor or trailer plate does not match the dispatch record" as two separate
-   indicators, both at phase in_transit, both weight 5 -- two observations of one
-   gate check.
+   data/fraud-data.json says the same thing a second way: FFT-004 lists
+   "Driver identity document does not match the name on the dispatch
+   confirmation" and "Tractor or trailer plate does not match the dispatch
+   record" as two separate indicators, both at phase in_transit, both weight 5
+   -- two observations of one gate check.
 
    So the fix is not a constant. It is that three of the thirteen primitives were
    modelled as half of what the source says they are, and the missing half is the
