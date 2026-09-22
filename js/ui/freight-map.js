@@ -676,8 +676,8 @@ const FWFreightMap = (() => {
        misled by that. Tuning the cap to make the strip look busier would be
        tuning the strip to stop being chronological, so it is left alone and the
        number is restated instead. */
-    measured: { seed: 12345, frames: 200, rowsSampled: 2800, disruptionRows: 23,
-      windowsWithADisruption: 20, mostInOneWindow: 2 },
+    measured: { seed: 12345, frames: 200, rowsSampled: 2800, disruptionRows: 28,
+      windowsWithADisruption: 22, mostInOneWindow: 2 },
     cap: 14
   };
 

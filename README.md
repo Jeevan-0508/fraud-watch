@@ -77,10 +77,10 @@ held in the simulation and is structurally unreachable from every analyst-facing
 |---|---|
 | **What it is** | Deterministic, seeded simulation of a freight network plus the analyst tooling to investigate it |
 | **What it is not** | Not production software, not a live data feed, not machine learning |
-| **Scale** | 11 nodes · 11 edges · 4 routes · 49 seeded entities · 13 disruption types · 13 signal types |
+| **Scale** | 11 nodes · 11 edges · 4 routes · 49 seeded entities · 14 disruption types · 14 signal types |
 | **Code** | 55 JavaScript modules, 20,600 lines, no build step, no backend |
 | **Verification** | 112 external test suites, 0 failing, at the current commit |
-| **Fraud content** | 12 documented patterns / 77 indicators / 137 countermeasures / 31 false positives, from a public taxonomy |
+| **Fraud content** | 12 documented patterns / 87 indicators / 138 countermeasures / 31 false positives, from a public taxonomy |
 
 ---
 
@@ -250,7 +250,7 @@ pattern, and it never claims a simulated signal literally *is* a documented indi
 shares a keyword, that is reported as a gap in the taxonomy's vocabulary — not as a finding about the
 behavior.
 
-The taxonomy itself is real, public, and quoted verbatim: **12 fraud patterns, 77 indicators, 137
+The taxonomy itself is real, public, and quoted verbatim: **12 fraud patterns, 87 indicators, 138
 countermeasures, 31 documented false positives** across 8 categories, from
 [freight-fraud-taxonomy](https://github.com/Jeevan-0508/freight-fraud-taxonomy) (CC BY 4.0). Counts
 are verified against `data/fraud-data.json` rather than asserted.
@@ -356,7 +356,7 @@ flowchart TD
     W[World Graph<br/>11 nodes, 11 edges, 4 routes]
     E[Entity Registry<br/>49 seeded entities]
     J[Journey Engine<br/>position over the graph]
-    B[Behavior Engine<br/>lifecycle + 13 disruption types]
+    B[Behavior Engine<br/>lifecycle + 14 disruption types]
     I[Intent Engine<br/>actor plans — GROUND TRUTH]
     F[False-Positive Engine<br/>benign causes — GROUND TRUTH]
     V[Event Engine<br/>the record]
@@ -536,7 +536,7 @@ Verified against the current commit by reading the code and by loading the deplo
 | Canonical world graph (11 nodes / 11 edges / 4 routes) | Complete |
 | Entity registry and seeded population (49 entities) | Complete |
 | Truck journeys with real position over the graph | Complete |
-| Autonomous lifecycle behavior + 13 disruption types | Complete |
+| Autonomous lifecycle behavior + 14 disruption types | Complete |
 | Actor intent / plans (ground truth) | Complete |
 | Composite acts (one act, multiple records) | Complete — engine only, deliberately not rendered |
 | Event stream (13 normal types, bounded 5,000-entry ring buffer) | Complete |

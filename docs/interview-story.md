@@ -164,7 +164,7 @@ disruption rate, lower the threshold, and produce an impressive caseload out of 
 - Position derived from movement; lifecycle stage derived from position; engines that must agree.
 - Records without interpretation → weighted decaying signals → cases only on two distinct live signal
   types over a weight threshold.
-- Classification against a real public taxonomy (12 patterns, 77 indicators, 137 countermeasures, 31
+- Classification against a real public taxonomy (12 patterns, 87 indicators, 138 countermeasures, 31
   documented false positives), with non-matches reported as vocabulary gaps rather than findings.
 - Seven costed record checks with four honest outcome classes, including "you spent the effort and
   learned nothing".

@@ -60,7 +60,7 @@ code and design notes: https://github.com/Jeevan-0508/fraud-watch`
 >
 > On top, only what the world wrote down: records → weighted signals with decay → a case only on ≥2
 > *distinct* live signal types over a weight threshold → matching against a real public taxonomy (12
-> patterns, 77 indicators, 137 countermeasures, 31 documented false positives) → seven costed record
+> patterns, 87 indicators, 138 countermeasures, 31 documented false positives) → seven costed record
 > checks that can come back exculpatory, weakly corroborating, inconclusive, or "this site doesn't
 > produce that record".
 >
