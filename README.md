@@ -411,6 +411,60 @@ flowchart TD
     ENTITY --> FACILITY[FACILITY · 9]
 ```
 
+## Autonomous world
+
+Fraud Watch is an autonomously advancing synthetic freight network. Its simulation progresses in
+scheduled 6-hour ticks and persists its world state independently of the browser. The dashboard is
+an observation interface, not the simulation runtime.
+
+Every other panel in this README describes state that only exists while a browser tab has the page
+open (`FWSimRunner` runs in memory, and closing the tab stops it). The autonomous world is the one
+part of this project that keeps running when nobody is looking, on a schedule GitHub itself owns:
+
+```mermaid
+flowchart LR
+    CRON[Scheduled GitHub Action<br/>cron: every 6 real hours] --> TICK[scripts/tick.js]
+    TICK -->|restore + fastForward| ENGINE[The same simulation engine<br/>FWSimRunner / js/simulation/*]
+    ENGINE --> SNAP[data/world-state.json<br/>authoritative snapshot]
+    ENGINE --> LOG[data/simulation-log.jsonl<br/>append-only tick history]
+    SNAP --> SUMMARY[data/dashboard-summary.json<br/>analyst-safe projection]
+    SNAP -->|committed to main| PAGES[GitHub Pages]
+    SUMMARY --> PAGES
+    PAGES --> UI[Autonomous World panel<br/>observation only]
+```
+
+**What actually happens on a tick.** `scripts/tick.js` loads `data/world-state.json`, calls
+`FWSimRunner.restore()` on it (the exact restore path a browser refresh already used), then calls
+`FWSimRunner.fastForward(6 * 3600)`, which steps the real engine (event/behavior/signal/MO/outcome,
+same as always) in small chunks across the whole 6-hour period rather than jumping the clock. Whatever
+would have happened with a tab open, shipments moving, disruptions, signals, cases opening or fading,
+happens the same way here. The result is captured with `FWLiveSimStore.capture()` (the same function a
+browser save uses) and written back to `data/world-state.json`, plus a derived `dashboard-summary.json`
+for the panel, plus one line appended to `data/simulation-log.jsonl`.
+
+**Cadence and catch-up.** The workflow (`.github/workflows/tick.yml`) runs on `cron: '17 */6 * * *'`:
+four ticks a day, 6 simulated hours each, so one real day advances the world by one simulated day. If a
+run is missed or delayed, `tick.js` computes how many 6-hour ticks are owed from the wall-clock gap
+since the last persisted tick and runs that many in sequence, but never more than `FW_MAX_CATCHUP_TICKS`
+(4, i.e. at most one simulated day of catch-up per invocation), so a dead workflow revived after a week
+does not silently sprint the world forward by a week. Every catch-up run is logged with the number owed,
+the number actually run, and whether it was capped. A second trigger inside the same 6-hour window (a
+retry, a manual dispatch right after the schedule fired) is logged as `SKIPPED_TOO_SOON` and changes
+nothing: duplicate triggers cannot double-advance the same period.
+
+**What this is not.** There is no server process running this simulation continuously: the engine
+only runs for the few seconds each scheduled Action takes, then exits. "Autonomous" describes the
+schedule and the persistence, not a 24/7 live server; nothing in this project claims one. The dashboard
+never computes a tick itself. It fetches `data/dashboard-summary.json` and renders whatever the last
+completed tick left behind. Ground truth (`intentBook`, `actTracker`, the answer key the rest of this
+README already describes as never analyst-readable) is excluded from `data/world-state.json` by
+`FWLiveSimStore`'s own persisted-fields whitelist, so it was never a thing this feature could leak.
+
+Tests for the tick contract live in `tests/tick.test.js` (`node tests/tick.test.js`): exact 6-hour
+and 24-hour advancement, persistence across ticks, deterministic replay from the same seed, bounded
+catch-up, duplicate-trigger and corrupted-state safety, and that the dashboard summary matches the
+persisted snapshot it was derived from.
+
 ## Technical highlights
 
 | Capability | What it demonstrates |
@@ -502,6 +556,7 @@ Verified against the current commit by reading the code and by loading the deplo
 | Classic Watch arcade mode | Complete |
 | Port Meridian investigation mode | Vertical slice — missions and free-roam not built |
 | Long-run replay / scenario comparison | Not built — the event log is a bounded ring buffer, so old events are discarded |
+| Autonomous scheduled advancement (GitHub Action, no browser required) | Complete: 6 simulated hours per tick, bounded catch-up, `tests/tick.test.js` |
 | Machine learning of any kind | Not present, and not claimed |
 
 ## Live demo

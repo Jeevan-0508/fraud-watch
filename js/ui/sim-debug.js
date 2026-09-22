@@ -195,6 +195,7 @@ const FWSimDebug = (() => {
       FWAnalyticsView.init();
       FWSimRunner.onTick(FWAnalyticsView.render);
     }
+    if (window.FWAutonomousWorld) FWAutonomousWorld.init();
     /* WARM START, and why there is one. A truck's first journey is drawn on its
        first behavior tick, not at t=0, so at the instant the run is created no
        truck has a journey and the network map draws eleven places and nothing

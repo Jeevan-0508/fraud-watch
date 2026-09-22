@@ -1,0 +1,58 @@
+name: Autonomous world tick
+
+# Fraud Watch's simulation advances on its own schedule, independent of any
+# browser tab. Every run of this workflow is one "tick": it loads the last
+# persisted world snapshot, advances the simulation engine by exactly 6
+# simulated hours (processing that period, not just moving a clock hand),
+# and commits the result so the GitHub Pages dashboard can display it.
+#
+# Cadence: every 6 real-world hours -> 4 ticks/day -> 1 simulated day per
+# real day. `workflow_dispatch` is for a manual nudge (e.g. right after
+# editing this file); it runs the exact same script and the exact same
+# bounded catch-up/duplicate-guard logic as the schedule, so it cannot
+# double-advance the world.
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch: {}
+
+# Only one tick may be in flight at a time. Without this, a slow run
+# overlapping the next scheduled trigger could both try to advance the same
+# persisted state from the same starting point — the duplicate-guard in
+# tick.js catches that too (MIN_INTERVAL_MS), but refusing the overlap here
+# is the cheaper, first line of defence.
+concurrency:
+  group: fraud-watch-autonomous-tick
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Advance the simulation by one tick (6 simulated hours)
+        run: node scripts/tick.js
+
+      - name: Commit the updated world state
+        run: |
+          git config user.name "fraud-watch-autonomous-world"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/world-state.json data/simulation-log.jsonl data/dashboard-summary.json
+          if git diff --cached --quiet; then
+            echo "No change to commit (tick was skipped or produced no diff)."
+          else
+            TICK=$(node -e "console.log(JSON.parse(require('fs').readFileSync('data/world-state.json','utf8')).meta.tick)")
+            DAY=$(node -e "console.log(JSON.parse(require('fs').readFileSync('data/world-state.json','utf8')).clock.day)")
+            git commit -m "Autonomous world tick #${TICK} (day ${DAY})"
+            git push
+          fi

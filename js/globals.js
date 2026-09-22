@@ -49,7 +49,7 @@ const FWGlobals = (() => {
     'FWAnalyticsEngine', 'FWSimRunner', 'FWSimDebug', 'FWMoIntelligence',
     'FWEntityInspector', 'FWCaseExport', 'FWFreightMap', 'FWNetworkEngine', 'FWAwayReportEngine', 'FWAwayReport',
     'FWNetworkView', 'FWCalibrationView', 'FWShiftView', 'FWExposureView',
-    'FWFacilityView', 'FWAnalyticsView', 'FWGame', 'FWTraining',
+    'FWFacilityView', 'FWAnalyticsView', 'FWAutonomousWorld', 'FWGame', 'FWTraining',
     'FWCharts'
   ];
 
@@ -116,6 +116,7 @@ const FWGlobals = (() => {
     FWExposureView: () => FWExposureView,
     FWFacilityView: () => FWFacilityView,
     FWAnalyticsView: () => FWAnalyticsView,
+    FWAutonomousWorld: () => FWAutonomousWorld,
     FWGame: () => FWGame,
     FWTraining: () => FWTraining,
     FWCharts: () => FWCharts
