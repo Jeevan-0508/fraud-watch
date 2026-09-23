@@ -40,7 +40,7 @@ const FILES = [
   'simulation/candidateEngine.js',
   'simulation/adviceEngine.js', 'simulation/outcomeEngine.js', 'simulation/exposureModel.js',
   'simulation/analyticsEngine.js', 'simulation/simRunner.js',
-  'ui/sim-debug.js', 'ui/mo-intelligence.js', 'ui/case-export.js', 'ui/entity-inspector.js',
+  'ui/sim-debug.js', 'ui/mo-intelligence.js', 'ui/discovery-lab.js', 'ui/case-export.js', 'ui/entity-inspector.js',
   'ui/freight-map.js',
   'simulation/networkEngine.js', 'simulation/awayReport.js',
   'ui/away-report.js', 'ui/network-view.js', 'ui/calibration-view.js',

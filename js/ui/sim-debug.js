@@ -157,6 +157,10 @@ const FWSimDebug = (() => {
       FWMoIntelligence.init();
       FWSimRunner.onTick(FWMoIntelligence.render);
     }
+    if (window.FWDiscoveryLab) {
+      FWDiscoveryLab.init();
+      FWSimRunner.onTick(FWDiscoveryLab.render);
+    }
     // Booted after the panel it exports from, because it binds a control that
     // lives in that panel's header.
     if (window.FWCaseExport) FWCaseExport.init();
@@ -218,6 +222,7 @@ const FWSimDebug = (() => {
     FWSimRunner.start();
     render(FWSimRunner.getState());
     if (window.FWMoIntelligence) FWMoIntelligence.render(FWSimRunner.getState());
+    if (window.FWDiscoveryLab) FWDiscoveryLab.render(FWSimRunner.getState());
     if (window.FWFreightMap) FWFreightMap.render(FWSimRunner.getState());
     if (window.FWNetworkView) FWNetworkView.render(FWSimRunner.getState());
     if (window.FWCalibrationView) FWCalibrationView.render(FWSimRunner.getState());
