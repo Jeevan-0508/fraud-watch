@@ -260,6 +260,25 @@ A **network view** builds an entity co-occurrence graph from cases that already 
 Facilities are drawn but deliberately excluded from repeat-entity and clustering findings, because
 almost every movement passes through a gate: a site's degree measures traffic, not involvement.
 
+### From classification to candidate: the Discovery Lab
+
+A classification is not the end of the story. Once a signature moEngine still calls
+`POTENTIAL_NEW_MO` or `EMERGING_BEHAVIOR` has been sighted at least twice, it is auto-derived into
+a **candidate record** -- purely informational, naming what the classifier's own numbers already
+support. Nothing past that moves on its own: an analyst drives it through `CANDIDATE` -> `REVIEW` ->
+`VALIDATED` or `REJECTED` with exactly two actions, Start Review and then Validate/Reject, and
+skipping Review is refused. A candidate's provenance -- every case that earned it the label -- is
+**append-only**: it never shrinks even if that same signature later recurs enough to be called
+`KNOWN_MO`, because the record answers "why was this first flagged," not "what still qualifies now."
+
+The Discovery Lab's scoreboard reads only numbers the engines already compute and already reconcile
+-- candidates surfaced, awaiting review, validated, rejected -- never a second, UI-side score. A
+validation rate is withheld until at least three candidates have been resolved, the same restraint
+Analyst Calibration applies to its own accuracy figures. And like every downstream engine in this
+project, the Discovery Lab is barred from reading the actor's plan: "validated" means an analyst
+judged the recurring signature worth naming, not that it matched anything in the hidden ground truth,
+and the two are never compared on screen.
+
 ### Actor intent is ground truth, and the analyst cannot reach it
 
 Some drivers hold a **plan**: an ordered list of steps, each pairing a disruption type with a
@@ -267,6 +286,17 @@ position test over the world graph. A step fires only when that driver's truck i
 position, and only on an opportunity the behavior engine had already granted at its own unchanged
 rate. So a plan changes *which* disruption a granted opportunity spends itself on — never how many
 there are.
+
+A plan's **kind** is drawn from 11 of the taxonomy's 12 documented patterns (the twelfth,
+paperwork-only Insurance Certificate Fraud, carries no movement/position fact this world can
+represent). Each kind's steps may also be reordered or shortened into a declared **variant** --
+`BASE`, `REORDERED`, `ABBREVIATED` -- never invented ad hoc. Exactly one actor per run may
+additionally hold a **blended-kind plan**: one act combining the steps of two distinct kinds, drawn
+strictly from whatever drivers are left over rather than substituting for a single-kind plan. And a
+plan can change exactly once, in one direction: if moEngine's own classification of a case tied to
+that actor's driver ever reaches `MO_VARIANT` or `KNOWN_MO`, the actor's variant may step down to
+the quieter `ABBREVIATED` form -- the plan noticing it has been noticed. A blended-kind actor never
+adapts; there is no quieter form of a plan that is already two plans.
 
 The plan is ground truth. The module that owns it **declares its own permitted readers in code**:
 
@@ -537,7 +567,9 @@ Verified against the current commit by reading the code and by loading the deplo
 | Entity registry and seeded population (49 entities) | Complete |
 | Truck journeys with real position over the graph | Complete |
 | Autonomous lifecycle behavior + 14 disruption types | Complete |
-| Actor intent / plans (ground truth) | Complete |
+| Actor intent / plans — taxonomy-driven kinds, variants, blended-kind actors | Complete |
+| Adversary adaptation (one quieter variant after detection, exactly once) | Complete |
+| Candidate-MO review workflow (Discovery Lab) | Complete |
 | Composite acts (one act, multiple records) | Complete — engine only, deliberately not rendered |
 | Event stream (13 normal types, bounded 5,000-entry ring buffer) | Complete |
 | Signal generation (13 weighted, decaying types) | Complete |
@@ -585,6 +617,10 @@ Select the **Live Sim** tab, then:
    panel withhold percentages until there are enough decided cases to mean anything.
 9. **Compare the operational world with the intelligence layer.** The Sites panel will show you that
    the busiest site is the best-watched one, not the riskiest.
+10. **Open the Discovery Lab.** Fast-forward a few days if it is empty. A candidate appears once a
+    still-novel signature is sighted twice; click **Start Review**, then **Validate** or **Reject**
+    with a note. Watch the scoreboard's counts move, and watch the validation rate stay withheld as
+    a count until three candidates have actually been resolved.
 
 Speed controls and a fast-forward are in the Live Sim header if you do not want to wait for the world
 to produce something.
@@ -686,6 +722,10 @@ it has not earned.
   its severity and prevalence judgements are that taxonomy's qualitative assessment.
 - **Composite acts are modelled but not rendered.** The engine links the records an act leaves behind;
   the UI deliberately does not surface them yet.
+- **A validated candidate is an analyst judgement, not a confirmed discovery.** The Discovery Lab is
+  barred from reading the actor's plan, the same as every other downstream engine, so "Validated"
+  records that a human found the recurring signature worth naming -- it is never checked against, or
+  claimed to match, the hidden ground truth that produced it.
 - **Port Meridian is a vertical slice.** Missions, free-roam, day/night cycle and audio are not built.
 - **The demo's default tab is the arcade mode**, which undersells everything above. Choose Live Sim.
 - **Modelling a regulatory or control concept is not compliance with it.** Nothing here certifies
