@@ -898,6 +898,73 @@ const FWIntentEngine = (() => {
     return book;
   }
 
+  /* PLANTING AN EVOLVED CANDIDATE (Slice 95). createBook above draws every
+     actor once, at genesis, from PLAN_KIND_NAMES -- a closed, hand-authored
+     vocabulary. This is the one seam that lets a SPECIFIC plan-shaped object
+     evolutionEngine proposed -- never a registered PLAN_KINDS name -- become
+     a real actor's plan. It builds the exact plan shape createBook itself
+     builds and runs it through the exact same feasibility gate
+     (candidateTargets, assertPlanFeasible), so nothing downstream --
+     behaviorEngine, signalEngine, moEngine, candidateEngine, Discovery Lab,
+     adapt(), retire() -- has to know or care whether a plan came from
+     PLAN_KINDS or from a mutation. lifecycle and eligibleStages are taken as
+     explicit arguments rather than read off book, because book (see
+     createBook above) never stores either -- createBook spends them once, at
+     the assertPlanFeasible call, and keeps neither; the caller (evolution-
+     runner, never this module) already holds them from its own boot and
+     passes them again here, on the same terms createBook required of ITS
+     caller. This function only ever refuses a driver who already holds a
+     plan or a candidate the graph cannot host, and refuses rather than
+     throws for the second reason, the same discipline
+     evolutionEngine.checkFeasibility already applies -- an infeasible
+     candidate reaching this function is the expected outcome of a search,
+     not a bug in this module. */
+  function plantCandidateActor(book, driverId, candidateId, kindLike, lifecycle, eligibleStages) {
+    if (!book || !book.plans) {
+      throw new Error('intentEngine.plantCandidateActor: no book given -- there is nowhere to plant this actor.');
+    }
+    if (book.plans.has(driverId)) {
+      throw new Error('intentEngine.plantCandidateActor: driver "' + driverId + '" already holds a plan (' +
+        book.plans.get(driverId).kind + '); planting a second plan over it would silently discard the first.');
+    }
+    if (!kindLike || !Array.isArray(kindLike.steps) || !kindLike.steps.length) {
+      throw new Error('intentEngine.plantCandidateActor: "' + candidateId + '" carries no steps; a plan with no ' +
+        'act is not something this function can feasibility-check, let alone run.');
+    }
+    const affordances = book.affordances;
+    const candidates = candidateTargets(kindLike, affordances);
+    if (!candidates.length) {
+      return { ok: false, why: 'NO_FEASIBLE_TARGET', candidateId: candidateId };
+    }
+    const targetNodeId = candidates[0];
+    const plan = {
+      actorDriverId: driverId,
+      kind: candidateId,
+      evolved: true,
+      variant: null,
+      resembles: kindLike.resembles || null,
+      targetNodeId: targetNodeId,
+      targetNodeType: affordances.index[targetNodeId].nodeType,
+      steps: kindLike.steps.map(s => (s.test === 'AT_NODE_TYPE'
+        ? { type: s.type, test: s.test, nodeType: s.nodeType }
+        : { type: s.type, test: s.test, nodeId: targetNodeId })),
+      stepIndex: 0,
+      state: 'ARMED',
+      laps: 0,
+      fired: [],
+      candidatesConsidered: candidates.length,
+      adapted: false, adaptedAt: null, adaptedTrigger: null, adaptedToQuieter: null
+    };
+    try {
+      assertPlanFeasible(plan, lifecycle, eligibleStages, affordances.sampleSeconds);
+    } catch (e) {
+      return { ok: false, why: 'FEASIBILITY_CHECK_FAILED', detail: String(e && e.message || e), candidateId: candidateId };
+    }
+    book.plans.set(driverId, plan);
+    book.actorIds.push(driverId);
+    return { ok: true, plan: plan };
+  }
+
   /* WHAT THE PLAN WANTS TO DO RIGHT NOW, asked once per granted opportunity.
 
      Returns null only when this driver holds no plan at all -- the ordinary case
@@ -1389,7 +1456,7 @@ const FWIntentEngine = (() => {
     ADAPT_SEED_OFFSET, adapt, retire,
     PLAN_STATES, MISS_REASONS, GROUND_TRUTH, ASSUMPTIONS, NOT_MODELLED, POSITION_TEST_DRIVE,
     nodeAffordances, candidateTargets, assertPlanFeasible, positionMatches,
-    createBook, nextStepFor, commitStep, latencyReport, summary,
+    createBook, plantCandidateActor, nextStepFor, commitStep, latencyReport, summary,
     assertPositionTestsDeclared, assertPlansCanCorrelate, assertStepTypesDeclared, assertKindsStageable,
     assertResemblanceResolves, assertEligibleStages
   };
