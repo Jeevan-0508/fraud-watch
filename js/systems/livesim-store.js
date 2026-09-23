@@ -30,7 +30,7 @@
    it is stated in REDUCTIONS. */
 const FWLiveSimStore = (() => {
   const KEY = 'fraudwatch_livesim_state';
-  const VERSION = 2;
+  const VERSION = 3;
 
   /* SAVE CADENCE, decided rather than left to the caller.
 
@@ -69,7 +69,8 @@ const FWLiveSimStore = (() => {
     { field: 'recentEvents', how: 'EVENT_ROWS', why: 'the published recent-event list the panels read, as declared rows.' },
     { field: 'totalEvents', how: 'PLAIN', why: 'the run total, which the recent list is only a window onto.' },
     { field: 'rngState', how: 'RNG_STATE', why: 'the run stream position, so a restored world continues rather than repeating.' },
-    { field: 'candidateStore', how: 'CANDIDATE_STORE', why: 'one Map of candidate-MO records keyed by signature -- an analyst\u2019s CANDIDATE/REVIEW/VALIDATED/REJECTED decisions and their provenance must survive a refresh exactly as a case status does. null when the module was not loaded, same as the trackers above.' }
+    { field: 'candidateStore', how: 'CANDIDATE_STORE', why: 'one Map of candidate-MO records keyed by signature -- an analyst\u2019s CANDIDATE/REVIEW/VALIDATED/REJECTED decisions and their provenance must survive a refresh exactly as a case status does. null when the module was not loaded, same as the trackers above.' },
+    { field: 'evolutionStore', how: 'EVOLUTION_STORE', why: 'the evolutionary search\u2019s own GENERATED/INFEASIBLE/SIMULATED/NOMINATED/DISCARDED records, generation counter and promoted list, on the same terms candidateStore survives a refresh on. null when the module was not loaded.' }
   ];
   const PERSISTED_FIELDS = PERSISTED.map(p => p.field);
 
@@ -85,7 +86,8 @@ const FWLiveSimStore = (() => {
     MO_ENGINE: 'three Maps -> three arrays of entries -> three Maps, refilled in place.',
     OUTCOME_ENGINE: 'a ledger array and a Map whose values are the SAME objects as the ledger rows -> the ledger only -> the ledger, with the Map rebuilt from it by reference so the aliasing that existed before the save exists after it.',
     RNG_STATE: 'a closure counter, readable only because rng.js exposes its position -> an integer -> the counter, set back.',
-    CANDIDATE_STORE: 'one Map, keyed by signature, of candidate records (plain fields plus two append-only arrays, provenance and history) -> an array of entries -> the same Map, refilled in place. null stays null.'
+    CANDIDATE_STORE: 'one Map, keyed by signature, of candidate records (plain fields plus two append-only arrays, provenance and history) -> an array of entries -> the same Map, refilled in place. null stays null.',
+    EVOLUTION_STORE: 'one Map keyed by candidateId, plus a generation counter and a promoted list -> an array of entries plus the two scalars -> the same Map, refilled in place, and the two scalars set back. null stays null.'
   };
 
   /* WHAT A RESTORED RUN DOES NOT GET BACK, stated so nobody reads the restore
@@ -200,6 +202,23 @@ const FWLiveSimStore = (() => {
     return store;
   }
 
+  // evolutionEngine's store (Slice 97): records on the same terms
+  // candidateStore's are, plus the two scalars createStore() also carries --
+  // generation, so proposeGeneration never repeats a generation number across
+  // a restore, and promoted, an append-only list a later live-promotion slice
+  // owns and this file only carries. null in, null out, same as above.
+  function captureEvolutionStore(store) {
+    return store ? { records: mapToEntries(store.records), generation: store.generation, promoted: copyPlain(store.promoted || []) } : null;
+  }
+
+  function applyEvolutionStore(store, stored) {
+    if (!store || !stored) return store;
+    fillMap(store.records, stored.records);
+    store.generation = stored.generation || 0;
+    store.promoted = stored.promoted || [];
+    return store;
+  }
+
   /* The one place where the save is not a copy of the shape it found. Before a
      save, one verdict record is three references to one object: a row of the
      ledger, a value in the by-case Map, and a field on the case it closed.
@@ -269,7 +288,8 @@ const FWLiveSimStore = (() => {
       recentEvents: eventRows(run.recentEvents),
       totalEvents: run.totalEvents,
       rngState: streamPosition(run.rng),
-      candidateStore: captureCandidateStore(run.candidateStore)
+      candidateStore: captureCandidateStore(run.candidateStore),
+      evolutionStore: captureEvolutionStore(run.evolutionStore)
     };
   }
 
@@ -285,21 +305,28 @@ const FWLiveSimStore = (() => {
     return { ok: true };
   }
 
-  /* THE DOOR VERSION 2 CAME THROUGH. Version 1 predates candidateEngine
-     entirely, so a version-1 snapshot has no candidateStore field and never
-     could -- that is not data lost, it is a fact about a run saved before the
-     feature existed. The only change a version-1 -> version-2 migration ever
-     has to make is stated here in one line: give it the same empty store a
-     fresh boot would have produced. Every other field is untouched, so a
-     migrated run continues exactly where it left off. A snapshot from any
-     OTHER unknown version is still refused rather than guessed at -- this
-     migration is written for the one gap that is actually known, not for
-     versions that do not exist yet. */
+  /* THE DOORS VERSION 2 AND VERSION 3 CAME THROUGH. Version 1 predates
+     candidateEngine entirely, so a version-1 snapshot has no candidateStore
+     field and never could; version 1 and version 2 both predate
+     evolutionEngine, so neither has an evolutionStore field. Neither gap is
+     data lost -- each is a fact about a run saved before the feature existed.
+     The only change either migration ever has to make is stated here in one
+     line per gap: give the snapshot the same empty store a fresh boot would
+     have produced for whichever field it is missing. Every other field is
+     untouched, so a migrated run continues exactly where it left off. A
+     snapshot from any OTHER unknown version is still refused rather than
+     guessed at -- this migration is written for the two gaps that are
+     actually known, not for versions that do not exist yet. */
   function migrate(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') return null;
     if (snapshot.version === VERSION) return snapshot;
     if (snapshot.version === 1) {
-      return Object.assign({}, snapshot, { version: VERSION, candidateStore: { records: [] } });
+      return Object.assign({}, snapshot, { version: VERSION, candidateStore: { records: [] },
+        evolutionStore: { records: [], generation: 0, promoted: [] } });
+    }
+    if (snapshot.version === 2) {
+      return Object.assign({}, snapshot, { version: VERSION,
+        evolutionStore: { records: [], generation: 0, promoted: [] } });
     }
     return null;
   }
@@ -326,6 +353,7 @@ const FWLiveSimStore = (() => {
     run.totalEvents = snapshot.totalEvents;
     setStreamPosition(run.rng, snapshot.rngState);
     applyCandidateStore(run.candidateStore, snapshot.candidateStore);
+    applyEvolutionStore(run.evolutionStore, snapshot.evolutionStore);
     return { ok: true, relinkedVerdicts: outcome.relinked, cases: run.moEngine.mos.size, day: run.clock.day };
   }
 

@@ -41,13 +41,18 @@ const FWSimRunner = (() => {
        its only readers, no view may render it, and it is reachable from state on
        exactly the terms a signal's answer key already is. */
     const candidateStore = window.FWCandidateEngine ? FWCandidateEngine.createStore() : null;
+    /* Slice 97: evolutionEngine's own store, one per run, on the same terms
+       candidateStore already sits on: created empty here, at boot, and never
+       re-created by restore() -- FWLiveSimStore.applyTo() refills THIS Map
+       from the saved snapshot, the same way it refills candidateStore's. */
+    const evolutionStore = window.FWEvolutionEngine ? FWEvolutionEngine.createStore() : null;
     const intentBook = window.FWIntentEngine
       ? FWIntentEngine.createBook(registry, seed, FWBehaviorEngine.LIFECYCLE,
         [...FWBehaviorEngine.DISRUPTION_ELIGIBLE_STAGES], { sampleSeconds: FF_CHUNK })
       : null;
     state = {
       seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine,
-      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker, candidateStore,
+      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker, candidateStore, evolutionStore,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;

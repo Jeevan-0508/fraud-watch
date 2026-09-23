@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const { bootSandbox } = require('./lib/app-sandbox.js');
 const { summarize } = require('./lib/summarize.js');
+const { runGeneration } = require('./lib/evolution-runner.js');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const DATA_DIR = process.env.FW_DATA_DIR || path.join(REPO_ROOT, 'data');
@@ -75,6 +76,38 @@ function simTimestamp(clock) {
   return { day: clock.day, timeOfDay: clock.timeOfDay(), absSeconds: (clock.day - 1) * 86400 + clock.simSeconds };
 }
 
+/* ONE EVOLUTIONARY GENERATION PER INVOCATION, never per 6-hour sub-tick a
+   catch-up run advances through -- MAX_GENERATIONS_PER_TICK (evolutionEngine.js,
+   section 21) means per tick.js run, and a catch-up run advancing four owed
+   ticks in one invocation is still one run of this script. Proposes a
+   generation against M's own FWBehaviorEngine.LIFECYCLE/DISRUPTION_ELIGIBLE_STAGES
+   (the exact values M.FWIntentEngine.createBook already used to build this
+   same state's intentBook) and scratch-simulates every candidate it produced,
+   each in its OWN disposable sandbox (scripts/lib/evolution-runner.js), never
+   this one. Returns null, doing nothing else, when FWEvolutionEngine or
+   state.evolutionStore is not loaded -- the same null-in/null-out discipline
+   candidateStore already uses elsewhere in this script's own state object. */
+function runEvolutionStep(M, state, execAt) {
+  if (!M.FWEvolutionEngine || !state.evolutionStore) return null;
+  const lifecycle = M.FWBehaviorEngine.LIFECYCLE;
+  const eligibleStages = [...M.FWBehaviorEngine.DISRUPTION_ELIGIBLE_STAGES];
+  const sampleSeconds = state.intentBook ? state.intentBook.sampleSeconds : M.FWSimRunner.FF_CHUNK;
+  const before = state.evolutionStore.generation;
+  const proposed = M.FWEvolutionEngine.proposeGeneration(
+    state.evolutionStore, state.seed, lifecycle, eligibleStages, sampleSeconds, { now: execAt }
+  );
+  const ran = runGeneration(M.FWEvolutionEngine, state.evolutionStore, { now: execAt });
+  const nominated = ran.results.filter(r => r.simulated && r.score && r.score.total >= 0.5).length;
+  // Logging is the caller's job, not this function's: appendLog() must run after the tick's
+  // own GENESIS_TICK/TICK entry so that entry stays log[0] for a single-tick log file.
+  return {
+    generation: proposed.generation, previousGeneration: before,
+    produced: proposed.produced.length, budgetExhausted: proposed.budgetExhausted,
+    simulated: ran.count, nominated,
+    byState: M.FWEvolutionEngine.summary(state.evolutionStore).byState
+  };
+}
+
 function main() {
   const M = bootSandbox().window;
   const existing = readJson(WORLD_STATE_PATH);
@@ -90,6 +123,7 @@ function main() {
     const eventsBefore = state.totalEvents;
     M.FWSimRunner.fastForward(TICK_SIM_SECONDS);
     const after = simTimestamp(state.clock);
+    const evolution = runEvolutionStep(M, state, execAt);
     const snapshot = M.FWLiveSimStore.capture(state);
     snapshot.meta = { tick: 1, lastTickReal: execAt, seedOrigin: 'GENESIS', seed: GENESIS_SEED,
       tickSimSeconds: TICK_SIM_SECONDS, cadenceMs: CADENCE_MS };
@@ -104,7 +138,9 @@ function main() {
       eventsGenerated: state.totalEvents - eventsBefore, totalEventsAfter: state.totalEvents,
       seed: GENESIS_SEED
     });
-    console.log(`GENESIS_TICK #1: day ${before.day} ${before.timeOfDay} -> day ${after.day} ${after.timeOfDay}`);
+    if (evolution) appendLog(Object.assign({ outcome: 'EVOLUTION_GENERATION', triggeredAt: execAt }, evolution));
+    console.log(`GENESIS_TICK #1: day ${before.day} ${before.timeOfDay} -> day ${after.day} ${after.timeOfDay}` +
+      (evolution ? ` evolution gen ${evolution.generation}: ${evolution.produced} produced, ${evolution.nominated} nominated.` : ''));
     return;
   }
 
@@ -157,14 +193,17 @@ function main() {
     }
 
     const nextExpectedTickReal = new Date(nowMs() + CADENCE_MS).toISOString();
+    const evolution = runEvolutionStep(M, state, execAt);
     const snapshot = M.FWLiveSimStore.capture(state);
     snapshot.meta = { tick, lastTickReal: execAt, seedOrigin: existing.meta ? existing.meta.seedOrigin : 'UNKNOWN',
       seed: state.seed, tickSimSeconds: TICK_SIM_SECONDS, cadenceMs: CADENCE_MS };
     writeJsonAtomic(WORLD_STATE_PATH, snapshot);
     writeJsonAtomic(SUMMARY_PATH, summarize(state, { tick, lastTickReal: execAt, nextExpectedTickReal }));
+    if (evolution) appendLog(Object.assign({ outcome: 'EVOLUTION_GENERATION', triggeredAt: execAt }, evolution));
 
     console.log(`TICK(s) #${lastTick + 1}..#${tick} of ${ranTicks} run (owed ${owedTicks}${capped ? ', capped at ' + MAX_CATCHUP_TICKS : ''}). ` +
-      `events this run: ${state.totalEvents - eventsAtStart}. now: day ${state.clock.day} ${state.clock.timeOfDay()}.`);
+      `events this run: ${state.totalEvents - eventsAtStart}. now: day ${state.clock.day} ${state.clock.timeOfDay()}.` +
+      (evolution ? ` evolution gen ${evolution.generation}: ${evolution.produced} produced, ${evolution.nominated} nominated.` : ''));
   } catch (e) {
     appendLog({ outcome: 'FAILURE', tick: lastTick, triggeredAt: execAt, phase: 'ADVANCE', error: String(e && e.message || e) });
     console.error('FAILURE advancing the world — leaving the last good world-state.json untouched.', e);
