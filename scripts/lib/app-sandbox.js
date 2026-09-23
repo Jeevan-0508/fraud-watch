@@ -35,7 +35,7 @@ const FILES = [
   'simulation/journeyEngine.js',
   'simulation/shiftEngine.js', 'simulation/facilityEngine.js', 'simulation/entityEngine.js',
   'simulation/eventEngine.js', 'simulation/falsePositiveEngine.js',
-  'simulation/intentEngine.js', 'simulation/behaviorEngine.js',
+  'simulation/intentEngine.js', 'simulation/evolutionEngine.js', 'simulation/behaviorEngine.js',
   'simulation/signalEngine.js', 'simulation/moEngine.js', 'simulation/actEngine.js', 'simulation/investigationEngine.js',
   'simulation/candidateEngine.js',
   'simulation/adviceEngine.js', 'simulation/outcomeEngine.js', 'simulation/exposureModel.js',
