@@ -157,12 +157,31 @@ const FWSimRunner = (() => {
      so the caller can take its normal first-run path (warm start included). */
   function restore(snapshot) {
     if (!snapshot || !window.FWLiveSimStore) return null;
-    const compat = FWLiveSimStore.compatible(snapshot);
-    if (!compat.ok) return null;
+    /* MIGRATE BEFORE CHECKING COMPATIBILITY (fix, this slice). load()'s own
+       browser path already migrates before calling this function, so a
+       snapshot arriving here from THAT path is already current and this is a
+       no-op (migrate() returns a same-version snapshot unchanged). scripts/
+       tick.js has no such step of its own -- it reads world-state.json off
+       disk and calls this function directly -- so without this line, this
+       function refused every snapshot older than the build's current VERSION
+       outright, with no migration ever attempted for the one caller that
+       actually needed one. */
+    const migrated = FWLiveSimStore.migrate(snapshot);
+    if (!migrated) {
+      lastRestore = { ok: false, why: 'WRONG_VERSION: stored snapshot version ' + (snapshot && snapshot.version) +
+        ' has no migration path to this build.' };
+      return null;
+    }
+    const compat = FWLiveSimStore.compatible(migrated);
+    if (!compat.ok) {
+      lastRestore = { ok: false, why: (compat.refusal || 'INCOMPATIBLE') + ': ' + compat.why +
+        (compat.missing ? ' (missing: ' + compat.missing.join(', ') + ')' : '') };
+      return null;
+    }
     try {
-      boot(snapshot.seed);
-      const applied = FWLiveSimStore.applyTo(state, snapshot);
-      if (!applied.ok) { state = null; boot(); return null; }
+      boot(migrated.seed);
+      const applied = FWLiveSimStore.applyTo(state, migrated);
+      if (!applied.ok) { state = null; boot(); lastRestore = applied; return null; }
       lastRestore = applied;
       return state;
     } catch (e) {
