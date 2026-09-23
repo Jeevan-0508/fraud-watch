@@ -346,6 +346,7 @@ const FWIntentEngine = (() => {
   const ASSUMPTIONS = [
     'An actor is a driver. Six of the twenty-four crewed drivers in this build hold a plan; the other eighteen and every spare driver in the pool of thirty-four hold none, and a truck whose driver holds none behaves exactly as it did before this module existed.',
     'A plan is chosen once, at boot, from a stream offset from the sim seed, and never changes. Nothing in the simulation can cause an actor to acquire, abandon or alter a plan -- there is no recruitment, no deterrence and no learning of any kind.',
+    'COMPOSITE_ACTOR_COUNT of the crewed drivers hold a plan built from two kinds at once rather than one. A composite is drawn from the same pool as every other actor, after they are placed, so it is a strictly additional actor, never a substitute for one of the eleven single-kind plans.',
     'A step fires only on an opportunity behaviorEngine has already granted at its own unchanged rate, so a plan redistributes which type a trace carries and never how many traces there are.',
     'Every step is one of behaviorEngine\'s fourteen disruption types and every position test is answered from journeyEngine.positionOf. This module declares no type and no position of its own.',
     'A planned trace is annotated by falsePositiveEngine identically to an unplanned one, so roughly two in three planned traces carry a documented benign cause on record. A plan is not a label.',
@@ -666,10 +667,67 @@ const FWIntentEngine = (() => {
     return kind.steps.slice();
   }
 
+  /* HOW MANY ACTORS DRAW TWO KINDS INSTEAD OF ONE. A composite is the one
+     construction in this module that does not name a single taxonomy pattern:
+     it takes the steps of two declared kinds, together, and stages them as one
+     act. Real MOs blend techniques -- a phantom-carrier onboarding that also
+     leans on an insider tip, a seal-and-swap that also forges the milestone
+     stamp a double-tender would have used -- and moEngine's own
+     classifyDiscoveryDetail already has a class for exactly this shape,
+     POTENTIAL_NEW_MO, which before this slice could only ever be produced by
+     an unlucky spread of ordinary unplanned traces landing together, never by
+     an actor whose act genuinely does not resemble one thing. Kept to one: a
+     population where blended acts were common would make POTENTIAL_NEW_MO the
+     baseline, not the exception it is named for. */
+  const COMPOSITE_ACTOR_COUNT = 1;
+
+  /* Merges two declared kinds into one staged act. The step SET is a union:
+     both kinds' steps, in the order [A's steps, then B's], with any type both
+     kinds already happen to use appearing once, not twice -- a plan cannot
+     fire the same disruption type from two different steps in one pass, and a
+     duplicate would just be padding that inflates stepsFired without adding a
+     type moEngine could see. targetNodeTypes is the INTERSECTION of the two
+     kinds' own restrictions (null meaning "no restriction", exactly as
+     PLAN_KINDS already uses it), because a node hosting the composite has to
+     satisfy both halves at once. Of the eleven declared kinds only
+     SEAL_AND_SWAP restricts at all, so in this build the intersection is
+     always either "no restriction" or SEAL_AND_SWAP's own WAREHOUSE/PORT --
+     but the function does the real set intersection rather than assuming
+     that stays true, because a twelfth kind with its own restriction would
+     make it false silently otherwise. */
+  function combineKinds(kindNameA, kindNameB) {
+    const a = PLAN_KINDS[kindNameA], b = PLAN_KINDS[kindNameB];
+    if (!a || !b) {
+      throw new Error('intentEngine.combineKinds: "' + (a ? kindNameB : kindNameA) + '" is not one of the ' +
+        'declared plan kinds (' + PLAN_KIND_NAMES.join(', ') + ').');
+    }
+    if (kindNameA === kindNameB) {
+      throw new Error('intentEngine.combineKinds: a composite needs two DIFFERENT kinds; "' + kindNameA + '" was ' +
+        'given twice, which is just that kind again, not a composite of anything.');
+    }
+    const seenTypes = new Set();
+    const steps = [];
+    a.steps.concat(b.steps).forEach(s => {
+      if (seenTypes.has(s.type)) return;
+      seenTypes.add(s.type);
+      steps.push(s);
+    });
+    let targetNodeTypes;
+    if (!a.targetNodeTypes) targetNodeTypes = b.targetNodeTypes ? b.targetNodeTypes.slice() : null;
+    else if (!b.targetNodeTypes) targetNodeTypes = a.targetNodeTypes.slice();
+    else targetNodeTypes = a.targetNodeTypes.filter(t => b.targetNodeTypes.indexOf(t) > -1);
+    return {
+      composedFrom: [kindNameA, kindNameB],
+      resembles: [a.resembles, b.resembles],
+      targetNodeTypes: targetNodeTypes,
+      steps: steps
+    };
+  }
+
   /* THE DRAW. Deterministic in the seed and in nothing else: the actors, the
-     kinds, the variants and the targets all come out of one stream created
-     here, so the same seed produces the same actors with the same plans over
-     the same nodes on every run and on every machine.
+     kinds, the variants, the composites and the targets all come out of one
+     stream created here, so the same seed produces the same actors with the
+     same plans over the same nodes on every run and on every machine.
 
      Actors are drawn from the drivers that HOLD A TRUCK at boot, because a
      driver in the spare pool is not driving anything and a plan they cannot act
@@ -683,7 +741,7 @@ const FWIntentEngine = (() => {
     const book = {
       seed: seed, seedOffset: PLAN_SEED_OFFSET, affordances: affordances,
       sampleSeconds: affordances.sampleSeconds,
-      plans: new Map(), actorIds: [], driverPool: pool.length, wantedActors: wanted,
+      plans: new Map(), actorIds: [], compositeActorIds: [], driverPool: pool.length, wantedActors: wanted,
       stepsFired: 0, misses: {}, opportunities: 0,
       note: pool.length >= wanted ? null
         : wanted + ' actors were wanted and only ' + pool.length + ' drivers hold a truck at boot, so ' +
@@ -747,6 +805,69 @@ const FWIntentEngine = (() => {
       assertPlanFeasible(plan, lifecycle, eligibleStages, affordances.sampleSeconds);
       book.plans.set(driver.id, plan);
       book.actorIds.push(driver.id);
+    }
+
+    /* COMPOSITE ACTORS. Drawn from whatever remains of the same pool, after
+       every single-kind actor above has already been placed, so a composite
+       is never a driver who would otherwise have held an ordinary plan --
+       it is a strictly additional, strictly rarer kind of actor. Two DISTINCT
+       kinds are drawn uniformly and merged by combineKinds(); everything past
+       that point (target draw, feasibility, correlation floor) is the same
+       gate every other plan in this book has already passed. */
+    const compositeWanted = o.compositeCount === undefined ? COMPOSITE_ACTOR_COUNT : o.compositeCount;
+    const compositeN = Math.min(compositeWanted, remaining.length);
+    for (let i = 0; i < compositeN; i++) {
+      const driver = remaining.splice(rng.int(0, remaining.length - 1), 1)[0];
+      let kindNameA, kindNameB;
+      if (o.compositeKinds) {
+        kindNameA = o.compositeKinds[0];
+        kindNameB = o.compositeKinds[1];
+      } else {
+        kindNameA = PLAN_KIND_NAMES[rng.int(0, PLAN_KIND_NAMES.length - 1)];
+        do {
+          kindNameB = PLAN_KIND_NAMES[rng.int(0, PLAN_KIND_NAMES.length - 1)];
+        } while (kindNameB === kindNameA);
+      }
+      const composed = combineKinds(kindNameA, kindNameB);
+      if (composed.targetNodeTypes && !composed.targetNodeTypes.length) {
+        throw new Error('intentEngine.createBook: ' + kindNameA + ' and ' + kindNameB + ' declare node-type ' +
+          'restrictions with no overlap, so no node in this graph could host both halves of this composite.');
+      }
+      const candidates = candidateTargets(composed, affordances);
+      if (!candidates.length) {
+        throw new Error('intentEngine.createBook: the composite of ' + kindNameA + ' and ' + kindNameB +
+          ' can be staged at no node in this graph. The plan vocabulary and the topology have to be reconciled, ' +
+          'not worked around.');
+      }
+      const targetNodeId = o.targetNodeId || rng.pick(candidates);
+      const distinctTypes = new Set(composed.steps.map(s => s.type)).size;
+      if (distinctTypes < MIN_CORRELATABLE_TYPES) {
+        throw new Error('intentEngine.createBook: the composite of ' + kindNameA + ' and ' + kindNameB +
+          ' produced ' + distinctTypes + ' distinct disruption type(s), fewer than the ' + MIN_CORRELATABLE_TYPES +
+          ' correlation needs. combineKinds should never have offered a pairing this thin.');
+      }
+      const plan = {
+        actorDriverId: driver.id,
+        kind: 'COMPOSITE',
+        composite: true,
+        composedFrom: composed.composedFrom,
+        variant: null,
+        resembles: composed.resembles,
+        targetNodeId: targetNodeId,
+        targetNodeType: affordances.index[targetNodeId].nodeType,
+        steps: composed.steps.map(s => (s.test === 'AT_NODE_TYPE'
+          ? { type: s.type, test: s.test, nodeType: s.nodeType }
+          : { type: s.type, test: s.test, nodeId: targetNodeId })),
+        stepIndex: 0,
+        state: 'ARMED',
+        laps: 0,
+        fired: [],
+        candidatesConsidered: candidates.length
+      };
+      assertPlanFeasible(plan, lifecycle, eligibleStages, affordances.sampleSeconds);
+      book.plans.set(driver.id, plan);
+      book.actorIds.push(driver.id);
+      book.compositeActorIds.push(driver.id);
     }
     return book;
   }
@@ -875,7 +996,7 @@ const FWIntentEngine = (() => {
     const byVariant = {};
     plans.forEach(p => {
       byKind[p.kind] = (byKind[p.kind] || 0) + 1;
-      byVariant[p.variant] = (byVariant[p.variant] || 0) + 1;
+      byVariant[p.variant || 'COMPOSITE'] = (byVariant[p.variant || 'COMPOSITE'] || 0) + 1;
     });
     const dormant = registry
       ? plans.filter(p => {
@@ -905,8 +1026,9 @@ const FWIntentEngine = (() => {
           ' named the type the draw had already given, so the plan changed nothing observable in that slot.'
         : 'no fired step recorded what the unplanned draw would have been, so no displacement is being claimed.',
       laps: plans.map(p => ({ actorDriverId: p.actorDriverId, kind: p.kind, variant: p.variant,
-        targetNodeId: p.targetNodeId, laps: p.laps, stepIndex: p.stepIndex, state: p.state,
-        fired: p.fired.length })),
+        composite: !!p.composite, composedFrom: p.composedFrom || null, targetNodeId: p.targetNodeId,
+        laps: p.laps, stepIndex: p.stepIndex, state: p.state, fired: p.fired.length })),
+      composites: plans.filter(p => p.composite).length,
       dormantActorIds: dormant,
       dormantNote: dormant === null
         ? 'not computed: dormancy is a fact about the registry (whether the actor is holding a truck right now) and no registry was given.'
@@ -1094,6 +1216,7 @@ const FWIntentEngine = (() => {
   return {
     PLANNED_ACTOR_COUNT, PLAN_SEED_OFFSET, MOVEMENT_SAMPLE_SECONDS, assertSampleMatchesRunner, POSITION_TESTS, POSITION_TEST_NAMES, PLAN_KINDS, PLAN_KIND_NAMES,
     VARIANT_KINDS, VARIANT_KIND_NAMES, MIN_CORRELATABLE_TYPES, assertVariantFloorMatchesCorrelation, availableVariants, stepsForVariant,
+    COMPOSITE_ACTOR_COUNT, combineKinds,
     PLAN_STATES, MISS_REASONS, GROUND_TRUTH, ASSUMPTIONS, NOT_MODELLED, POSITION_TEST_DRIVE,
     nodeAffordances, candidateTargets, assertPlanFeasible, positionMatches,
     createBook, nextStepFor, commitStep, latencyReport, summary,
