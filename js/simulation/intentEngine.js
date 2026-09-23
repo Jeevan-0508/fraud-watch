@@ -158,13 +158,18 @@ const FWIntentEngine = (() => {
   };
   const POSITION_TEST_NAMES = Object.keys(POSITION_TESTS);
 
-  /* THE THREE PLANS.
+  /* THE ELEVEN PLANS.
 
      Each is a multi-step act over the graph, written in the vocabulary that
      already exists: the step types are behaviorEngine's, the position tests are
      journeyEngine's, and `resembles` records which of the taxonomy's twelve
      patterns the shape was generalized from. No step invents a disruption type
-     and no plan invents a place.
+     and no plan invents a place. Eleven of the twelve taxonomy patterns are
+     here: FFT-011 (Insurance Certificate Fraud) has no plan, because every one
+     of its indicators is a pre-trip paperwork check against an insurer or
+     broker. Nothing about it is a fact a truck's position, a driver or a
+     disruption type could ever carry, and inventing a movement trace for it
+     would be exactly the kind of unfounded fact this module exists to refuse.
 
      `targetNodeTypes` narrows where the act is staged; null means any node the
      feasibility check admits. The target is drawn once per actor and is a NODE,
@@ -212,6 +217,91 @@ const FWIntentEngine = (() => {
         { type: 'HANDOVER_GAP', test: 'AT_NODE' },
         { type: 'CARRIER_UNRESPONSIVE', test: 'AT_NODE' }
       ]
+    },
+    DOUBLE_TENDER: {
+      id: 'DOUBLE_TENDER',
+      label: 'the booking on record is quietly re-tendered to a second carrier, and the manifest stops matching the asset that actually shows up',
+      resembles: { id: 'FFT-001', name: 'Double Brokering' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'MANIFEST_CHANGED', test: 'AT_NODE' },
+        { type: 'GPS_SIGNAL_LOST', test: 'ON_LEG_INTO_NODE' },
+        { type: 'HANDOVER_GAP', test: 'AT_NODE' }
+      ]
+    },
+    GHOST_ONBOARD: {
+      id: 'GHOST_ONBOARD',
+      label: 'the vehicle at pickup carries no livery and is not the plate on file, then it goes quiet on the leg out and never answers again',
+      resembles: { id: 'FFT-002', name: 'Phantom Carrier' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'EQUIPMENT_CARRIER_MISMATCH', test: 'AT_NODE' },
+        { type: 'GPS_SIGNAL_LOST', test: 'ON_LEG_INTO_NODE' },
+        { type: 'CARRIER_UNRESPONSIVE', test: 'AT_NODE' }
+      ]
+    },
+    IDENTITY_SWAP: {
+      id: 'IDENTITY_SWAP',
+      label: 'a real, dormant licence gets used by someone who is not its holder, and the equipment presenting at pickup is not registered to that holder either',
+      resembles: { id: 'FFT-003', name: 'Carrier Identity Takeover' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'ACCOUNT_TAKEOVER', test: 'AT_NODE' },
+        { type: 'EQUIPMENT_CARRIER_MISMATCH', test: 'AT_NODE' },
+        { type: 'DUPLICATE_ASSET_ID', test: 'AT_NODE' }
+      ]
+    },
+    PERSISTENT_SHORTAGE: {
+      id: 'PERSISTENT_SHORTAGE',
+      label: 'the seal recorded at destination does not match the one recorded at origin, and the stop along the way runs longer than the corridor norm',
+      resembles: { id: 'FFT-005', name: 'Systematic Pilferage' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'SEAL_MISMATCH', test: 'AT_NODE' },
+        { type: 'UNEXPECTED_STOP', test: 'ON_LEG_INTO_NODE' }
+      ]
+    },
+    CURTAIN_STOP: {
+      id: 'CURTAIN_STOP',
+      label: 'an unscheduled stop lands somewhere that is not a certified secure yard, and the truck is down there long enough for the curtain to be a problem',
+      resembles: { id: 'FFT-006', name: 'Unsecured Parking Theft' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'UNEXPECTED_STOP', test: 'ON_LEG_INTO_NODE' },
+        { type: 'STAGED_BREAKDOWN', test: 'AT_NODE' }
+      ]
+    },
+    GATE_TIPOFF: {
+      id: 'GATE_TIPOFF',
+      label: 'a driver credential authorises a pickup outside the pattern normal for that shift, and the gate stamp that should have caught it does not',
+      resembles: { id: 'FFT-009', name: 'Insider Collusion' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'DRIVER_CHANGED', test: 'AT_NODE' },
+        { type: 'HANDOVER_GAP', test: 'AT_NODE' },
+        { type: 'FALSE_MILESTONE_STAMP', test: 'AT_NODE_TYPE', nodeType: 'CHECKPOINT' }
+      ]
+    },
+    PAPER_TRAIL: {
+      id: 'PAPER_TRAIL',
+      label: 'the manifest changes once, quietly, and the milestone stamp behind it is claimed at a gate the truck did not clear the way the record says',
+      resembles: { id: 'FFT-010', name: 'Transport Document Fraud' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'MANIFEST_CHANGED', test: 'AT_NODE' },
+        { type: 'FALSE_MILESTONE_STAMP', test: 'AT_NODE_TYPE', nodeType: 'CHECKPOINT' }
+      ]
+    },
+    CHAIN_HANDOFF: {
+      id: 'CHAIN_HANDOFF',
+      label: 'the vehicle and driver at pickup belong to an entity that appears nowhere in the shipper\'s own records, one tier below whoever was actually contracted',
+      resembles: { id: 'FFT-012', name: 'Undisclosed Subcontracting Chain' },
+      targetNodeTypes: null,
+      steps: [
+        { type: 'EQUIPMENT_CARRIER_MISMATCH', test: 'AT_NODE' },
+        { type: 'DRIVER_CHANGED', test: 'AT_NODE' },
+        { type: 'CARRIER_UNRESPONSIVE', test: 'AT_NODE' }
+      ]
     }
   };
   const PLAN_KIND_NAMES = Object.keys(PLAN_KINDS);
@@ -254,7 +344,7 @@ const FWIntentEngine = (() => {
   };
 
   const ASSUMPTIONS = [
-    'An actor is a driver. Two of the eight crewed drivers in this build hold a plan; the other six and every spare driver hold none, and a truck whose driver holds none behaves exactly as it did before this module existed.',
+    'An actor is a driver. Six of the twenty-four crewed drivers in this build hold a plan; the other eighteen and every spare driver in the pool of thirty-four hold none, and a truck whose driver holds none behaves exactly as it did before this module existed.',
     'A plan is chosen once, at boot, from a stream offset from the sim seed, and never changes. Nothing in the simulation can cause an actor to acquire, abandon or alter a plan -- there is no recruitment, no deterrence and no learning of any kind.',
     'A step fires only on an opportunity behaviorEngine has already granted at its own unchanged rate, so a plan redistributes which type a trace carries and never how many traces there are.',
     'Every step is one of behaviorEngine\'s fourteen disruption types and every position test is answered from journeyEngine.positionOf. This module declares no type and no position of its own.',
@@ -765,11 +855,25 @@ const FWIntentEngine = (() => {
     return { state: 'CHECKED', minDistinctTypes: min, rows: rows };
   }
 
-  /* Called from behaviorEngine's load. Both directions are NOT symmetric here on
-     purpose: every step type must be a type behaviorEngine can apply, but the
-     reverse is not required -- most of the fourteen types are not part of any
-     plan, and they must not be, or the unplanned baseline would be the plan
-     vocabulary too. The unused types are reported so the asymmetry is a figure. */
+  /* Called from behaviorEngine's load. The direction that is enforced is
+     enforced on purpose and only one way: every step type must be a type
+     behaviorEngine can apply, so a plan can never invent a fifteenth kind of
+     thing that happens. The reverse -- every type appearing in some plan --
+     is not required and was not true before Slice 86, when three plans left
+     five of the fourteen types unplanned. It is true now: eleven plans, one
+     for each taxonomy pattern this graph can stage a trace for (see
+     PLAN_KINDS), between them reach every type behaviorEngine declares. That
+     does not fold the unplanned baseline into the plan vocabulary, because
+     the baseline is a fact about VOLUME, not about which types are eligible:
+     PLANNED_ACTOR_COUNT of the crewed drivers hold any plan at all, a step
+     fires only on a position its actor is not usually in, and behaviorEngine
+     still draws and discards its own unplanned type first every tick
+     regardless of what any plan could have used instead. A type appearing in
+     a plan changes what an opportunity CAN be spent on if a planned actor
+     happens to be positioned for it; it does not change who is planned or
+     how often anything happens. The used/unused split is still reported
+     below, now as a figure that reads zero rather than one asserted to stay
+     above zero. */
   function assertStepTypesDeclared(disruptionTypes) {
     const types = (disruptionTypes || []).slice();
     if (!types.length) {
@@ -787,9 +891,12 @@ const FWIntentEngine = (() => {
     }));
     return { state: 'CHECKED', declaredTypes: types.length, usedByPlans: used.length,
       used: used.slice().sort(), unused: types.filter(t => used.indexOf(t) < 0).sort(),
-      note: used.length + ' of the ' + types.length + ' disruption types appear in a plan. The other ' +
-        (types.length - used.length) + ' only ever arrive unplanned, which is what keeps the unplanned baseline a ' +
-        'baseline and not a second copy of the plan vocabulary.' };
+      note: used.length + ' of the ' + types.length + ' disruption types appear in a plan.' +
+        (used.length < types.length
+          ? ' The other ' + (types.length - used.length) + ' only ever arrive unplanned.'
+          : ' None are plan-exclusive: every type can also arrive from behaviorEngine\'s own unplanned draw, ' +
+            'which is what keeps the unplanned baseline a baseline -- a fact about how many drivers hold a plan ' +
+            'and how often a step fires, not about which types a plan is allowed to use.') };
   }
 
   /* Called from behaviorEngine's load: every declared plan kind must be stageable
