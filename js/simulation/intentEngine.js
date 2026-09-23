@@ -15,8 +15,10 @@
    over the world graph -- at this node, on the leg into this node, at any node
    of this type. A step fires only when the truck the actor is driving is
    actually in that position, and only on an opportunity behaviorEngine's
-   existing gate has already granted. The plan is chosen once, at boot, from a
-   seeded stream, and it does not change.
+   existing gate has already granted. The KIND, the TARGET and (for a
+   composite) the two kinds composed are chosen once, at boot, from a seeded
+   stream, and none of those three ever change. The VARIANT may change exactly
+   once per actor, and only in one direction -- see adapt() (Slice 89) below.
 
    WHAT A PLAN IS NOT.
 
@@ -345,7 +347,7 @@ const FWIntentEngine = (() => {
 
   const ASSUMPTIONS = [
     'An actor is a driver. Six of the twenty-four crewed drivers in this build hold a plan; the other eighteen and every spare driver in the pool of thirty-four hold none, and a truck whose driver holds none behaves exactly as it did before this module existed.',
-    'A plan is chosen once, at boot, from a stream offset from the sim seed, and never changes. Nothing in the simulation can cause an actor to acquire, abandon or alter a plan -- there is no recruitment, no deterrence and no learning of any kind.',
+    'A plan\'s kind, target and (for a composite) composed-from pair are chosen once, at boot, and never change; there is still no recruitment and no deterrence, and no actor ever acquires or abandons a plan. Its VARIANT can change exactly once, from adapt() (Slice 89): a single-kind actor whose case reaches moEngine\'s MO_VARIANT or KNOWN_MO steps down to the ABBREVIATED variant if it is not already on it and one exists for its kind. That is the only learning this module models, it is bounded to one step per actor because ABBREVIATED is the only variant quieter than what it replaces, and a composite actor never adapts because a composite has no declared variant to step down to.',
     'COMPOSITE_ACTOR_COUNT of the crewed drivers hold a plan built from two kinds at once rather than one. A composite is drawn from the same pool as every other actor, after they are placed, so it is a strictly additional actor, never a substitute for one of the eleven single-kind plans.',
     'A step fires only on an opportunity behaviorEngine has already granted at its own unchanged rate, so a plan redistributes which type a trace carries and never how many traces there are.',
     'Every step is one of behaviorEngine\'s fourteen disruption types and every position test is answered from journeyEngine.positionOf. This module declares no type and no position of its own.',
@@ -724,6 +726,17 @@ const FWIntentEngine = (() => {
     };
   }
 
+  /* THE ADAPTATION STREAM. adapt() (below) needs its own randomness for the
+     one draw it can ever make -- which step ABBREVIATED drops, exactly the
+     draw stepsForVariant already makes at boot for an actor who rolls
+     ABBREVIATED there -- and it must not spend a single number from the
+     stream `rng` above uses, or every draw after the first tick an actor
+     adapts on would shift, taking every OTHER actor's kind/target/variant
+     with it the same way widening PLAN_KINDS did in Slice 86. A second
+     stream, offset by a second constant, costs nothing and keeps the two
+     concerns (what is chosen at boot, what changes afterward) independent. */
+  const ADAPT_SEED_OFFSET = 4133;
+
   /* THE DRAW. Deterministic in the seed and in nothing else: the actors, the
      kinds, the variants, the composites and the targets all come out of one
      stream created here, so the same seed produces the same actors with the
@@ -741,7 +754,10 @@ const FWIntentEngine = (() => {
     const book = {
       seed: seed, seedOffset: PLAN_SEED_OFFSET, affordances: affordances,
       sampleSeconds: affordances.sampleSeconds,
-      plans: new Map(), actorIds: [], compositeActorIds: [], driverPool: pool.length, wantedActors: wanted,
+      plans: new Map(), actorIds: [], compositeActorIds: [], adaptedActorIds: [],
+      driverPool: pool.length, wantedActors: wanted,
+      /* adapt()'s own stream (Slice 89), never rng above -- see ADAPT_SEED_OFFSET. */
+      adaptRng: FWRng.createRng(((seed | 0) + ADAPT_SEED_OFFSET) >>> 0),
       stepsFired: 0, misses: {}, opportunities: 0,
       note: pool.length >= wanted ? null
         : wanted + ' actors were wanted and only ' + pool.length + ' drivers hold a truck at boot, so ' +
@@ -800,7 +816,8 @@ const FWIntentEngine = (() => {
         state: 'ARMED',
         laps: 0,
         fired: [],
-        candidatesConsidered: candidates.length
+        candidatesConsidered: candidates.length,
+        adapted: false, adaptedAt: null, adaptedTrigger: null, adaptedToQuieter: null
       };
       assertPlanFeasible(plan, lifecycle, eligibleStages, affordances.sampleSeconds);
       book.plans.set(driver.id, plan);
@@ -862,7 +879,15 @@ const FWIntentEngine = (() => {
         state: 'ARMED',
         laps: 0,
         fired: [],
-        candidatesConsidered: candidates.length
+        candidatesConsidered: candidates.length,
+        /* A composite never adapts (see adapt() below): there is no declared
+           variant to step down to, and inventing a fourth "quieter composite"
+           shape with no textbook shape behind it is exactly the invented
+           figure this codebase's own conventions refuse elsewhere. These
+           fields are still declared, at their permanent no-op values, so a
+           composite plan and a single-kind plan carry the same shape and
+           nothing downstream has to special-case one to read the other. */
+        adapted: false, adaptedAt: null, adaptedTrigger: null, adaptedToQuieter: null
       };
       assertPlanFeasible(plan, lifecycle, eligibleStages, affordances.sampleSeconds);
       book.plans.set(driver.id, plan);
@@ -933,6 +958,100 @@ const FWIntentEngine = (() => {
     }
     book.stepsFired += 1;
     return plan;
+  }
+
+/* ==========================================================================
+     THE FEEDBACK LOOP (Slice 89). Every other fact about a plan is fixed at
+     boot; this is the one exception, and it exists to answer the mission
+     question of whether a detection outcome ever changes what the adversary
+     does next, or whether this build's fraud only ever runs open-loop. Before
+     this it always ran open-loop: ASSUMPTIONS above said so in as many words.
+
+     WHAT COUNTS AS A DETECTION WORTH REACTING TO. Not a signal on its own
+     (falsePositiveEngine already shows two in three of this module's own
+     traces carry a documented benign cause, so reacting to a single signal
+     would be an actor with certainty no signal in this build ever earns) and
+     not a bare case (moEngine opens one from as few as MIN_SIGNAL_TYPES
+     distinct traces, which is correlation, not recognition). What this reacts
+     to is moEngine's own classification reaching MO_VARIANT or KNOWN_MO for a
+     case tied to the actor's driver -- the moment the correlation layer has
+     decided the case resembles a documented pattern, whether for the first
+     time or the tenth. A POTENTIAL_NEW_MO case (seen too few times for the
+     count to say either way) or an EMERGING_BEHAVIOR case (matching no
+     documented pattern) is left alone: neither is the correlation layer
+     recognizing this actor's own shape, so reacting to either would be the
+     actor knowing more than the record does.
+
+     WHAT ADAPTING MEANS. The actor's next lap steps down to the ABBREVIATED
+     variant, one fewer step and one fewer type on record, still enough to
+     correlate (availableVariants already only offers ABBREVIATED where that
+     holds), if it is not on that variant already and its kind has one to
+     offer. \`fired\` is never rewritten: the laps already on record stay
+     exactly as fired, because the point is that a real investigator would see
+     the shape change, not a record with its past quietly edited. Bounded to
+     one change for the actor's whole run: ABBREVIATED is the only variant
+     quieter than BASE or REORDERED, so a second detection has nowhere
+     quieter left to send it, and \`adapted\` being permanently true is itself
+     the honest answer for that case (noticed, nothing left to do about it)
+     rather than a silent no-op repeated every tick.
+
+     THE READ THIS ADDS, AND WHY IT IS A DIFFERENT DIRECTION FROM THE ONE
+     GROUND_TRUTH GUARDS. GROUND_TRUTH (above) forbids moEngine and everything
+     downstream of it from ever reading the PLAN; that direction is completely
+     unchanged here, moEngine still classifies from its own keyword table
+     alone and still cannot see book.plans. This function reads the other
+     direction: intentEngine, here, reads moEngine's classification of a case,
+     which is derived evidence built from traces already on the record, not
+     the plan itself. An adversary reacting to being noticed is not a leak of
+     ground truth to a view; the view still never sees the plan or this
+     reaction to it, and every trace this produces is exactly as visible, and
+     exactly as capable of carrying a documented benign cause, as the trace it
+     replaces.
+
+     DETERMINISM. detections is handed in already reduced to plain
+     {driverId, classification, caseId} triples, extracted by simRunner from
+     moEngine's own state, so this module never reads moEngine's object shape
+     directly, the same arm's-length arrangement DISRUPTION_ELIGIBLE_STAGES
+     already uses across the behaviorEngine boundary. Which classification a
+     given driver's case holds on a given tick is itself a deterministic
+     function of the seed, and the ABBREVIATED dropIndex draw spends
+     adaptRng, a stream offset from the seed and touched by nothing else, so
+     the same seed adapts the same actors at the same tick to the same
+     quieter shape on every run. */
+  function adapt(book, now, detections) {
+    if (!Array.isArray(detections)) {
+      throw new Error('intentEngine.adapt: detections must be an array of {driverId, classification, caseId} ' +
+        'triples; nothing else in this call would name which actor a case belongs to.');
+    }
+    const TRIGGERING = new Set(['MO_VARIANT', 'KNOWN_MO']);
+    const byDriver = new Map();
+    detections.forEach(d => {
+      if (d && d.driverId != null && TRIGGERING.has(d.classification) && !byDriver.has(d.driverId)) {
+        byDriver.set(d.driverId, d);
+      }
+    });
+    const adaptedNow = [];
+    Array.from(book.plans.keys()).sort().forEach(driverId => {
+      const plan = book.plans.get(driverId);
+      if (plan.adapted || plan.composite) return;
+      const hit = byDriver.get(driverId);
+      if (!hit) return;
+      const kind = PLAN_KINDS[plan.kind];
+      const quieterAvailable = availableVariants(kind).indexOf('ABBREVIATED') > -1 && plan.variant !== 'ABBREVIATED';
+      if (quieterAvailable) {
+        plan.variant = 'ABBREVIATED';
+        plan.steps = stepsForVariant(kind, 'ABBREVIATED', book.adaptRng);
+        plan.stepIndex = 0;
+        plan.state = 'ARMED';
+      }
+      plan.adapted = true;
+      plan.adaptedAt = now;
+      plan.adaptedTrigger = { caseId: hit.caseId, classification: hit.classification };
+      plan.adaptedToQuieter = quieterAvailable;
+      book.adaptedActorIds.push(driverId);
+      adaptedNow.push(driverId);
+    });
+    return adaptedNow;
   }
 
   /* ==========================================================================
@@ -1027,8 +1146,13 @@ const FWIntentEngine = (() => {
         : 'no fired step recorded what the unplanned draw would have been, so no displacement is being claimed.',
       laps: plans.map(p => ({ actorDriverId: p.actorDriverId, kind: p.kind, variant: p.variant,
         composite: !!p.composite, composedFrom: p.composedFrom || null, targetNodeId: p.targetNodeId,
-        laps: p.laps, stepIndex: p.stepIndex, state: p.state, fired: p.fired.length })),
+        laps: p.laps, stepIndex: p.stepIndex, state: p.state, fired: p.fired.length, adapted: !!p.adapted })),
       composites: plans.filter(p => p.composite).length,
+      adaptedActorIds: book.adaptedActorIds.slice(),
+      adaptedNote: book.adaptedActorIds.length
+        ? book.adaptedActorIds.length + ' of ' + plans.length + ' actors stepped down to a quieter variant after ' +
+          'their own case reached MO_VARIANT or KNOWN_MO; see adapt().'
+        : 'no actor has been detected to MO_VARIANT or KNOWN_MO yet, so none has adapted.',
       dormantActorIds: dormant,
       dormantNote: dormant === null
         ? 'not computed: dormancy is a fact about the registry (whether the actor is holding a truck right now) and no registry was given.'
@@ -1217,6 +1341,7 @@ const FWIntentEngine = (() => {
     PLANNED_ACTOR_COUNT, PLAN_SEED_OFFSET, MOVEMENT_SAMPLE_SECONDS, assertSampleMatchesRunner, POSITION_TESTS, POSITION_TEST_NAMES, PLAN_KINDS, PLAN_KIND_NAMES,
     VARIANT_KINDS, VARIANT_KIND_NAMES, MIN_CORRELATABLE_TYPES, assertVariantFloorMatchesCorrelation, availableVariants, stepsForVariant,
     COMPOSITE_ACTOR_COUNT, combineKinds,
+    ADAPT_SEED_OFFSET, adapt,
     PLAN_STATES, MISS_REASONS, GROUND_TRUTH, ASSUMPTIONS, NOT_MODELLED, POSITION_TEST_DRIVE,
     nodeAffordances, candidateTargets, assertPlanFeasible, positionMatches,
     createBook, nextStepFor, commitStep, latencyReport, summary,

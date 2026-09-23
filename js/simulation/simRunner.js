@@ -75,6 +75,20 @@ const FWSimRunner = (() => {
     FWSignalEngine.process(signalEngine, registry, disruptions);
     FWSignalEngine.pruneExpired(registry, now);
     const moResult = FWMoEngine.process(moEngine, registry, now);
+    // Phase F, Slice 89: the plan book adapts after the case it produced has
+    // been classified, never before, so a detection can only ever change what
+    // an actor does NEXT, not the trace that got it noticed. moEngine's own mo
+    // objects are reduced to plain {driverId, classification, caseId} triples
+    // here rather than handed to intentEngine directly, the same arm's-length
+    // arrangement DISRUPTION_ELIGIBLE_STAGES already uses across this boundary.
+    if (window.FWIntentEngine && intentBook) {
+      const detections = Array.from(moEngine.mos.values()).map(mo => ({
+        driverId: mo.entities && mo.entities.driverId != null ? mo.entities.driverId : null,
+        classification: mo.classification,
+        caseId: mo.id
+      }));
+      FWIntentEngine.adapt(intentBook, now, detections);
+    }
 
     const combined = normalEvents.concat(disruptions);
     state.recentEvents = combined.concat(state.recentEvents).slice(0, 40);
