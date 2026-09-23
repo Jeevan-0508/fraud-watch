@@ -40,13 +40,14 @@ const FWSimRunner = (() => {
        TRUTH -- intentEngine.GROUND_TRUTH names this module and behaviorEngine as
        its only readers, no view may render it, and it is reachable from state on
        exactly the terms a signal's answer key already is. */
+    const candidateStore = window.FWCandidateEngine ? FWCandidateEngine.createStore() : null;
     const intentBook = window.FWIntentEngine
       ? FWIntentEngine.createBook(registry, seed, FWBehaviorEngine.LIFECYCLE,
         [...FWBehaviorEngine.DISRUPTION_ELIGIBLE_STAGES], { sampleSeconds: FF_CHUNK })
       : null;
     state = {
       seed, rng, clock, registry, eventEngine, signalEngine, moEngine, outcomeEngine,
-      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker,
+      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker, candidateStore,
       recentEvents: [], lastResult: null, totalEvents: 0
     };
     return state;
@@ -57,7 +58,7 @@ const FWSimRunner = (() => {
   function stepOnce(dtSeconds) {
     if (!state || dtSeconds <= 0) return null;
     const { clock, registry, rng, eventEngine, signalEngine, moEngine,
-      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker } = state;
+      shiftTracker, facilityTracker, journeyTracker, intentBook, actTracker, candidateStore } = state;
     const now = absoluteNow(clock);
     // Phase 37: the shift the port is actually in drives normal traffic
     // volume, which disruption types are plausible, and how much of what
@@ -75,6 +76,14 @@ const FWSimRunner = (() => {
     FWSignalEngine.process(signalEngine, registry, disruptions);
     FWSignalEngine.pruneExpired(registry, now);
     const moResult = FWMoEngine.process(moEngine, registry, now);
+    // Phase F, Slice 90: candidate-signature discovery is derived straight off
+    // moEngine's own classification output every tick, before intentEngine
+    // ever sees a detection -- sync() only ever creates/extends a CANDIDATE
+    // record, never advances one past it, so this line can never be the thing
+    // that validates or rejects a pattern.
+    if (window.FWCandidateEngine && candidateStore) {
+      FWCandidateEngine.sync(candidateStore, moEngine, now);
+    }
     // Phase F, Slice 89: the plan book adapts after the case it produced has
     // been classified, never before, so a detection can only ever change what
     // an actor does NEXT, not the trace that got it noticed. moEngine's own mo

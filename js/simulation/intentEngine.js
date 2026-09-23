@@ -341,7 +341,7 @@ const FWIntentEngine = (() => {
   const GROUND_TRUTH = {
     holds: 'the plan every planned actor is executing, which step it is on, and every step it has already fired',
     readers: ['js/simulation/behaviorEngine.js', 'js/simulation/simRunner.js'],
-    forbidden: 'any file under js/ui/, and any engine downstream of behaviorEngine (signalEngine, moEngine, investigationEngine, outcomeEngine, exposureModel, analyticsEngine, networkEngine, awayReport, adviceEngine)',
+    forbidden: 'any file under js/ui/, and any engine downstream of behaviorEngine (signalEngine, moEngine, investigationEngine, candidateEngine, outcomeEngine, exposureModel, analyticsEngine, networkEngine, awayReport, adviceEngine)',
     why: 'a case is supposed to be built out of what was written down. A classifier that could read the plan would be scoring itself, and a panel that could render it would be answering the question the player is here to answer.'
   };
 

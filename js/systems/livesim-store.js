@@ -30,7 +30,7 @@
    it is stated in REDUCTIONS. */
 const FWLiveSimStore = (() => {
   const KEY = 'fraudwatch_livesim_state';
-  const VERSION = 1;
+  const VERSION = 2;
 
   /* SAVE CADENCE, decided rather than left to the caller.
 
@@ -68,7 +68,8 @@ const FWLiveSimStore = (() => {
     { field: 'journeyTracker', how: 'PLAIN_OR_NULL', why: 'travel and agreement counters.' },
     { field: 'recentEvents', how: 'EVENT_ROWS', why: 'the published recent-event list the panels read, as declared rows.' },
     { field: 'totalEvents', how: 'PLAIN', why: 'the run total, which the recent list is only a window onto.' },
-    { field: 'rngState', how: 'RNG_STATE', why: 'the run stream position, so a restored world continues rather than repeating.' }
+    { field: 'rngState', how: 'RNG_STATE', why: 'the run stream position, so a restored world continues rather than repeating.' },
+    { field: 'candidateStore', how: 'CANDIDATE_STORE', why: 'one Map of candidate-MO records keyed by signature -- an analyst\u2019s CANDIDATE/REVIEW/VALIDATED/REJECTED decisions and their provenance must survive a refresh exactly as a case status does. null when the module was not loaded, same as the trackers above.' }
   ];
   const PERSISTED_FIELDS = PERSISTED.map(p => p.field);
 
@@ -83,7 +84,8 @@ const FWLiveSimStore = (() => {
     EVENT_ROWS: 'a recorded event -> its declared fields only, listed in EVENT_ROW_FIELDS -> the same fields. What a row carries beside them is not written, so it cannot be read back out.',
     MO_ENGINE: 'three Maps -> three arrays of entries -> three Maps, refilled in place.',
     OUTCOME_ENGINE: 'a ledger array and a Map whose values are the SAME objects as the ledger rows -> the ledger only -> the ledger, with the Map rebuilt from it by reference so the aliasing that existed before the save exists after it.',
-    RNG_STATE: 'a closure counter, readable only because rng.js exposes its position -> an integer -> the counter, set back.'
+    RNG_STATE: 'a closure counter, readable only because rng.js exposes its position -> an integer -> the counter, set back.',
+    CANDIDATE_STORE: 'one Map, keyed by signature, of candidate records (plain fields plus two append-only arrays, provenance and history) -> an array of entries -> the same Map, refilled in place. null stays null.'
   };
 
   /* WHAT A RESTORED RUN DOES NOT GET BACK, stated so nobody reads the restore
@@ -186,6 +188,18 @@ const FWLiveSimStore = (() => {
     return engine;
   }
 
+  // The store itself is optional (candidateEngine may not be loaded), same
+  // as shiftTracker/facilityTracker/journeyTracker below -- null in, null out.
+  function captureCandidateStore(store) {
+    return store ? { records: mapToEntries(store.records) } : null;
+  }
+
+  function applyCandidateStore(store, stored) {
+    if (!store || !stored) return store;
+    fillMap(store.records, stored.records);
+    return store;
+  }
+
   /* The one place where the save is not a copy of the shape it found. Before a
      save, one verdict record is three references to one object: a row of the
      ledger, a value in the by-case Map, and a field on the case it closed.
@@ -254,7 +268,8 @@ const FWLiveSimStore = (() => {
       journeyTracker: run.journeyTracker ? copyPlain(run.journeyTracker) : null,
       recentEvents: eventRows(run.recentEvents),
       totalEvents: run.totalEvents,
-      rngState: streamPosition(run.rng)
+      rngState: streamPosition(run.rng),
+      candidateStore: captureCandidateStore(run.candidateStore)
     };
   }
 
@@ -270,13 +285,22 @@ const FWLiveSimStore = (() => {
     return { ok: true };
   }
 
-  /* The door a version 2 of this shape would come through. Nothing to migrate
-     yet, and a snapshot from an unknown version is refused rather than
-     coerced -- scoring.js can merge an old save into a default state because its
-     state is a flat bag of counters; a world cannot be half-merged. */
+  /* THE DOOR VERSION 2 CAME THROUGH. Version 1 predates candidateEngine
+     entirely, so a version-1 snapshot has no candidateStore field and never
+     could -- that is not data lost, it is a fact about a run saved before the
+     feature existed. The only change a version-1 -> version-2 migration ever
+     has to make is stated here in one line: give it the same empty store a
+     fresh boot would have produced. Every other field is untouched, so a
+     migrated run continues exactly where it left off. A snapshot from any
+     OTHER unknown version is still refused rather than guessed at -- this
+     migration is written for the one gap that is actually known, not for
+     versions that do not exist yet. */
   function migrate(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') return null;
     if (snapshot.version === VERSION) return snapshot;
+    if (snapshot.version === 1) {
+      return Object.assign({}, snapshot, { version: VERSION, candidateStore: { records: [] } });
+    }
     return null;
   }
 
@@ -301,6 +325,7 @@ const FWLiveSimStore = (() => {
     run.recentEvents = snapshot.recentEvents || [];
     run.totalEvents = snapshot.totalEvents;
     setStreamPosition(run.rng, snapshot.rngState);
+    applyCandidateStore(run.candidateStore, snapshot.candidateStore);
     return { ok: true, relinkedVerdicts: outcome.relinked, cases: run.moEngine.mos.size, day: run.clock.day };
   }
 
