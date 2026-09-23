@@ -84,6 +84,24 @@ const FWSimRunner = (() => {
     if (window.FWCandidateEngine && candidateStore) {
       FWCandidateEngine.sync(candidateStore, moEngine, now);
     }
+    // Phase F, Slice 93: a VALIDATED candidate is the strongest fact this build
+    // has about a signature, and the only one that can retire a plan outright
+    // rather than merely soften it (see intentEngine.retire()). Every VALIDATED
+    // record's provenance is reduced to plain driverIds via moEngine's own case
+    // entities -- never candidateEngine's or moEngine's object shape -- the same
+    // arm's-length arrangement the adapt() call just below already uses.
+    if (window.FWIntentEngine && intentBook && window.FWCandidateEngine && candidateStore) {
+      const validatedDriverIds = FWCandidateEngine.listByState(candidateStore, 'VALIDATED')
+        .reduce((ids, record) => {
+          record.provenance.forEach(p => {
+            const mo = moEngine.mos.get(p.moId);
+            const driverId = mo && mo.entities ? mo.entities.driverId : null;
+            if (driverId != null && ids.indexOf(driverId) < 0) ids.push(driverId);
+          });
+          return ids;
+        }, []);
+      FWIntentEngine.retire(intentBook, now, validatedDriverIds);
+    }
     // Phase F, Slice 89: the plan book adapts after the case it produced has
     // been classified, never before, so a detection can only ever change what
     // an actor does NEXT, not the trace that got it noticed. moEngine's own mo

@@ -315,7 +315,8 @@ const FWIntentEngine = (() => {
     ARMED: 'chosen and feasible, no step has fired yet.',
     RUNNING: 'at least one step has fired and the plan is waiting for the position its next step needs.',
     DORMANT: 'the actor is not driving any truck right now (an unplanned DRIVER_CHANGED moved them off one), so no step can fire until they are assigned again.',
-    CYCLED: 'every step has fired at least once and the plan has re-armed at its first step. The count of laps is kept; a systematic MO is systematic, and the recurrence of one signature is the only thing about a plan the correlation layer could ever notice.'
+    CYCLED: 'every step has fired at least once and the plan has re-armed at its first step. The count of laps is kept; a systematic MO is systematic, and the recurrence of one signature is the only thing about a plan the correlation layer could ever notice.',
+    RETIRED: 'a signature this actor\'s case contributed to was VALIDATED by an analyst (Slice 93); the plan is permanently stopped and no step will fire again.'
   };
 
   /* GROUND TRUTH, AND ITS DECLARED READERS.
@@ -347,7 +348,7 @@ const FWIntentEngine = (() => {
 
   const ASSUMPTIONS = [
     'An actor is a driver. Six of the twenty-four crewed drivers in this build hold a plan; the other eighteen and every spare driver in the pool of thirty-four hold none, and a truck whose driver holds none behaves exactly as it did before this module existed.',
-    'A plan\'s kind, target and (for a composite) composed-from pair are chosen once, at boot, and never change; there is still no recruitment and no deterrence, and no actor ever acquires or abandons a plan. Its VARIANT can change exactly once, from adapt() (Slice 89): a single-kind actor whose case reaches moEngine\'s MO_VARIANT or KNOWN_MO steps down to the ABBREVIATED variant if it is not already on it and one exists for its kind. That is the only learning this module models, it is bounded to one step per actor because ABBREVIATED is the only variant quieter than what it replaces, and a composite actor never adapts because a composite has no declared variant to step down to.',
+    'A plan\'s kind, target and (for a composite) composed-from pair are chosen once, at boot, and never change; there is still no recruitment, so no actor ever acquires a plan after boot. Its VARIANT can change exactly once, from adapt() (Slice 89): a single-kind actor whose case reaches moEngine\'s MO_VARIANT or KNOWN_MO steps down to the ABBREVIATED variant if it is not already on it and one exists for its kind, bounded to one step per actor because ABBREVIATED is the only variant quieter than what it replaces; a composite actor never adapts because a composite has no declared variant to step down to. A plan can also be retired outright, from retire() (Slice 93): once a signature an actor\'s case contributed to is VALIDATED by an analyst in the Discovery Lab, that driverId\'s plan stops permanently -- a composite actor retires exactly as a single-kind one does, since retiring needs no quieter variant to exist -- and this is the only way an actor in this build ever abandons a plan.',
     'COMPOSITE_ACTOR_COUNT of the crewed drivers hold a plan built from two kinds at once rather than one. A composite is drawn from the same pool as every other actor, after they are placed, so it is a strictly additional actor, never a substitute for one of the eleven single-kind plans.',
     'A step fires only on an opportunity behaviorEngine has already granted at its own unchanged rate, so a plan redistributes which type a trace carries and never how many traces there are.',
     'Every step is one of behaviorEngine\'s fourteen disruption types and every position test is answered from journeyEngine.positionOf. This module declares no type and no position of its own.',
@@ -754,7 +755,7 @@ const FWIntentEngine = (() => {
     const book = {
       seed: seed, seedOffset: PLAN_SEED_OFFSET, affordances: affordances,
       sampleSeconds: affordances.sampleSeconds,
-      plans: new Map(), actorIds: [], compositeActorIds: [], adaptedActorIds: [],
+      plans: new Map(), actorIds: [], compositeActorIds: [], adaptedActorIds: [], retiredActorIds: [],
       driverPool: pool.length, wantedActors: wanted,
       /* adapt()'s own stream (Slice 89), never rng above -- see ADAPT_SEED_OFFSET. */
       adaptRng: FWRng.createRng(((seed | 0) + ADAPT_SEED_OFFSET) >>> 0),
@@ -908,6 +909,7 @@ const FWIntentEngine = (() => {
     if (!book || !truck) return null;
     const plan = book.plans.get(truck.driverId);
     if (!plan) return null;
+    if (plan.retired) return null;
     book.opportunities += 1;
     const miss = (why) => {
       book.misses[why] = (book.misses[why] || 0) + 1;
@@ -1033,7 +1035,7 @@ const FWIntentEngine = (() => {
     const adaptedNow = [];
     Array.from(book.plans.keys()).sort().forEach(driverId => {
       const plan = book.plans.get(driverId);
-      if (plan.adapted || plan.composite) return;
+      if (plan.adapted || plan.composite || plan.retired) return;
       const hit = byDriver.get(driverId);
       if (!hit) return;
       const kind = PLAN_KINDS[plan.kind];
@@ -1052,6 +1054,44 @@ const FWIntentEngine = (() => {
       adaptedNow.push(driverId);
     });
     return adaptedNow;
+  }
+
+  /* THE SECOND TIER (Slice 93). adapt() answers one automatic detection with
+     one quieter variant; retire() answers a human analyst's VALIDATED decision
+     in the Discovery Lab by stopping the plan outright -- permanent, and the
+     only way an actor in this build ever abandons a plan.
+
+     SAFE DIRECTION. GROUND_TRUTH still forbids candidateEngine from ever
+     reading book.plans; unchanged. This function reads the other way, exactly
+     as adapt() already does from moEngine: simRunner reduces a VALIDATED
+     record's provenance to plain driverIds via moEngine's own case entities,
+     and hands in only those ids -- never candidateEngine's or moEngine's
+     object shape. A driverId is already public everywhere else in this build,
+     so nothing here leaks the plan.
+
+     BOUNDED. Once retired, never un-retired; calling this again with the same
+     id is a no-op, same contract as adapted. Composite actors CAN retire
+     (unlike adapt(), retiring needs no quieter variant to exist).
+
+     EFFECT. nextStepFor returns null for a retired driver from here on, same
+     as holding no plan at all -- the truck reverts to the unplanned baseline. */
+  function retire(book, now, validatedDriverIds) {
+    if (!Array.isArray(validatedDriverIds)) {
+      throw new Error('intentEngine.retire: validatedDriverIds must be an array of driver ids; nothing else ' +
+        'in this call would name which actor a validated signature belongs to.');
+    }
+    const wanted = new Set(validatedDriverIds.filter(id => id != null));
+    const retiredNow = [];
+    Array.from(book.plans.keys()).sort().forEach(driverId => {
+      const plan = book.plans.get(driverId);
+      if (plan.retired || !wanted.has(driverId)) return;
+      plan.retired = true;
+      plan.retiredAt = now;
+      plan.state = 'RETIRED';
+      book.retiredActorIds.push(driverId);
+      retiredNow.push(driverId);
+    });
+    return retiredNow;
   }
 
   /* ==========================================================================
@@ -1146,13 +1186,18 @@ const FWIntentEngine = (() => {
         : 'no fired step recorded what the unplanned draw would have been, so no displacement is being claimed.',
       laps: plans.map(p => ({ actorDriverId: p.actorDriverId, kind: p.kind, variant: p.variant,
         composite: !!p.composite, composedFrom: p.composedFrom || null, targetNodeId: p.targetNodeId,
-        laps: p.laps, stepIndex: p.stepIndex, state: p.state, fired: p.fired.length, adapted: !!p.adapted })),
+        laps: p.laps, stepIndex: p.stepIndex, state: p.state, fired: p.fired.length, adapted: !!p.adapted, retired: !!p.retired })),
       composites: plans.filter(p => p.composite).length,
       adaptedActorIds: book.adaptedActorIds.slice(),
       adaptedNote: book.adaptedActorIds.length
         ? book.adaptedActorIds.length + ' of ' + plans.length + ' actors stepped down to a quieter variant after ' +
           'their own case reached MO_VARIANT or KNOWN_MO; see adapt().'
         : 'no actor has been detected to MO_VARIANT or KNOWN_MO yet, so none has adapted.',
+      retiredActorIds: book.retiredActorIds.slice(),
+      retiredNote: book.retiredActorIds.length
+        ? book.retiredActorIds.length + ' of ' + plans.length + ' actors were retired after a signature ' +
+          'their case contributed to was VALIDATED by an analyst; see retire().'
+        : 'no signature has been VALIDATED yet, so none has retired.',
       dormantActorIds: dormant,
       dormantNote: dormant === null
         ? 'not computed: dormancy is a fact about the registry (whether the actor is holding a truck right now) and no registry was given.'
@@ -1341,7 +1386,7 @@ const FWIntentEngine = (() => {
     PLANNED_ACTOR_COUNT, PLAN_SEED_OFFSET, MOVEMENT_SAMPLE_SECONDS, assertSampleMatchesRunner, POSITION_TESTS, POSITION_TEST_NAMES, PLAN_KINDS, PLAN_KIND_NAMES,
     VARIANT_KINDS, VARIANT_KIND_NAMES, MIN_CORRELATABLE_TYPES, assertVariantFloorMatchesCorrelation, availableVariants, stepsForVariant,
     COMPOSITE_ACTOR_COUNT, combineKinds,
-    ADAPT_SEED_OFFSET, adapt,
+    ADAPT_SEED_OFFSET, adapt, retire,
     PLAN_STATES, MISS_REASONS, GROUND_TRUTH, ASSUMPTIONS, NOT_MODELLED, POSITION_TEST_DRIVE,
     nodeAffordances, candidateTargets, assertPlanFeasible, positionMatches,
     createBook, nextStepFor, commitStep, latencyReport, summary,

@@ -279,6 +279,13 @@ project, the Discovery Lab is barred from reading the actor's plan: "validated" 
 judged the recurring signature worth naming, not that it matched anything in the hidden ground truth,
 and the two are never compared on screen.
 
+Validating a candidate has a real consequence downstream, and it is never rendered on screen. Every
+driver whose case contributed to a VALIDATED signature has their plan retired -- permanently, the same
+tick the decision is picked up. That is deterrence, not detection: it changes what a caught actor does
+next, and it is the only way in this build an actor ever abandons a plan. Nothing surfaces which driver
+that was; the only trace of it a player can ever see is the aggregate one -- fewer future sightings of
+a pattern once it has been validated.
+
 ### Actor intent is ground truth, and the analyst cannot reach it
 
 Some drivers hold a **plan**: an ordered list of steps, each pairing a disruption type with a
@@ -297,6 +304,12 @@ plan can change exactly once, in one direction: if moEngine's own classification
 that actor's driver ever reaches `MO_VARIANT` or `KNOWN_MO`, the actor's variant may step down to
 the quieter `ABBREVIATED` form -- the plan noticing it has been noticed. A blended-kind actor never
 adapts; there is no quieter form of a plan that is already two plans.
+
+A plan can also stop altogether, which is stronger than stepping down. Once an analyst VALIDATES a
+candidate signature in the Discovery Lab, every driver whose case contributed to it has their plan
+retired -- permanently, and unlike the variant step-down, a blended-kind actor retires exactly as a
+single-kind one does, since stopping needs no quieter form to exist. Retiring is the only way an actor
+in this build ever abandons a plan.
 
 The plan is ground truth. The module that owns it **declares its own permitted readers in code**:
 
@@ -570,6 +583,7 @@ Verified against the current commit by reading the code and by loading the deplo
 | Actor intent / plans — taxonomy-driven kinds, variants, blended-kind actors | Complete |
 | Adversary adaptation (one quieter variant after detection, exactly once) | Complete |
 | Candidate-MO review workflow (Discovery Lab) | Complete |
+| Deterrence (a VALIDATED candidate retires every actor it implicates, permanently) | Complete |
 | Composite acts (one act, multiple records) | Complete — engine only, deliberately not rendered |
 | Event stream (13 normal types, bounded 5,000-entry ring buffer) | Complete |
 | Signal generation (13 weighted, decaying types) | Complete |
@@ -620,7 +634,8 @@ Select the **Live Sim** tab, then:
 10. **Open the Discovery Lab.** Fast-forward a few days if it is empty. A candidate appears once a
     still-novel signature is sighted twice; click **Start Review**, then **Validate** or **Reject**
     with a note. Watch the scoreboard's counts move, and watch the validation rate stay withheld as
-    a count until three candidates have actually been resolved.
+    a count until three candidates have actually been resolved. Validating has a real, permanent
+    effect on the simulation itself -- it is just never shown to you (see Limitations).
 
 Speed controls and a fast-forward are in the Live Sim header if you do not want to wait for the world
 to produce something.
@@ -726,6 +741,9 @@ it has not earned.
   barred from reading the actor's plan, the same as every other downstream engine, so "Validated"
   records that a human found the recurring signature worth naming -- it is never checked against, or
   claimed to match, the hidden ground truth that produced it.
+- **Validating retires actors silently.** A VALIDATED candidate permanently stops every actor whose
+  case contributed to it, and nothing in the UI ever says so or names who it was -- the only observable
+  trace is that a validated pattern stops recurring.
 - **Port Meridian is a vertical slice.** Missions, free-roam, day/night cycle and audio are not built.
 - **The demo's default tab is the arcade mode**, which undersells everything above. Choose Live Sim.
 - **Modelling a regulatory or control concept is not compliance with it.** Nothing here certifies
