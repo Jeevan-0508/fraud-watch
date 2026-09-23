@@ -568,10 +568,108 @@ const FWIntentEngine = (() => {
       POSITION_TEST_NAMES.join(', ') + '), so what would satisfy it is not a fact this module holds.');
   }
 
+  /* THE VARIANT. A plan kind is a shape declared once in PLAN_KINDS; a variant
+     is how one actor's copy of that shape actually gets laid out. Three exist.
+
+       BASE         every step fires in the order PLAN_KINDS declares.
+       REORDERED    every step PLAN_KINDS declares still fires -- the same set
+                    of traces -- in a different sequence. The steps a plan is
+                    written in are already a choice ("why the steps are spread
+                    over the approach and the place" above), not a physical
+                    law, so a truck's own position gate is still the only thing
+                    that decides when a given step can fire; a reordered plan
+                    can take longer to complete a lap, and latencyReport()
+                    measures that rather than hiding it.
+       ABBREVIATED  one step PLAN_KINDS declares never fires. A shorter,
+                     quieter version of the same act: still enough distinct
+                     types to be correlated, one fewer than the textbook shape
+                     moEngine's keyword table was written against.
+
+     This is the module's answer to a question the taxonomy asks and the
+     original three plans could not: a real MO is not always executed to the
+     letter, and a case that matches a known pattern imperfectly is not
+     evidence of nothing, it is what moEngine's own MO_VARIANT class exists to
+     name. Before this, that class only ever fired on a coincidence of signal
+     reliability; nothing on the adversary side ever actually varied. Nothing
+     here KNOWS about MO_VARIANT -- moEngine still classifies from its own
+     keyword table over the traces on record and has never heard of this
+     module -- but a REORDERED or ABBREVIATED execution is the first thing in
+     this build that could earn that classification for a reason grounded in
+     what the actor actually did. */
+  const VARIANT_KINDS = {
+    BASE: { name: 'BASE', means: 'every step fires, in the order PLAN_KINDS declares.' },
+    REORDERED: { name: 'REORDERED', means: 'every step fires, in a different order than PLAN_KINDS declares.' },
+    ABBREVIATED: { name: 'ABBREVIATED', means: 'one step PLAN_KINDS declares never fires.' }
+  };
+  const VARIANT_KIND_NAMES = Object.keys(VARIANT_KINDS);
+
+  /* The floor a variant may never cross. Handed to assertPlansCanCorrelate as
+     a literal at the call site below; declared here, once, as the number
+     ABBREVIATED's own eligibility test is built against, so the two can never
+     independently drift. It mirrors moEngine.MIN_SIGNAL_TYPES, which this
+     module may not read at load (moEngine loads after it) -- the reconciling
+     guard is assertVariantFloorMatchesCorrelation, called by the suite once
+     both modules exist, the same arrangement assertSampleMatchesRunner already
+     uses for simRunner's FF_CHUNK. */
+  const MIN_CORRELATABLE_TYPES = 2;
+
+  function assertVariantFloorMatchesCorrelation(minSignalTypes) {
+    if (!(minSignalTypes >= 1)) {
+      throw new Error('intentEngine.assertVariantFloorMatchesCorrelation: no minimum given, so the quoted floor ' +
+        'would be compared against nothing and reported as agreeing.');
+    }
+    if (minSignalTypes !== MIN_CORRELATABLE_TYPES) {
+      throw new Error('intentEngine: MIN_CORRELATABLE_TYPES is ' + MIN_CORRELATABLE_TYPES + ' and moEngine needs ' +
+        minSignalTypes + ' distinct signal types to correlate a case. The ABBREVIATED variant gate has gone stale ' +
+        'and may now offer a variant no execution of it could ever be correlated by anything.');
+    }
+    return { state: 'CHECKED', minCorrelatableTypes: MIN_CORRELATABLE_TYPES };
+  }
+
+  /* Every variant a given kind may draw. BASE and REORDERED are always
+     available -- every declared kind has at least two steps, so a reorder is
+     always a real permutation. ABBREVIATED is available only when dropping one
+     step still clears MIN_CORRELATABLE_TYPES; every step within a kind already
+     carries a distinct type (assertPlansCanCorrelate proves this at load), so
+     "one fewer step" and "one fewer distinct type" are the same fact. */
+  function availableVariants(kind) {
+    const v = [VARIANT_KIND_NAMES[0], VARIANT_KIND_NAMES[1]];
+    if (kind.steps.length - 1 >= MIN_CORRELATABLE_TYPES) v.push(VARIANT_KIND_NAMES[2]);
+    return v;
+  }
+
+  /* The steps a given variant actually lays out, drawn from the same actor
+     stream that chose the kind and the target -- consuming this module's own
+     dedicated rng, never behaviorEngine's. BASE returns the declared order
+     untouched. REORDERED draws a Fisher-Yates permutation. ABBREVIATED drops
+     one step chosen uniformly from the declared list. Both draws are over the
+     KIND's declared steps, never the mutated result of a previous draw, so a
+     REORDERED plan is a permutation of exactly the same set ABBREVIATED would
+     have chosen from. */
+  function stepsForVariant(kind, variantName, rng) {
+    if (variantName === 'REORDERED') {
+      const order = kind.steps.map((s, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = rng.int(0, i);
+        const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+      }
+      return order.map(i => kind.steps[i]);
+    }
+    if (variantName === 'ABBREVIATED') {
+      const dropIndex = rng.int(0, kind.steps.length - 1);
+      return kind.steps.filter((s, i) => i !== dropIndex);
+    }
+    if (variantName !== 'BASE') {
+      throw new Error('intentEngine.stepsForVariant: "' + variantName + '" is not one of the declared variants (' +
+        VARIANT_KIND_NAMES.join(', ') + ').');
+    }
+    return kind.steps.slice();
+  }
+
   /* THE DRAW. Deterministic in the seed and in nothing else: the actors, the
-     kinds and the targets all come out of one stream created here, so the same
-     seed produces the same two actors with the same two plans over the same two
-     nodes on every run and on every machine.
+     kinds, the variants and the targets all come out of one stream created
+     here, so the same seed produces the same actors with the same plans over
+     the same nodes on every run and on every machine.
 
      Actors are drawn from the drivers that HOLD A TRUCK at boot, because a
      driver in the spare pool is not driving anything and a plan they cannot act
@@ -616,13 +714,28 @@ const FWIntentEngine = (() => {
           'fire at. The plan vocabulary and the topology have to be reconciled, not worked around.');
       }
       const targetNodeId = o.targetNodeId || rng.pick(candidates);
+      const avail = availableVariants(kind);
+      const variantName = o.variant || avail[rng.int(0, avail.length - 1)];
+      if (avail.indexOf(variantName) < 0) {
+        throw new Error('intentEngine.createBook: variant ' + variantName + ' was requested for plan kind ' +
+          kindName + ' and is not one of the variants available to it (' + avail.join(', ') + '). A planted ' +
+          'variant this kind cannot offer would otherwise reach stepsForVariant and be built anyway.');
+      }
+      const variantSteps = stepsForVariant(kind, variantName, rng);
+      const distinctTypes = new Set(variantSteps.map(s => s.type)).size;
+      if (distinctTypes < MIN_CORRELATABLE_TYPES) {
+        throw new Error('intentEngine.createBook: the ' + variantName + ' variant of ' + kindName + ' produced ' +
+          distinctTypes + ' distinct disruption type(s), fewer than the ' + MIN_CORRELATABLE_TYPES + ' correlation ' +
+          'needs. availableVariants should never have offered a combination this thin.');
+      }
       const plan = {
         actorDriverId: driver.id,
         kind: kindName,
+        variant: variantName,
         resembles: kind.resembles,
         targetNodeId: targetNodeId,
         targetNodeType: affordances.index[targetNodeId].nodeType,
-        steps: kind.steps.map(s => (s.test === 'AT_NODE_TYPE'
+        steps: variantSteps.map(s => (s.test === 'AT_NODE_TYPE'
           ? { type: s.type, test: s.test, nodeType: s.nodeType }
           : { type: s.type, test: s.test, nodeId: targetNodeId })),
         stepIndex: 0,
@@ -759,7 +872,11 @@ const FWIntentEngine = (() => {
       'every disruption in it is the unplanned draw. That is the whole of the pre-Slice-73 behaviour.' };
     const plans = Array.from(book.plans.values());
     const byKind = {};
-    plans.forEach(p => { byKind[p.kind] = (byKind[p.kind] || 0) + 1; });
+    const byVariant = {};
+    plans.forEach(p => {
+      byKind[p.kind] = (byKind[p.kind] || 0) + 1;
+      byVariant[p.variant] = (byVariant[p.variant] || 0) + 1;
+    });
     const dormant = registry
       ? plans.filter(p => {
         const d = FWEntityEngine.get(registry, 'driver', p.actorDriverId);
@@ -776,6 +893,7 @@ const FWIntentEngine = (() => {
       state: 'MEASURED',
       actors: plans.length, driverPool: book.driverPool, wantedActors: book.wantedActors,
       byKind: byKind,
+      byVariant: byVariant,
       opportunities: book.opportunities,
       stepsFired: book.stepsFired,
       misses: Object.assign({}, book.misses),
@@ -786,8 +904,9 @@ const FWIntentEngine = (() => {
           'type the unplanned draw would not have produced. The other ' + (displacementKnown - substituted) +
           ' named the type the draw had already given, so the plan changed nothing observable in that slot.'
         : 'no fired step recorded what the unplanned draw would have been, so no displacement is being claimed.',
-      laps: plans.map(p => ({ actorDriverId: p.actorDriverId, kind: p.kind, targetNodeId: p.targetNodeId,
-        laps: p.laps, stepIndex: p.stepIndex, state: p.state, fired: p.fired.length })),
+      laps: plans.map(p => ({ actorDriverId: p.actorDriverId, kind: p.kind, variant: p.variant,
+        targetNodeId: p.targetNodeId, laps: p.laps, stepIndex: p.stepIndex, state: p.state,
+        fired: p.fired.length })),
       dormantActorIds: dormant,
       dormantNote: dormant === null
         ? 'not computed: dormancy is a fact about the registry (whether the actor is holding a truck right now) and no registry was given.'
@@ -974,6 +1093,7 @@ const FWIntentEngine = (() => {
 
   return {
     PLANNED_ACTOR_COUNT, PLAN_SEED_OFFSET, MOVEMENT_SAMPLE_SECONDS, assertSampleMatchesRunner, POSITION_TESTS, POSITION_TEST_NAMES, PLAN_KINDS, PLAN_KIND_NAMES,
+    VARIANT_KINDS, VARIANT_KIND_NAMES, MIN_CORRELATABLE_TYPES, assertVariantFloorMatchesCorrelation, availableVariants, stepsForVariant,
     PLAN_STATES, MISS_REASONS, GROUND_TRUTH, ASSUMPTIONS, NOT_MODELLED, POSITION_TEST_DRIVE,
     nodeAffordances, candidateTargets, assertPlanFeasible, positionMatches,
     createBook, nextStepFor, commitStep, latencyReport, summary,
