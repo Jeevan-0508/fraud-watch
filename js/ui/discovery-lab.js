@@ -59,11 +59,17 @@ const FWDiscoveryLab = (() => {
     els = {
       root: document.getElementById('discovery-lab-root'),
       scoreboard: document.getElementById('discovery-lab-scoreboard'),
+      exportStatus: document.getElementById('discovery-lab-export-status'),
       tabs: document.getElementById('discovery-lab-tabs'),
       list: document.getElementById('discovery-lab-list')
     };
     if (els.list) {
       els.list.addEventListener('click', (e) => {
+        const exportBtn = e.target.closest('[data-cand-export]');
+        if (exportBtn) {
+          handleExport(exportBtn.dataset.candSignature);
+          return;
+        }
         const btn = e.target.closest('[data-cand-action]');
         if (btn) handleAction(btn.dataset.candSignature, btn.dataset.candAction);
       });
@@ -93,6 +99,37 @@ const FWDiscoveryLab = (() => {
       FWCandidateEngine.resolve(state.candidateStore, signature, def.verdict, now, note);
     }
     render(state);
+  }
+
+  function handleExport(signature) {
+    const state = FWSimRunner.getState();
+    if (!state || !state.candidateStore || !signature) return;
+    const record = state.candidateStore.records.get(signature);
+    if (!record) {
+      if (els.exportStatus) els.exportStatus.textContent = 'Export refused: candidate is no longer in the active simulation.';
+      return;
+    }
+    try {
+      const payload = FWCandidateExport.build(record, state);
+      const blob = new Blob([JSON.stringify(payload, null, 2) + '\n'], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const fileSignature = record.signature.replace(/[^A-Za-z0-9_+-]/g, '_');
+      const stamp = payload.exported_at.replace(/[:.]/g, '-');
+      link.href = url;
+      link.download = 'candidate-mo-' + fileSignature + '-' + stamp + '.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (els.exportStatus) {
+        els.exportStatus.textContent = 'Downloaded ' + link.download + '. Synthetic simulator data; export authenticity is unverified.';
+      }
+    } catch (e) {
+      if (els.exportStatus) {
+        els.exportStatus.textContent = 'Export refused: ' + (e instanceof Error ? e.message : String(e));
+      }
+    }
   }
 
   function fmtAt(absSeconds) {
@@ -146,7 +183,7 @@ const FWDiscoveryLab = (() => {
   function renderActions(record) {
     const buttons = ACTIONS.filter(a => a.fromState === record.state).map(a =>
       `<button data-cand-action="${a.action}" data-cand-signature="${record.signature}" class="px-2 py-1 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">${a.label}</button>`).join('');
-    return buttons ? `<div class="flex flex-wrap gap-1.5 mt-2">${buttons}</div>` : '';
+    return buttons;
   }
 
   function renderCard(record) {
@@ -159,7 +196,10 @@ const FWDiscoveryLab = (() => {
       ${record.resolutionNote ? `<div class="text-[10px] text-slate-400 mt-1">Resolution note: ${record.resolutionNote}</div>` : ''}
       ${renderProvenance(record)}
       ${renderHistory(record)}
-      ${renderActions(record)}
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        ${renderActions(record)}
+        <button data-cand-export="true" data-cand-signature="${record.signature}" class="px-2 py-1 rounded-md text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-sky-300">Download synthetic JSON</button>
+      </div>
     </div>`;
   }
 
@@ -185,4 +225,4 @@ const FWDiscoveryLab = (() => {
 
   return { init, render, setFilter, handleAction };
 })();
-
+

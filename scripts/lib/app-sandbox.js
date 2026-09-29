@@ -19,6 +19,8 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { TextDecoder } = require('util');
+const crypto = require('crypto').webcrypto;
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const JS_ROOT = path.join(REPO_ROOT, 'js');
@@ -37,7 +39,7 @@ const FILES = [
   'simulation/eventEngine.js', 'simulation/falsePositiveEngine.js',
   'simulation/intentEngine.js', 'simulation/evolutionEngine.js', 'simulation/behaviorEngine.js',
   'simulation/signalEngine.js', 'simulation/moEngine.js', 'simulation/actEngine.js', 'simulation/investigationEngine.js',
-  'simulation/candidateEngine.js',
+  'simulation/candidateEngine.js', 'simulation/candidate-export.js',
   'simulation/adviceEngine.js', 'simulation/outcomeEngine.js', 'simulation/exposureModel.js',
   'simulation/analyticsEngine.js', 'simulation/simRunner.js',
   'ui/sim-debug.js', 'ui/mo-intelligence.js', 'ui/discovery-lab.js', 'ui/case-export.js', 'ui/entity-inspector.js',
@@ -124,12 +126,19 @@ function bootSandbox() {
     console,
     setTimeout, clearTimeout, setInterval: () => 0, clearInterval: () => {},
     requestAnimationFrame: () => 0, cancelAnimationFrame: () => {},
-    Math, Date, JSON, Object, Array, String, Number, Boolean, Set, Map, Error,
+    Math, Date, JSON, Object, Array, String, Number, Boolean, Set, Map, Error, TextDecoder, crypto,
     isNaN, parseInt, parseFloat, Infinity, NaN, undefined,
     fetch: (p) => {
       const file = path.join(REPO_ROOT, String(p));
       if (!fs.existsSync(file)) return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(JSON.parse(fs.readFileSync(file, 'utf8'))) });
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(JSON.parse(fs.readFileSync(file, 'utf8'))),
+        arrayBuffer: () => {
+          const bytes = fs.readFileSync(file);
+          return Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+        }
+      });
     },
     performance: { now: () => Date.now() },
     Chart: function () { return { destroy() {}, update() {}, data: { labels: [], datasets: [{ data: [] }] }, options: {} }; },
