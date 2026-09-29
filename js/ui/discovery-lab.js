@@ -39,16 +39,6 @@ const FWDiscoveryLab = (() => {
   };
   function stateTone(s) { return STATE_TONE[s] || 'bg-slate-700 text-slate-200'; }
 
-  /* A validation rate over fewer than this many resolved candidates is a
-     coin flip wearing a percentage sign. Below it the panel prints the two
-     counts and stops -- the same refusal calibration-view.js and
-     analytics-view.js already both apply to their own rates, restated here
-     rather than copied as a shared constant because the base each of the
-     three withholds against is a different quantity (decided cases,
-     analytics samples, resolved candidates) and a shared threshold would
-     imply they ought to agree, which they have no reason to. ASSUMED. */
-  const MIN_RESOLVED_FOR_RATE = 3;
-
   const ACTIONS = [
     { action: 'start-review', label: 'Start Review', fromState: 'CANDIDATE' },
     { action: 'validate', label: 'Validate', fromState: 'REVIEW', verdict: 'VALIDATED' },
@@ -117,10 +107,6 @@ const FWDiscoveryLab = (() => {
     const dsum = FWMoEngine.discoverySummary(state.moEngine);
     const eligibleSighted = FWCandidateEngine.ELIGIBLE_CLASSIFICATIONS
       .reduce((n, k) => n + (dsum.byClassification[k] || 0), 0);
-    const resolved = csum.byState.VALIDATED + csum.byState.REJECTED;
-    const rateLine = resolved >= MIN_RESOLVED_FOR_RATE
-      ? `${Math.round((csum.byState.VALIDATED / resolved) * 100)}% of ${resolved} resolved candidates validated as a genuinely new pattern.`
-      : `Validated ${csum.byState.VALIDATED} of ${resolved} resolved -- rate withheld until at least ${MIN_RESOLVED_FOR_RATE} are resolved, to avoid a percentage over a coin-flip base.`;
     els.scoreboard.innerHTML = `
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
         <div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2"><div class="text-[10px] text-slate-500">Still-novel cases sighted</div><div class="text-base text-white">${eligibleSighted}</div></div>
@@ -128,7 +114,7 @@ const FWDiscoveryLab = (() => {
         <div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2"><div class="text-[10px] text-slate-500">Awaiting / in review</div><div class="text-base text-white">${csum.byState.CANDIDATE} / ${csum.byState.REVIEW}</div></div>
         <div class="bg-[#0e1520] border border-slate-800 rounded-lg p-2"><div class="text-[10px] text-slate-500">Validated / rejected</div><div class="text-base text-white">${csum.byState.VALIDATED} / ${csum.byState.REJECTED}</div></div>
       </div>
-      <p class="text-[10px] text-slate-500">${rateLine} "Still-novel cases sighted" is every case moEngine currently classifies ${FWCandidateEngine.ELIGIBLE_CLASSIFICATIONS.join(' or ')} -- a candidate is only surfaced once a signature reaches ${FWCandidateEngine.CANDIDATE_SIGHTING_FLOOR} such sightings, so this count is always >= candidates surfaced, never the same number restated.</p>`;
+      <p class="text-[10px] text-slate-500">"Still-novel cases sighted" is every case moEngine currently classifies ${FWCandidateEngine.ELIGIBLE_CLASSIFICATIONS.join(' or ')} -- a candidate is only surfaced once a signature reaches ${FWCandidateEngine.CANDIDATE_SIGHTING_FLOOR} such sightings, so this count is always >= candidates surfaced, never the same number restated. VALIDATED and REJECTED are analyst labels inside this synthetic simulator; these counts are not accuracy estimates or proof of real-world novelty.</p>`;
   }
 
   function renderProvenance(record) {
@@ -155,7 +141,7 @@ const FWDiscoveryLab = (() => {
         <span class="font-mono text-[11px] text-slate-300">${record.signature}</span>
         <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${stateTone(record.state)}">${record.state}</span>
       </div>
-      <div class="text-[10px] text-slate-500">First seen ${fmtAt(record.firstSeenAt)} \u00b7 promoted to candidate ${fmtAt(record.promotedAt)}${record.resolvedAt != null ? ' \u00b7 resolved ' + fmtAt(record.resolvedAt) : ''}</div>
+      <div class="text-[10px] text-slate-500">First seen ${fmtAt(record.firstSeenAt)} \u00b7 candidate surfaced ${fmtAt(record.discoveredAt != null ? record.discoveredAt : record.promotedAt)}${record.resolvedAt != null ? ' \u00b7 resolved ' + fmtAt(record.resolvedAt) : ''}</div>
       ${record.resolutionNote ? `<div class="text-[10px] text-slate-400 mt-1">Resolution note: ${record.resolutionNote}</div>` : ''}
       ${renderProvenance(record)}
       ${renderHistory(record)}
@@ -167,7 +153,7 @@ const FWDiscoveryLab = (() => {
     const all = FWCandidateEngine.summary(state.candidateStore).records;
     return all
       .filter(r => stateFilter === 'ALL' || r.state === stateFilter)
-      .sort((a, b) => b.promotedAt - a.promotedAt);
+      .sort((a, b) => (b.discoveredAt != null ? b.discoveredAt : b.promotedAt) - (a.discoveredAt != null ? a.discoveredAt : a.promotedAt));
   }
 
   function render(state) {
@@ -185,4 +171,4 @@ const FWDiscoveryLab = (() => {
 
   return { init, render, setFilter, handleAction };
 })();
-
+

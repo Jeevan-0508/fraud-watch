@@ -3,6 +3,7 @@
    this file; every string surfaced to the player comes from fraud-data.json. */
 const FW = (() => {
   let raw = null;
+  let sourceManifest = null;
 
   const CATEGORY_COLOR = {
     cargo_loss:  '#f87171',
@@ -67,7 +68,30 @@ const FW = (() => {
   async function load() {
     if (raw) return raw;
     const res = await fetch('data/fraud-data.json');
+    if (!res.ok) throw new Error('FW.load: taxonomy bundle request returned HTTP ' + res.status);
     raw = await res.json();
+    try {
+      const manifestResponse = await fetch('data/taxonomy-source.json');
+      if (manifestResponse.ok) {
+        const manifest = await manifestResponse.json();
+        const commit = manifest.source_commit || '';
+        const expectedUrl = 'https://github.com/Jeevan-0508/freight-fraud-taxonomy/blob/' + commit + '/docs/data.json';
+        const counts = manifest.counts || {};
+        if (/^[0-9a-f]{40}$/i.test(commit) &&
+            /^[0-9a-f]{64}$/i.test(manifest.content_sha256 || '') &&
+            manifest.source_repository === 'Jeevan-0508/freight-fraud-taxonomy' &&
+            manifest.source_path === 'docs/data.json' &&
+            manifest.source_url === expectedUrl &&
+            manifest.taxonomy_version === raw.meta.version &&
+            counts.pattern_count === raw.meta.pattern_count &&
+            counts.indicator_count === raw.meta.indicator_count &&
+            counts.countermeasure_count === raw.meta.countermeasure_count) {
+          sourceManifest = manifest;
+        }
+      }
+    } catch (_) {
+      sourceManifest = null;
+    }
     measureIndicatorWeights();
     checkSeverityTokens();
     checkCategoryTokens();
@@ -213,6 +237,7 @@ const FW = (() => {
   function loaded() { return raw != null; }
   function patterns() { return raw ? raw.patterns : null; }
   function meta() { return raw ? raw.meta : null; }
+  function source() { return sourceManifest; }
 
   function randomPattern() {
     const p = raw.patterns;
@@ -307,7 +332,7 @@ const FW = (() => {
   function severityColor(sev) { return SEVERITY_COLOR[sev] || UNKNOWN_TOKEN_COLOR; }
 
   return {
-    load, loaded, patterns, meta, randomPattern, pickIndicators, pickDecoy,
+    load, loaded, patterns, meta, source, randomPattern, pickIndicators, pickDecoy,
     bestCountermeasure, categoryColor, severityColor, CATEGORY_COLOR, SEVERITY_COLOR,
     indicatorWeightScale, severityScale, categoryScale,
     UNKNOWN_TOKEN_COLOR, COLOR_BASIS, colorBasis, COLOR_SPACES,
