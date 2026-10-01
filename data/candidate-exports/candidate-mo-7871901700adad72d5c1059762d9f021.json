@@ -1,0 +1,72 @@
+{
+  "schema_version": "candidate-mo.v1",
+  "kind": "candidate_mo",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-01T13:27:09.032Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 799200
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.0.0",
+    "source_commit": null,
+    "snapshot_sha256": "9778d1d39cf058e4990c6e50f65821481af85f690ff7312e2a541ea1b100b908"
+  },
+  "candidate": {
+    "id": "fraud-watch:EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
+    "signature": "EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
+    "lifecycle_state": "DISCOVERED",
+    "source_state": "CANDIDATE",
+    "time_basis": "simulation_seconds_from_genesis",
+    "first_seen_at": 45300,
+    "candidate_since": 638100,
+    "review_started_at": null,
+    "resolved_at": null,
+    "resolution_note": null,
+    "supporting_cases": [
+      {
+        "case_id": "MO-0001",
+        "classification": "EMERGING_BEHAVIOR",
+        "current_classification": "EMERGING_BEHAVIOR",
+        "classification_reason": "no documented pattern shares a single keyword with any of this case’s signal types.",
+        "recorded_at": 638100,
+        "case_opened_at": 45300,
+        "first_observed_at": 43244,
+        "signal_types": [
+          "EQUIPMENT_CARRIER_MISMATCH",
+          "FALSE_MILESTONE_STAMP",
+          "HANDOVER_GAP",
+          "MANIFEST_CHANGED"
+        ],
+        "related_pattern_id": null,
+        "correlation_index": 13,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0010",
+        "classification": "EMERGING_BEHAVIOR",
+        "current_classification": "EMERGING_BEHAVIOR",
+        "classification_reason": "no documented pattern shares a single keyword with any of this case’s signal types.",
+        "recorded_at": 638100,
+        "case_opened_at": 638100,
+        "first_observed_at": 634990,
+        "signal_types": [
+          "EQUIPMENT_CARRIER_MISMATCH",
+          "FALSE_MILESTONE_STAMP",
+          "HANDOVER_GAP",
+          "MANIFEST_CHANGED"
+        ],
+        "related_pattern_id": null,
+        "correlation_index": 13,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      }
+    ]
+  }
+}

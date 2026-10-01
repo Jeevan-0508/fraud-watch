@@ -1,0 +1,53 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-01T13:27:09.032Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 799200
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.0.0",
+    "source_commit": null,
+    "snapshot_sha256": "9778d1d39cf058e4990c6e50f65821481af85f690ff7312e2a541ea1b100b908"
+  },
+  "observation": {
+    "id": "MO-0001",
+    "status": "DISMISSED",
+    "classification": "EMERGING_BEHAVIOR",
+    "title": "Unclassified correlated anomaly",
+    "signature": "EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
+    "correlation_index": 13,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "MINIMAL",
+    "recurrence_count": 1,
+    "first_observed_at": 43244,
+    "opened_at": 45300,
+    "last_observed_at": 52200,
+    "related_pattern_id": null,
+    "signal_types": [
+      "EQUIPMENT_CARRIER_MISMATCH",
+      "FALSE_MILESTONE_STAMP",
+      "HANDOVER_GAP",
+      "MANIFEST_CHANGED"
+    ],
+    "signal_count": 4,
+    "entity_ids": {
+      "truck_id": "TRU-023",
+      "driver_id": "DRI-023",
+      "trailer_id": "TRA-023",
+      "carrier_id": "CAR-007",
+      "facility_id": null
+    },
+    "classification_reason": "NO_RESEMBLANCE",
+    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types."
+  }
+}
