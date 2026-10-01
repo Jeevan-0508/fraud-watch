@@ -283,8 +283,9 @@ and the two are never compared on screen.
 
 Each autonomous tick also writes `data/candidate-exports/` (or the directory in
 `FW_CANDIDATE_EXPORT_DIR`). It exports complete `candidateStore` records through
-`FWCandidateExport` and records classified `POTENTIAL_NEW_MO` rows through `FWMoExport`. The
-simulator's other MO classifications never enter this handoff. Every file is marked
+`FWCandidateExport` and records every persisted MO row through `FWMoExport`. The source
+classification is retained for context, while Risk OS treats every imported row as a potential
+hypothesis. Every file is marked
 `synthetic_simulation` with `unverified_export` authenticity, and the manifest repeats the
 boundary that these are hypotheses only. A record that fails provenance or taxonomy validation
 is recorded as refused and produces no partial file.

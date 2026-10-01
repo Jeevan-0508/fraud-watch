@@ -78,10 +78,11 @@ function candidateRecords(state) {
   return Array.isArray(records) ? records.slice() : [];
 }
 
-/* Export only candidateStore records and explicitly classified POTENTIAL_NEW_MO
-   observations. Other moEngine classifications and raw simulator records never
-   enter the Risk OS handoff. A malformed record is refused independently so one
-   bad hypothesis cannot block the world tick or create a partial export. */
+/* Export candidateStore records and every persisted moEngine observation as
+   separate synthetic hypothesis context. The original MO classification is
+   retained; Risk OS lifecycle is still hypothesis only. A malformed record is
+   refused independently so one bad hypothesis cannot block the world tick or
+   create a partial export. */
 function exportCandidates(M, state, exportedAt) {
   const result = { directory: CANDIDATE_EXPORT_DIR, exported: 0, refused: 0, candidates: [], potentialMOs: [] };
   if (!M.FWCandidateExport) return result;
@@ -109,7 +110,7 @@ function exportPotentialMOs(M, state, exportedAt) {
   if (!M.FWMoExport || !state || !state.moEngine || !state.moEngine.mos) return result;
   const records = typeof state.moEngine.mos.values === 'function' ? Array.from(state.moEngine.mos.values()) : [];
   for (const mo of records) {
-    if (!mo || mo.classification !== 'POTENTIAL_NEW_MO') continue;
+    if (!mo) continue;
     try {
       const payload = M.FWMoExport.build(mo, state, { exportedAt });
       const digest = require('crypto').createHash('sha256').update(payload.observation.id).digest('hex').slice(0, 32);
@@ -139,7 +140,7 @@ function exportSyntheticHandoffs(M, state, exportedAt) {
     schema_version: 'candidate-export-manifest.v1',
     exported_at: exportedAt,
     source: { repository: 'Jeevan-0508/fraud-watch', authenticity: 'unverified_export', data_class: 'synthetic_simulation' },
-    boundary: 'candidate and POTENTIAL_NEW_MO hypotheses only; never real-world evidence or scored risks',
+    boundary: 'candidate and MO hypotheses only; never real-world evidence or scored risks',
     candidates: result.candidates.concat(result.potentialMOs)
   });
   return result;
