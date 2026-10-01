@@ -1,0 +1,213 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-01T19:34:33.560Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 820800
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.0.0",
+    "source_commit": null,
+    "snapshot_sha256": "9778d1d39cf058e4990c6e50f65821481af85f690ff7312e2a541ea1b100b908"
+  },
+  "observation": {
+    "id": "MO-0012",
+    "status": "NEW",
+    "classification": "POTENTIAL_NEW_MO",
+    "title": "Possible Transport Document Fraud",
+    "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN+UNEXPECTED_STOP",
+    "correlation_index": 13,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "MINIMAL",
+    "recurrence_count": 2,
+    "first_observed_at": 808921,
+    "opened_at": 810600,
+    "last_observed_at": 817500,
+    "related_pattern_id": "FFT-010",
+    "signal_types": [
+      "FALSE_MILESTONE_STAMP",
+      "HANDOVER_GAP",
+      "STAGED_BREAKDOWN",
+      "UNEXPECTED_STOP"
+    ],
+    "signal_count": 4,
+    "entity_ids": {
+      "truck_id": "TRU-009",
+      "driver_id": "DRI-003",
+      "trailer_id": "TRA-008",
+      "carrier_id": "CAR-007",
+      "facility_id": null
+    },
+    "classification_reason": "TOO_FEW_SIGHTINGS",
+    "classification_reason_note": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "POTENTIAL_NEW_MO",
+      "title": "Possible Transport Document Fraud",
+      "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN+UNEXPECTED_STOP",
+      "correlationIndex": 13,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 2,
+      "firstObservedAt": 808921,
+      "openedAt": 810600,
+      "lastObservedAt": 817500,
+      "relatedPatternId": "FFT-010",
+      "signalTypes": [
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP",
+        "STAGED_BREAKDOWN",
+        "UNEXPECTED_STOP"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-009",
+        "driver_id": "DRI-003",
+        "trailer_id": "TRA-008",
+        "carrier_id": "CAR-007",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 808921,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 809100,
+          "signalType": "STAGED_BREAKDOWN"
+        },
+        {
+          "at": 810581,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 810600,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 808921,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "STAGED_BREAKDOWN",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 809100,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 810581,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 810600,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate",
+          "signalCount": 2
+        }
+      ],
+      "unsitedSignalCount": 2,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "TOO_FEW_SIGHTINGS",
+      "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-010",
+          "name": "Transport Document Fraud",
+          "votes": 5,
+          "keywords": [
+            "consignment",
+            "document",
+            "falsif",
+            "forgery",
+            "proof of delivery"
+          ]
+        },
+        {
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 4,
+          "keywords": [
+            "collection",
+            "deception",
+            "load theft",
+            "pickup"
+          ]
+        },
+        {
+          "id": "FFT-006",
+          "name": "Unsecured Parking Theft",
+          "votes": 4,
+          "keywords": [
+            "curtain",
+            "parking",
+            "roadside",
+            "truck stop"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "Shares most vocabulary with Transport Document Fraud (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Fictitious Pickup, Unsecured Parking Theft.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "An unattributable delivery signature.",
+          "actually": "Genuine receipt by agency staff, a temporary worker, or a third-party site operator whom the consignee does not have on record.",
+          "ruleOut": "Ask the consignee who was actually on site in that window rather than only whether the name is on the authorised list."
+        },
+        {
+          "title": "Handwritten annotations added to a consignment note.",
+          "actually": "Legitimate reservations recorded at handover, which is exactly what the document is designed for.",
+          "ruleOut": "Establish when the annotation was made and by whom. Contemporaneous reservations are the correct use of the document; retrospective additions are not."
+        },
+        {
+          "title": "The same reference appearing twice.",
+          "actually": "A split delivery, a re-delivery after a failed attempt, or a documented partial movement.",
+          "ruleOut": "Check whether the duplication is explained by a recorded split or re-delivery event before treating it as reuse."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Deduplicate delivery documents automatically by image hash and reference across movements and claims."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Secure the original document before any dispute is progressed, since the evidential value of a copy is limited."
+        }
+      ]
+    }
+  }
+}

@@ -20,50 +20,50 @@
     "snapshot_sha256": "9778d1d39cf058e4990c6e50f65821481af85f690ff7312e2a541ea1b100b908"
   },
   "candidate": {
-    "id": "fraud-watch:EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
-    "signature": "EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
+    "id": "fraud-watch:FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN+UNEXPECTED_STOP",
+    "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN+UNEXPECTED_STOP",
     "lifecycle_state": "DISCOVERED",
     "source_state": "CANDIDATE",
     "time_basis": "simulation_seconds_from_genesis",
-    "first_seen_at": 45300,
-    "candidate_since": 638100,
+    "first_seen_at": 333900,
+    "candidate_since": 810600,
     "review_started_at": null,
     "resolved_at": null,
     "resolution_note": null,
     "supporting_cases": [
       {
-        "case_id": "MO-0001",
+        "case_id": "MO-0008",
         "classification": "EMERGING_BEHAVIOR",
         "current_classification": "EMERGING_BEHAVIOR",
         "classification_reason": "no documented pattern shares a single keyword with any of this case’s signal types.",
-        "recorded_at": 638100,
-        "case_opened_at": 45300,
-        "first_observed_at": 43244,
+        "recorded_at": 810600,
+        "case_opened_at": 333900,
+        "first_observed_at": 332401,
         "signal_types": [
-          "EQUIPMENT_CARRIER_MISMATCH",
           "FALSE_MILESTONE_STAMP",
           "HANDOVER_GAP",
-          "MANIFEST_CHANGED"
+          "STAGED_BREAKDOWN",
+          "UNEXPECTED_STOP"
         ],
         "related_pattern_id": null,
         "correlation_index": 13,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       },
       {
-        "case_id": "MO-0010",
-        "classification": "EMERGING_BEHAVIOR",
-        "current_classification": "EMERGING_BEHAVIOR",
-        "classification_reason": "no documented pattern shares a single keyword with any of this case’s signal types.",
-        "recorded_at": 638100,
-        "case_opened_at": 638100,
-        "first_observed_at": 634990,
+        "case_id": "MO-0012",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 810600,
+        "case_opened_at": 810600,
+        "first_observed_at": 808921,
         "signal_types": [
-          "EQUIPMENT_CARRIER_MISMATCH",
           "FALSE_MILESTONE_STAMP",
           "HANDOVER_GAP",
-          "MANIFEST_CHANGED"
+          "STAGED_BREAKDOWN",
+          "UNEXPECTED_STOP"
         ],
-        "related_pattern_id": null,
+        "related_pattern_id": "FFT-010",
         "correlation_index": 13,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
@@ -74,30 +74,30 @@
       "status": null,
       "classification": null,
       "title": null,
-      "signature": "EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
+      "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN+UNEXPECTED_STOP",
       "correlationIndex": null,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": null,
       "recurrenceCount": null,
-      "firstObservedAt": 45300,
-      "openedAt": 638100,
+      "firstObservedAt": 333900,
+      "openedAt": 810600,
       "lastObservedAt": null,
       "relatedPatternId": null,
       "signalTypes": [
-        "EQUIPMENT_CARRIER_MISMATCH",
         "FALSE_MILESTONE_STAMP",
         "HANDOVER_GAP",
-        "MANIFEST_CHANGED"
+        "STAGED_BREAKDOWN",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {},
       "timeline": [
         {
-          "at": 638100,
-          "signalType": "EQUIPMENT_CARRIER_MISMATCH + FALSE_MILESTONE_STAMP + HANDOVER_GAP + MANIFEST_CHANGED"
+          "at": 810600,
+          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP + STAGED_BREAKDOWN + UNEXPECTED_STOP"
         },
         {
-          "at": 638100,
-          "signalType": "EQUIPMENT_CARRIER_MISMATCH + FALSE_MILESTONE_STAMP + HANDOVER_GAP + MANIFEST_CHANGED"
+          "at": 810600,
+          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP + STAGED_BREAKDOWN + UNEXPECTED_STOP"
         }
       ],
       "signals": [],

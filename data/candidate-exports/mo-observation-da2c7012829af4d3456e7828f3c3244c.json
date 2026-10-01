@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-01T13:27:09.032Z",
+  "exported_at": "2026-10-01T19:34:33.560Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 799200
+    "sim_time_seconds_from_genesis": 820800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -48,6 +48,98 @@
       "facility_id": null
     },
     "classification_reason": "NO_RESEMBLANCE",
-    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types."
+    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "DISMISSED",
+      "classification": "EMERGING_BEHAVIOR",
+      "title": "Unclassified correlated anomaly",
+      "signature": "EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
+      "correlationIndex": 13,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 1,
+      "firstObservedAt": 43244,
+      "openedAt": 45300,
+      "lastObservedAt": 52200,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP",
+        "MANIFEST_CHANGED"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-023",
+        "driver_id": "DRI-023",
+        "trailer_id": "TRA-023",
+        "carrier_id": "CAR-007",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 43244,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 43500,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 45183,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 45300,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 43244,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 43500,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 45183,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 45300,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [],
+      "unsitedSignalCount": 4,
+      "siteSpread": "UNSITED",
+      "classificationReason": "NO_RESEMBLANCE",
+      "classificationReasonNote": "no documented pattern shares a single keyword with any of this case’s signal types.",
+      "relatedPatterns": [],
+      "resemblanceNotes": [
+        "No documented pattern shares a keyword with this signal combination — zero votes, which is a gap in what the taxonomy's vocabulary covers, not a finding that the behaviour is new. Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
   }
 }

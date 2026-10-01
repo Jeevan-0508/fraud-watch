@@ -1,0 +1,190 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-01T19:34:33.560Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 820800
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.0.0",
+    "source_commit": null,
+    "snapshot_sha256": "9778d1d39cf058e4990c6e50f65821481af85f690ff7312e2a541ea1b100b908"
+  },
+  "observation": {
+    "id": "MO-0013",
+    "status": "NEW",
+    "classification": "POTENTIAL_NEW_MO",
+    "title": "Possible Phantom Carrier",
+    "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+    "correlation_index": 45,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "ELEVATED",
+    "recurrence_count": 2,
+    "first_observed_at": 819445,
+    "opened_at": 819900,
+    "last_observed_at": 820800,
+    "related_pattern_id": "FFT-002",
+    "signal_types": [
+      "CARRIER_UNRESPONSIVE",
+      "FALSE_MILESTONE_STAMP",
+      "HANDOVER_GAP"
+    ],
+    "signal_count": 3,
+    "entity_ids": {
+      "truck_id": "TRU-011",
+      "driver_id": "DRI-027",
+      "trailer_id": "TRA-005",
+      "carrier_id": "CAR-003",
+      "facility_id": null
+    },
+    "classification_reason": "TOO_FEW_SIGHTINGS",
+    "classification_reason_note": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "POTENTIAL_NEW_MO",
+      "title": "Possible Phantom Carrier",
+      "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+      "correlationIndex": 45,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "ELEVATED",
+      "recurrenceCount": 2,
+      "firstObservedAt": 819445,
+      "openedAt": 819900,
+      "lastObservedAt": 820800,
+      "relatedPatternId": "FFT-002",
+      "signalTypes": [
+        "CARRIER_UNRESPONSIVE",
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-011",
+        "driver_id": "DRI-027",
+        "trailer_id": "TRA-005",
+        "carrier_id": "CAR-003",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 819445,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 819600,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 819900,
+          "signalType": "CARRIER_UNRESPONSIVE"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 819445,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 819600,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "CARRIER_UNRESPONSIVE",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 819900,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [],
+      "unsitedSignalCount": 3,
+      "siteSpread": "UNSITED",
+      "classificationReason": "TOO_FEW_SIGHTINGS",
+      "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-002",
+          "name": "Phantom Carrier",
+          "votes": 5,
+          "keywords": [
+            "carrier",
+            "fictitious",
+            "ghost",
+            "non-existent",
+            "phantom"
+          ]
+        },
+        {
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 5,
+          "keywords": [
+            "collection",
+            "deception",
+            "fictitious",
+            "load theft",
+            "pickup"
+          ]
+        },
+        {
+          "id": "FFT-010",
+          "name": "Transport Document Fraud",
+          "votes": 5,
+          "keywords": [
+            "consignment",
+            "document",
+            "falsif",
+            "forgery",
+            "proof of delivery"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "Shares most vocabulary with Phantom Carrier (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Fictitious Pickup, Transport Document Fraud.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "A newly registered company with no transport history bidding on freight.",
+          "actually": "A genuine new entrant, or a newly incorporated vehicle of an existing operator restructuring its business.",
+          "ruleOut": "Verify operating authority directly with the issuing authority, confirm insurance with the insurer, and confirm that declared equipment exists and is registered to the entity. A real new entrant passes all three; a phantom fails at least one."
+        },
+        {
+          "title": "A shared or serviced office address.",
+          "actually": "Small legitimate hauliers and freight agents commonly use serviced offices while operating from a separate yard.",
+          "ruleOut": "Ask for the operational depot or parking location separately from the registered address, and verify that it exists and is capable of holding the declared fleet."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Automatically flag a first-time counterparty bidding on a load above a defined value threshold for manual release."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Treat a non-contactable carrier holding loaded cargo as a theft in progress and escalate to law enforcement immediately rather than as a service failure."
+        }
+      ]
+    }
+  }
+}

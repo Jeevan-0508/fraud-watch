@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-01T13:27:09.032Z",
+  "exported_at": "2026-10-01T19:34:33.560Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 799200
+    "sim_time_seconds_from_genesis": 820800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -54,6 +54,293 @@
       "facility_id": null
     },
     "classification_reason": "NO_RESEMBLANCE",
-    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types."
+    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "DISMISSED",
+      "classification": "EMERGING_BEHAVIOR",
+      "title": "Unclassified correlated anomaly",
+      "signature": "ACCOUNT_TAKEOVER+SEAL_MISMATCH",
+      "correlationIndex": 6,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 1,
+      "firstObservedAt": 127800,
+      "openedAt": 129600,
+      "lastObservedAt": 346500,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "ACCOUNT_TAKEOVER",
+        "DRIVER_CHANGED",
+        "DUPLICATE_ASSET_ID",
+        "GPS_SIGNAL_LOST",
+        "HANDOVER_GAP",
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH",
+        "STAGED_BREAKDOWN",
+        "TRAILER_SWAPPED",
+        "UNEXPECTED_STOP"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-014",
+        "driver_id": "DRI-014",
+        "trailer_id": "TRA-034",
+        "carrier_id": "CAR-008",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 127800,
+          "signalType": "SEAL_MISMATCH"
+        },
+        {
+          "at": 129600,
+          "signalType": "ACCOUNT_TAKEOVER"
+        },
+        {
+          "at": 154800,
+          "signalType": "TRAILER_SWAPPED"
+        },
+        {
+          "at": 190800,
+          "signalType": "GPS_SIGNAL_LOST"
+        },
+        {
+          "at": 205800,
+          "signalType": "SEAL_MISMATCH"
+        },
+        {
+          "at": 206700,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 208200,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 233400,
+          "signalType": "DUPLICATE_ASSET_ID"
+        },
+        {
+          "at": 264000,
+          "signalType": "DRIVER_CHANGED"
+        },
+        {
+          "at": 271606,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 271800,
+          "signalType": "STAGED_BREAKDOWN"
+        },
+        {
+          "at": 289800,
+          "signalType": "DUPLICATE_ASSET_ID"
+        },
+        {
+          "at": 298500,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 309900,
+          "signalType": "TRAILER_SWAPPED"
+        },
+        {
+          "at": 313200,
+          "signalType": "ACCOUNT_TAKEOVER"
+        },
+        {
+          "at": 320700,
+          "signalType": "ACCOUNT_TAKEOVER"
+        },
+        {
+          "at": 330900,
+          "signalType": "GPS_SIGNAL_LOST"
+        },
+        {
+          "at": 339600,
+          "signalType": "DRIVER_CHANGED"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 127800,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 129600,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "TRAILER_SWAPPED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 154800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "GPS_SIGNAL_LOST",
+          "contribution": 1.2,
+          "reliability": 0.6,
+          "at": 190800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 205800,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 206700,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 208200,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 233400,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DRIVER_CHANGED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 264000,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 271606,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "STAGED_BREAKDOWN",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 271800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 289800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 298500,
+          "facilityId": "FAC-008",
+          "facilityName": "Inland Depot Ost"
+        },
+        {
+          "signalType": "TRAILER_SWAPPED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 309900,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 313200,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 320700,
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)"
+        },
+        {
+          "signalType": "GPS_SIGNAL_LOST",
+          "contribution": 1.2,
+          "reliability": 0.6,
+          "at": 330900,
+          "facilityId": "FAC-015",
+          "facilityName": "Inland Depot Nord"
+        },
+        {
+          "signalType": "DRIVER_CHANGED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 339600,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate",
+          "signalCount": 4
+        },
+        {
+          "facilityId": "FAC-008",
+          "facilityName": "Inland Depot Ost",
+          "signalCount": 1
+        },
+        {
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)",
+          "signalCount": 1
+        },
+        {
+          "facilityId": "FAC-015",
+          "facilityName": "Inland Depot Nord",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 11,
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
+      "classificationReason": "NO_RESEMBLANCE",
+      "classificationReasonNote": "no documented pattern shares a single keyword with any of this case’s signal types.",
+      "relatedPatterns": [],
+      "resemblanceNotes": [
+        "No documented pattern shares a keyword with this signal combination — zero votes, which is a gap in what the taxonomy's vocabulary covers, not a finding that the behaviour is new. Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
   }
 }

@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-01T13:27:09.032Z",
+  "exported_at": "2026-10-01T19:34:33.560Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 799200
+    "sim_time_seconds_from_genesis": 820800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -47,6 +47,91 @@
       "facility_id": null
     },
     "classification_reason": "NO_RESEMBLANCE",
-    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types."
+    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "DISMISSED",
+      "classification": "EMERGING_BEHAVIOR",
+      "title": "Unclassified correlated anomaly",
+      "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+      "correlationIndex": 13,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 1,
+      "firstObservedAt": 225300,
+      "openedAt": 232500,
+      "lastObservedAt": 239400,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "CARRIER_UNRESPONSIVE",
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-017",
+        "driver_id": "DRI-017",
+        "trailer_id": "TRA-017",
+        "carrier_id": "CAR-005",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 225300,
+          "signalType": "CARRIER_UNRESPONSIVE"
+        },
+        {
+          "at": 232319,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 232500,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "CARRIER_UNRESPONSIVE",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 225300,
+          "facilityId": "FAC-010",
+          "facilityName": "East Gate"
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 232319,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 232500,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-010",
+          "facilityName": "East Gate",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 2,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "NO_RESEMBLANCE",
+      "classificationReasonNote": "no documented pattern shares a single keyword with any of this case’s signal types.",
+      "relatedPatterns": [],
+      "resemblanceNotes": [
+        "No documented pattern shares a keyword with this signal combination — zero votes, which is a gap in what the taxonomy's vocabulary covers, not a finding that the behaviour is new. Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
   }
 }

@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-01T13:27:09.032Z",
+  "exported_at": "2026-10-01T19:34:33.560Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 799200
+    "sim_time_seconds_from_genesis": 820800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -48,6 +48,104 @@
       "facility_id": null
     },
     "classification_reason": "NO_RESEMBLANCE",
-    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types."
+    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "DISMISSED",
+      "classification": "EMERGING_BEHAVIOR",
+      "title": "Unclassified correlated anomaly",
+      "signature": "DUPLICATE_ASSET_ID+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "correlationIndex": 17,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 1,
+      "firstObservedAt": 201300,
+      "openedAt": 203700,
+      "lastObservedAt": 227100,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "DUPLICATE_ASSET_ID",
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "MANIFEST_CHANGED",
+        "ROUTE_DEVIATION"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-002",
+        "driver_id": "DRI-033",
+        "trailer_id": "TRA-002",
+        "carrier_id": "CAR-001",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 201300,
+          "signalType": "DUPLICATE_ASSET_ID"
+        },
+        {
+          "at": 203425,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 203700,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 223800,
+          "signalType": "ROUTE_DEVIATION"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 201300,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 203425,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 203700,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "ROUTE_DEVIATION",
+          "contribution": 1.4,
+          "reliability": 0.7,
+          "at": 223800,
+          "facilityId": "FAC-015",
+          "facilityName": "Inland Depot Nord"
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-015",
+          "facilityName": "Inland Depot Nord",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 3,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "NO_RESEMBLANCE",
+      "classificationReasonNote": "no documented pattern shares a single keyword with any of this case’s signal types.",
+      "relatedPatterns": [],
+      "resemblanceNotes": [
+        "No documented pattern shares a keyword with this signal combination — zero votes, which is a gap in what the taxonomy's vocabulary covers, not a finding that the behaviour is new. Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
   }
 }

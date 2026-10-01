@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-01T13:27:09.032Z",
+  "exported_at": "2026-10-01T19:34:33.560Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 799200
+    "sim_time_seconds_from_genesis": 820800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -53,6 +53,210 @@
       "facility_id": null
     },
     "classification_reason": "NO_RESEMBLANCE",
-    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types."
+    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "DISMISSED",
+      "classification": "EMERGING_BEHAVIOR",
+      "title": "Unclassified correlated anomaly",
+      "signature": "EQUIPMENT_CARRIER_MISMATCH+HANDOVER_GAP+MANIFEST_CHANGED",
+      "correlationIndex": 27,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "WATCH",
+      "recurrenceCount": 1,
+      "firstObservedAt": 187500,
+      "openedAt": 187800,
+      "lastObservedAt": 249300,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "DRIVER_CHANGED",
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP",
+        "MANIFEST_CHANGED",
+        "ROUTE_DEVIATION",
+        "SEAL_MISMATCH",
+        "STAGED_BREAKDOWN",
+        "UNEXPECTED_STOP"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-021",
+        "driver_id": "DRI-021",
+        "trailer_id": "TRA-021",
+        "carrier_id": "CAR-006",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 187500,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 187519,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 187800,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 194696,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 194700,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 213372,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 213600,
+          "signalType": "STAGED_BREAKDOWN"
+        },
+        {
+          "at": 219900,
+          "signalType": "ROUTE_DEVIATION"
+        },
+        {
+          "at": 225900,
+          "signalType": "DRIVER_CHANGED"
+        },
+        {
+          "at": 240899,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 240900,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 242400,
+          "signalType": "SEAL_MISMATCH"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 187500,
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)"
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 187519,
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)"
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 187800,
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)"
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 194696,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 194700,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 213372,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "STAGED_BREAKDOWN",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 213600,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "ROUTE_DEVIATION",
+          "contribution": 1.4,
+          "reliability": 0.7,
+          "at": 219900,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DRIVER_CHANGED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 225900,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 240899,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 240900,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 242400,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)",
+          "signalCount": 3
+        },
+        {
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate",
+          "signalCount": 2
+        }
+      ],
+      "unsitedSignalCount": 7,
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
+      "classificationReason": "NO_RESEMBLANCE",
+      "classificationReasonNote": "no documented pattern shares a single keyword with any of this case’s signal types.",
+      "relatedPatterns": [],
+      "resemblanceNotes": [
+        "No documented pattern shares a keyword with this signal combination — zero votes, which is a gap in what the taxonomy's vocabulary covers, not a finding that the behaviour is new. Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
   }
 }

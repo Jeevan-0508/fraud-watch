@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-01T13:27:09.032Z",
+  "exported_at": "2026-10-01T19:34:33.560Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 799200
+    "sim_time_seconds_from_genesis": 820800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -47,6 +47,115 @@
       "facility_id": null
     },
     "classification_reason": "NO_RESEMBLANCE",
-    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types."
+    "classification_reason_note": "no documented pattern shares a single keyword with any of this case’s signal types.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "DISMISSED",
+      "classification": "EMERGING_BEHAVIOR",
+      "title": "Unclassified correlated anomaly",
+      "signature": "ACCOUNT_TAKEOVER+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "correlationIndex": 41,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "ELEVATED",
+      "recurrenceCount": 1,
+      "firstObservedAt": 48300,
+      "openedAt": 54900,
+      "lastObservedAt": 64500,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "ACCOUNT_TAKEOVER",
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "MANIFEST_CHANGED"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-014",
+        "driver_id": "DRI-014",
+        "trailer_id": "TRA-014",
+        "carrier_id": "CAR-008",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 48300,
+          "signalType": "ACCOUNT_TAKEOVER"
+        },
+        {
+          "at": 54750,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 54900,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 61187,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 61200,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 48300,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 54750,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 54900,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 61187,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 61200,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate",
+          "signalCount": 2
+        }
+      ],
+      "unsitedSignalCount": 3,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "NO_RESEMBLANCE",
+      "classificationReasonNote": "no documented pattern shares a single keyword with any of this case’s signal types.",
+      "relatedPatterns": [],
+      "resemblanceNotes": [
+        "No documented pattern shares a keyword with this signal combination — zero votes, which is a gap in what the taxonomy's vocabulary covers, not a finding that the behaviour is new. Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
   }
 }
