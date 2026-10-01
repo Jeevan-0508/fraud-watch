@@ -187,8 +187,19 @@ function runEvolutionStep(M, state, execAt) {
   };
 }
 
-function main() {
+async function main() {
   const M = bootSandbox().window;
+  // The browser loads the taxonomy before the panels can classify a case. The
+  // headless tick must do the same before any export so provenance and pattern
+  // references are checked against the real loaded bytes, never a guessed copy.
+  try {
+    if (M.FW && !M.FW.loaded()) await M.FW.load();
+  } catch (e) {
+    appendLog({ outcome: 'FAILURE', triggeredAt: new Date(nowMs()).toISOString(), phase: 'TAXONOMY_LOAD', error: String(e && e.message || e) });
+    console.error('FAILURE loading the taxonomy — leaving persisted state untouched.', e);
+    process.exitCode = 1;
+    return;
+  }
   const existing = readJson(WORLD_STATE_PATH);
   const execAt = new Date(nowMs()).toISOString();
 
@@ -298,4 +309,7 @@ function main() {
   }
 }
 
-main();
+main().catch((e) => {
+  console.error('FAILURE in autonomous tick:', e);
+  process.exitCode = 1;
+});
