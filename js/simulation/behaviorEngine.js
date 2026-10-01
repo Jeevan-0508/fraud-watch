@@ -442,7 +442,8 @@ const FWBehaviorEngine = (() => {
            storage is the live case -- did not happen, so the actor is still
            waiting to do it and the plan must not move past it. That is why the
            commit is here, after the null check, and not inside nextStepFor. */
-        if (pending && pending.fires) FWIntentEngine.commitStep(ctx.intentBook, pending, timestamp, drawn);
+        if (pending && pending.fires) FWIntentEngine.commitStep(ctx.intentBook, pending, timestamp, drawn,
+          Object.assign({}, ev, { observationWindowSeconds: FWSignalEngine.decaySecondsFor(type) }));
         if (hasShiftModel) FWShiftEngine.record(ctx.shiftTracker, shift, type, !ev.unrecorded);
         if (window.FWFacilityEngine) {
           FWFacilityEngine.record(ctx.facilityTracker, truck.facilityId || null, type, !ev.unrecorded, shift);
