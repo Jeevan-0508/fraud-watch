@@ -19,3 +19,4 @@ jobs:
           node tests/evolution.test.js
           node tests/tick.test.js
           node tests/candidate-export.test.js
+          node tests/mo-export.test.js

@@ -282,11 +282,12 @@ and the two are never compared on screen.
 ### Automatic synthetic handoff to Risk OS
 
 Each autonomous tick also writes `data/candidate-exports/` (or the directory in
-`FW_CANDIDATE_EXPORT_DIR`). It exports only complete `candidateStore` records through
-`FWCandidateExport`; the simulator's `moEngine` records are never exported as evidence. Every
-file is `candidate-mo.v1`, marked `synthetic_simulation` with `unverified_export` authenticity,
-and the manifest repeats the boundary that these are hypotheses only. A candidate that fails
-provenance or taxonomy validation is recorded as refused and produces no partial file.
+`FW_CANDIDATE_EXPORT_DIR`). It exports complete `candidateStore` records through
+`FWCandidateExport` and records classified `POTENTIAL_NEW_MO` rows through `FWMoExport`. The
+simulator's other MO classifications never enter this handoff. Every file is marked
+`synthetic_simulation` with `unverified_export` authenticity, and the manifest repeats the
+boundary that these are hypotheses only. A record that fails provenance or taxonomy validation
+is recorded as refused and produces no partial file.
 
 Risk OS can import this directory with `npm run import:fraud-watch -- <candidate-export-dir> <risk-intake-inbox>`. The importer creates hypothesis-state `risk-intake.v1` records with empty
 evidence and null scoring fields. Operator review and independent real-world evidence are still

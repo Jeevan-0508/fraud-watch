@@ -78,12 +78,12 @@ function candidateRecords(state) {
   return Array.isArray(records) ? records.slice() : [];
 }
 
-/* Export only candidateStore records. The underlying moEngine is deliberately
-   excluded: it contains simulator observations, not real-world evidence. A
-   malformed or incomplete candidate is refused independently so one bad
-   hypothesis cannot block the world tick or create a partial export. */
+/* Export only candidateStore records and explicitly classified POTENTIAL_NEW_MO
+   observations. Other moEngine classifications and raw simulator records never
+   enter the Risk OS handoff. A malformed record is refused independently so one
+   bad hypothesis cannot block the world tick or create a partial export. */
 function exportCandidates(M, state, exportedAt) {
-  const result = { directory: CANDIDATE_EXPORT_DIR, exported: 0, refused: 0, candidates: [] };
+  const result = { directory: CANDIDATE_EXPORT_DIR, exported: 0, refused: 0, candidates: [], potentialMOs: [] };
   if (!M.FWCandidateExport) return result;
 
   for (const record of candidateRecords(state)) {
@@ -101,12 +101,46 @@ function exportCandidates(M, state, exportedAt) {
     }
   }
 
+  return result;
+}
+
+function exportPotentialMOs(M, state, exportedAt) {
+  const result = { exported: 0, refused: 0, potentialMOs: [] };
+  if (!M.FWMoExport || !state || !state.moEngine || !state.moEngine.mos) return result;
+  const records = typeof state.moEngine.mos.values === 'function' ? Array.from(state.moEngine.mos.values()) : [];
+  for (const mo of records) {
+    if (!mo || mo.classification !== 'POTENTIAL_NEW_MO') continue;
+    try {
+      const payload = M.FWMoExport.build(mo, state, { exportedAt });
+      const digest = require('crypto').createHash('sha256').update(payload.observation.id).digest('hex').slice(0, 32);
+      const filename = `mo-observation-${digest}.json`;
+      writeJsonAtomic(path.join(CANDIDATE_EXPORT_DIR, filename), payload);
+      result.exported += 1;
+      result.potentialMOs.push({ id: payload.observation.id, classification: payload.observation.classification, file: filename, schema_version: 'mo-observation.v1' });
+    } catch (e) {
+      result.refused += 1;
+      result.potentialMOs.push({ id: mo && mo.id ? mo.id : 'unknown', refused: true, reason: String(e && e.message || e), schema_version: 'mo-observation.v1' });
+    }
+  }
+  return result;
+}
+
+function exportSyntheticHandoffs(M, state, exportedAt) {
+  const candidates = exportCandidates(M, state, exportedAt);
+  const potentialMOs = exportPotentialMOs(M, state, exportedAt);
+  const result = {
+    directory: CANDIDATE_EXPORT_DIR,
+    exported: candidates.exported + potentialMOs.exported,
+    refused: candidates.refused + potentialMOs.refused,
+    candidates: candidates.candidates,
+    potentialMOs: potentialMOs.potentialMOs
+  };
   writeJsonAtomic(path.join(CANDIDATE_EXPORT_DIR, 'manifest.json'), {
     schema_version: 'candidate-export-manifest.v1',
     exported_at: exportedAt,
     source: { repository: 'Jeevan-0508/fraud-watch', authenticity: 'unverified_export', data_class: 'synthetic_simulation' },
-    boundary: 'candidate hypotheses only; never real-world evidence or scored risks',
-    candidates: result.candidates
+    boundary: 'candidate and POTENTIAL_NEW_MO hypotheses only; never real-world evidence or scored risks',
+    candidates: result.candidates.concat(result.potentialMOs)
   });
   return result;
 }
@@ -168,7 +202,7 @@ function main() {
     M.FWSimRunner.fastForward(TICK_SIM_SECONDS);
     const after = simTimestamp(state.clock);
     const evolution = runEvolutionStep(M, state, execAt);
-    const candidateExports = exportCandidates(M, state, execAt);
+    const candidateExports = exportSyntheticHandoffs(M, state, execAt);
     const snapshot = M.FWLiveSimStore.capture(state);
     snapshot.meta = { tick: 1, lastTickReal: execAt, seedOrigin: 'GENESIS', seed: GENESIS_SEED,
       tickSimSeconds: TICK_SIM_SECONDS, cadenceMs: CADENCE_MS };
@@ -242,7 +276,7 @@ function main() {
 
     const nextExpectedTickReal = new Date(nowMs() + CADENCE_MS).toISOString();
     const evolution = runEvolutionStep(M, state, execAt);
-    const candidateExports = exportCandidates(M, state, execAt);
+    const candidateExports = exportSyntheticHandoffs(M, state, execAt);
     const snapshot = M.FWLiveSimStore.capture(state);
     snapshot.meta = { tick, lastTickReal: execAt, seedOrigin: existing.meta ? existing.meta.seedOrigin : 'UNKNOWN',
       seed: state.seed, tickSimSeconds: TICK_SIM_SECONDS, cadenceMs: CADENCE_MS };
