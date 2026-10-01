@@ -1,7 +1,7 @@
 {
   "meta": {
     "taxonomy": "Freight & Carrier Fraud Risk Taxonomy",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "pattern_count": 12,
     "categories": [
       "cargo_loss",
@@ -13,8 +13,8 @@
       "insider",
       "regulatory"
     ],
-    "indicator_count": 87,
-    "countermeasure_count": 138
+    "indicator_count": 93,
+    "countermeasure_count": 143
   },
   "patterns": [
     {
@@ -176,8 +176,30 @@
           "url": "https://www.tapaemea.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.1.0",
+      "last_reviewed": "2026-09-22",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "DOUBLE_TENDER",
+        "label": "the booking on record is quietly re-tendered to a second carrier, and the manifest stops matching the asset that actually shows up",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "MANIFEST_CHANGED",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "GPS_SIGNAL_LOST",
+            "test": "ON_LEG_INTO_NODE"
+          },
+          {
+            "type": "HANDOVER_GAP",
+            "test": "AT_NODE"
+          }
+        ],
+        "generation_order": 3
+      }
     },
     {
       "id": "FFT-002",
@@ -351,8 +373,30 @@
           "url": "https://www.tianet.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.1.0",
+      "last_reviewed": "2026-09-22",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "GHOST_ONBOARD",
+        "label": "the vehicle at pickup carries no livery and is not the plate on file, then it goes quiet on the leg out and never answers again",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "EQUIPMENT_CARRIER_MISMATCH",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "GPS_SIGNAL_LOST",
+            "test": "ON_LEG_INTO_NODE"
+          },
+          {
+            "type": "CARRIER_UNRESPONSIVE",
+            "test": "AT_NODE"
+          }
+        ],
+        "generation_order": 4
+      }
     },
     {
       "id": "FFT-003",
@@ -397,6 +441,20 @@
         },
         {
           "phase": "pre_award",
+          "signal": "A primary administrator or account owner changes, and the change propagates to the execution platform without an independent notification or immutable audit event",
+          "observable_in": "Carrier account change log compared with the downstream load-board and execution-platform audit logs",
+          "weight": 5,
+          "notes": "A valid downstream credential does not prove that the person who changed it was the legitimate operator. Missing change visibility is a control gap, not proof of takeover."
+        },
+        {
+          "phase": "pre_award",
+          "signal": "A newly active administrator, driver identity or contact channel is linked through a shared account, device or sign-in identifier to unrelated suspended counterparties",
+          "observable_in": "Related-account and identity-link analysis across carrier master, authentication and driver records",
+          "weight": 4,
+          "notes": "A link is a lead for review, not a finding of common control or wrongdoing."
+        },
+        {
+          "phase": "pre_award",
           "signal": "Bank details supplied do not match the account name of the licensed operator, or are held in a different country from the operator",
           "observable_in": "Payment master data",
           "weight": 5
@@ -438,6 +496,11 @@
           "looks_like": "Bank account name differs from the operator name.",
           "actually": "Legitimate use of a factoring company or a group treasury account, which is common in road freight.",
           "how_to_rule_out": "Require a written assignment or factoring agreement, and verify it with the factor directly. Legitimate factoring is documented and verifiable."
+        },
+        {
+          "looks_like": "A primary administrator or account owner changes shortly before a movement.",
+          "actually": "A genuine ownership transfer, staff change, leave cover or managed-service transition.",
+          "how_to_rule_out": "Verify the change through the previously known operator channel, record the effective date and preserve the old-to-new administrator audit trail."
         }
       ],
       "countermeasures": {
@@ -450,7 +513,8 @@
         "detective": [
           "Run automated lookalike-domain detection against the domains of onboarded carriers.",
           "Flag tenders where a dormant licence suddenly becomes commercially active.",
-          "Reconcile equipment registration against licence holder at the gate."
+          "Reconcile equipment registration against licence holder at the gate.",
+          "Alert on primary-administrator changes and reconcile them to an immutable downstream audit event before allowing a new movement."
         ],
         "responsive": [
           "Notify the impersonated operator, which is a victim and will usually cooperate, and which may already hold evidence.",
@@ -493,8 +557,30 @@
           "url": "https://www.tianet.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.2.0",
+      "last_reviewed": "2026-10-01",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "IDENTITY_SWAP",
+        "label": "a real, dormant licence gets used by someone who is not its holder, and the equipment presenting at pickup is not registered to that holder either",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "ACCOUNT_TAKEOVER",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "EQUIPMENT_CARRIER_MISMATCH",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "DUPLICATE_ASSET_ID",
+            "test": "AT_NODE"
+          }
+        ],
+        "generation_order": 5
+      }
     },
     {
       "id": "FFT-004",
@@ -563,6 +649,13 @@
           "notes": "Effectively conclusive, and the reason gate logs should be checked against open bookings in real time rather than reconciled later."
         },
         {
+          "phase": "in_transit",
+          "signal": "Two different drivers each pass identity verification for the same movement within a short window, even though the first collection has already been recorded",
+          "observable_in": "Gate identity events and collection timestamps reconciled against the booking and dispatch record",
+          "weight": 5,
+          "notes": "Each check can pass on its own. The contradiction is temporal and only appears when the two valid-looking presentations are compared."
+        },
+        {
           "phase": "post_event",
           "signal": "The contracted carrier reports arriving to find the load already collected",
           "observable_in": "Carrier exception report",
@@ -579,6 +672,11 @@
           "looks_like": "Driver presents printed or photographed paperwork.",
           "actually": "Normal practice for many small operators, particularly on subcontracted or spot work.",
           "how_to_rule_out": "Do not treat document format as the test. Test identity: does the vehicle belong to the contracted operator and does the operator confirm this driver for this load."
+        },
+        {
+          "looks_like": "A second driver or vehicle appears for the same movement after the first presentation.",
+          "actually": "A documented relay, recovery, shift change or approved substitution whose dispatch update did not reach the gate in time.",
+          "how_to_rule_out": "Confirm the handover through the pre-existing carrier contact and retain the original and replacement identity records with the reason and time of the change."
         }
       ],
       "countermeasures": {
@@ -590,6 +688,7 @@
         ],
         "detective": [
           "Check the gate log against open bookings in real time so that a second presentation for the same reference is caught while the vehicle is still on site.",
+          "Alert when two valid-looking driver or vehicle identities present for one movement inside a short time window, and hold release until the carrier confirms the substitution.",
           "Photograph vehicle, plate and driver document at every collection and retain the images against the booking.",
           "Alert when a collection is recorded outside the booked window."
         ],
@@ -635,8 +734,30 @@
           "url": "https://www.iru.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.2.0",
+      "last_reviewed": "2026-10-01",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "UNRECORDED_HANDOVER",
+        "label": "a stop short of the destination, a handover nobody confirms, and then the operator stops answering",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "UNEXPECTED_STOP",
+            "test": "ON_LEG_INTO_NODE"
+          },
+          {
+            "type": "HANDOVER_GAP",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "CARRIER_UNRESPONSIVE",
+            "test": "AT_NODE"
+          }
+        ],
+        "generation_order": 2
+      }
     },
     {
       "id": "FFT-005",
@@ -767,8 +888,26 @@
           "url": "https://www.europol.europa.eu/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.1.0",
+      "last_reviewed": "2026-09-05",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "PERSISTENT_SHORTAGE",
+        "label": "the seal recorded at destination does not match the one recorded at origin, and the stop along the way runs longer than the corridor norm",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "SEAL_MISMATCH",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "UNEXPECTED_STOP",
+            "test": "ON_LEG_INTO_NODE"
+          }
+        ],
+        "generation_order": 6
+      }
     },
     {
       "id": "FFT-006",
@@ -840,6 +979,13 @@
           "observable_in": "Route/telematics stop analysis correlated against the scheduled journey and expected rest requirements",
           "weight": 4,
           "notes": "The 'last mile' variant of this pattern: cargo is diverted just before arrival rather than during a long overnight stop, so it is easy to miss if only long stops are reviewed."
+        },
+        {
+          "phase": "in_transit",
+          "signal": "A loaded trailer is uncoupled and left at a non-secure location during an improvised driver swap or destination delay",
+          "observable_in": "Trailer coupling status, dispatch exception, parking location and driver-change record",
+          "weight": 4,
+          "notes": "The delay or driver swap may be legitimate; the exposure is the unattended loaded trailer and must be checked against the agreed parking policy."
         }
       ],
       "false_positives": [
@@ -852,6 +998,11 @@
           "looks_like": "Curtain damage at delivery.",
           "actually": "Accidental damage from loading equipment or road debris, which is common on soft-sided equipment.",
           "how_to_rule_out": "Compare the cut geometry and location with the load plan, and verify against seal and count records whether anything is actually missing."
+        },
+        {
+          "looks_like": "A loaded trailer is left at an unsecured location during a driver change or delay.",
+          "actually": "A site closure, legally required rest, breakdown or documented relay where no loss occurred.",
+          "how_to_rule_out": "Verify the instruction, coupling status, CCTV or receipt and the trailer condition at the next controlled handover before treating the stop as theft evidence."
         }
       ],
       "countermeasures": {
@@ -863,6 +1014,7 @@
         ],
         "detective": [
           "Geofence certified secure parking areas and alert on any rest period taken outside them.",
+          "Require an approved exception and positive custody handover before a loaded trailer is uncoupled outside a secure yard.",
           "Alert on stop duration above a corridor-specific threshold in segments with elevated incident history.",
           "Fit and monitor door and curtain sensors so that the loss is detected at the stop rather than at the delivery."
         ],
@@ -915,8 +1067,26 @@
           "url": "https://www.iru.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.2.0",
+      "last_reviewed": "2026-10-01",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "CURTAIN_STOP",
+        "label": "an unscheduled stop lands somewhere that is not a certified secure yard, and the truck is down there long enough for the curtain to be a problem",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "UNEXPECTED_STOP",
+            "test": "ON_LEG_INTO_NODE"
+          },
+          {
+            "type": "STAGED_BREAKDOWN",
+            "test": "AT_NODE"
+          }
+        ],
+        "generation_order": 7
+      }
     },
     {
       "id": "FFT-007",
@@ -1058,8 +1228,34 @@
           "url": "https://www.iru.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.1.0",
+      "last_reviewed": "2026-09-22",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "SEAL_AND_SWAP",
+        "label": "the seal on the box stops matching the paperwork at a yard, the box changes, and the delivery is stamped at the next gate",
+        "target_node_types": [
+          "WAREHOUSE",
+          "PORT"
+        ],
+        "steps": [
+          {
+            "type": "SEAL_MISMATCH",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "TRAILER_SWAPPED",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "FALSE_MILESTONE_STAMP",
+            "test": "AT_NODE_TYPE",
+            "nodeType": "CHECKPOINT"
+          }
+        ],
+        "generation_order": 1
+      }
     },
     {
       "id": "FFT-008",
@@ -1128,6 +1324,13 @@
         },
         {
           "phase": "in_transit",
+          "signal": "A tracker goes silent immediately after a short dwell near a terminal or handover point while an independent source records subsequent movement",
+          "observable_in": "Telematics gap joined to gate, toll, yard, fuel or access-control records",
+          "weight": 5,
+          "notes": "The timing narrows the investigative window but does not by itself distinguish deliberate removal from a device fault."
+        },
+        {
+          "phase": "in_transit",
           "signal": "A location-based arrival or departure stamp is recorded within seconds of check-in, with no corroborating confirmation from an independent yard or gate system",
           "observable_in": "Cross-check between an app-based geolocation stamp and an independent yard-management or gate-log record for the same event",
           "weight": 4,
@@ -1149,6 +1352,11 @@
           "looks_like": "Sustained regional GNSS interference.",
           "actually": "Documented wide-area interference affecting all users in a region, which is well reported in parts of Europe and is not aimed at any particular vehicle.",
           "how_to_rule_out": "Compare against published interference monitoring for the region and period before drawing any conclusion about a specific movement."
+        },
+        {
+          "looks_like": "A tracker goes silent at a terminal or after a short stop.",
+          "actually": "Battery failure, planned maintenance, coverage loss, wiring fault or a device replaced during a legitimate repair.",
+          "how_to_rule_out": "Compare with fleet-wide outages, inspect the device and wiring, and reconcile the movement with independent records before attributing intent."
         }
       ],
       "countermeasures": {
@@ -1162,6 +1370,7 @@
           "Run automated speed and distance plausibility checks between consecutive fixes and alert on physically impossible transitions.",
           "Alert on any position gap above a defined duration, and treat gaps during rest periods as higher priority than gaps in motion.",
           "Aggregate signal-loss events by driver, vehicle, corridor and hardware version to separate deliberate from technical causes.",
+          "Join every high-priority gap to independent gate, yard, toll, fuel or access records and preserve the raw timestamps before smoothing.",
           "Compare individual gaps against fleet-wide loss in the same area and window before escalating."
         ],
         "responsive": [
@@ -1205,8 +1414,30 @@
           "url": "https://www.iru.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.2.0",
+      "last_reviewed": "2026-10-01",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "SPOOFED_APPROACH",
+        "label": "position reporting is broken on the run in, and the asset shows up somewhere it also still is",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "GPS_SIGNAL_LOST",
+            "test": "ON_LEG_INTO_NODE"
+          },
+          {
+            "type": "ROUTE_DEVIATION",
+            "test": "ON_LEG_INTO_NODE"
+          },
+          {
+            "type": "DUPLICATE_ASSET_ID",
+            "test": "AT_NODE"
+          }
+        ],
+        "generation_order": 0
+      }
     },
     {
       "id": "FFT-009",
@@ -1359,8 +1590,31 @@
           "url": "https://www.europol.europa.eu/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.1.0",
+      "last_reviewed": "2026-09-22",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "GATE_TIPOFF",
+        "label": "a driver credential authorises a pickup outside the pattern normal for that shift, and the gate stamp that should have caught it does not",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "DRIVER_CHANGED",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "HANDOVER_GAP",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "FALSE_MILESTONE_STAMP",
+            "test": "AT_NODE_TYPE",
+            "nodeType": "CHECKPOINT"
+          }
+        ],
+        "generation_order": 8
+      }
     },
     {
       "id": "FFT-010",
@@ -1435,6 +1689,13 @@
           "observable_in": "Cross-check of the submitted report's stated location and timeline against an independently obtained copy or confirmation from the reporting authority",
           "weight": 4,
           "notes": "Always re-verify through the authority directly rather than relying solely on the copy supplied by the party making the claim."
+        },
+        {
+          "phase": "post_event",
+          "signal": "A delivery or milestone stamp is present but the corresponding gate, yard-management, CMR or consignee record does not corroborate the physical handover",
+          "observable_in": "Milestone and delivery record reconciled against independent gate, yard, CMR and consignee confirmation",
+          "weight": 4,
+          "notes": "A stamp is an assertion about an event, not the event itself. Missing corroboration is a review trigger, not proof of falsification."
         }
       ],
       "false_positives": [
@@ -1452,6 +1713,11 @@
           "looks_like": "The same reference appearing twice.",
           "actually": "A split delivery, a re-delivery after a failed attempt, or a documented partial movement.",
           "how_to_rule_out": "Check whether the duplication is explained by a recorded split or re-delivery event before treating it as reuse."
+        },
+        {
+          "looks_like": "A milestone or delivery stamp has no matching independent gate record.",
+          "actually": "An asynchronous feed, a documented manual exception, a site-system outage or a legitimate handover outside the normal system path.",
+          "how_to_rule_out": "Check the outage and exception logs, obtain the original CMR or consignee confirmation and record the reconciliation result before calling the stamp false."
         }
       ],
       "countermeasures": {
@@ -1464,6 +1730,7 @@
         "detective": [
           "Deduplicate delivery documents automatically by image hash and reference across movements and claims.",
           "Reconcile document timestamps against telematics arrival and departure data and flag inconsistencies.",
+          "Reconcile milestone stamps against an independent gate or yard event before treating them as proof of collection or delivery.",
           "Sample-verify delivery signatures directly with consignees rather than only when a claim arises.",
           "Flag claims that rely on a document for which no original can be produced."
         ],
@@ -1508,8 +1775,27 @@
           "url": "https://www.tapaemea.org/"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.2.0",
+      "last_reviewed": "2026-10-01",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "PAPER_TRAIL",
+        "label": "the manifest changes once, quietly, and the milestone stamp behind it is claimed at a gate the truck did not clear the way the record says",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "MANIFEST_CHANGED",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "FALSE_MILESTONE_STAMP",
+            "test": "AT_NODE_TYPE",
+            "nodeType": "CHECKPOINT"
+          }
+        ],
+        "generation_order": 9
+      }
     },
     {
       "id": "FFT-011",
@@ -1815,8 +2101,30 @@
           "url": "https://treaties.un.org/Pages/ViewDetails.aspx?src=TREATY&mtdsg_no=XI-B-11&chapter=11"
         }
       ],
-      "version": "1.0.0",
-      "last_reviewed": "2026-09-05"
+      "version": "1.1.0",
+      "last_reviewed": "2026-09-05",
+      "simulation_recipe": {
+        "engine": "fraud-watch",
+        "version": 1,
+        "plan_id": "CHAIN_HANDOFF",
+        "label": "the vehicle and driver at pickup belong to an entity that appears nowhere in the shipper's own records, one tier below whoever was actually contracted",
+        "target_node_types": null,
+        "steps": [
+          {
+            "type": "EQUIPMENT_CARRIER_MISMATCH",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "DRIVER_CHANGED",
+            "test": "AT_NODE"
+          },
+          {
+            "type": "CARRIER_UNRESPONSIVE",
+            "test": "AT_NODE"
+          }
+        ],
+        "generation_order": 10
+      }
     }
   ]
 }
