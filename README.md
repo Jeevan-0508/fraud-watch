@@ -301,9 +301,21 @@ represent). Each kind's steps may also be reordered or shortened into a declared
 additionally hold a **blended-kind plan**: one act combining the steps of two distinct kinds, drawn
 strictly from whatever drivers are left over rather than substituting for a single-kind plan. And a
 plan can change exactly once, in one direction: if moEngine's own classification of a case tied to
-that actor's driver ever reaches `MO_VARIANT` or `KNOWN_MO`, the actor's variant may step down to
-the quieter `ABBREVIATED` form -- the plan noticing it has been noticed. A blended-kind actor never
-adapts; there is no quieter form of a plan that is already two plans.
+that actor's driver ever reaches `MO_VARIANT` or `KNOWN_MO`, the simulation applies its declared
+feedback rule and changes a single-kind plan to the quieter `ABBREVIATED` form, starting from its
+first step. A blended-kind actor never adapts; there is no quieter form of a plan that is already two
+plans.
+
+This is a **synthetic feedback rule**, not evidence that an actor can observe an investigator's screen or that
+the case is truly fraud. `MO_VARIANT` and `KNOWN_MO` are correlation labels from the simulation. The runner
+records the triggering case; the summary separates actors that actually changed variant from those that had
+no shorter declared variant available. No investigation verdict, calibrated probability, or real-world evasion
+is inferred from that response.
+
+The actor plan book remains hidden and is deliberately excluded from saved/public world snapshots. A restored
+run rebuilds plans from its seed, while retaining the persisted cases and analyst decisions. It therefore does
+**not** preserve the hidden plan's fired-step cursor or prior adaptation exactly across refreshes; this is a
+known replay limitation, not a claim of lossless adversary memory.
 
 A plan can also stop altogether, which is stronger than stepping down. Once an analyst VALIDATES a
 candidate signature in the Discovery Lab, every driver whose case contributed to it has their plan

@@ -1032,29 +1032,25 @@ const FWIntentEngine = (() => {
 /* ==========================================================================
      THE FEEDBACK LOOP (Slice 89). Every other fact about a plan is fixed at
      boot; this is the one exception, and it exists to answer the mission
-     question of whether a detection outcome ever changes what the adversary
-     does next, or whether this build's fraud only ever runs open-loop. Before
+     question of whether a classifier label changes what the synthetic actor
+     plan does next, or whether this build's fraud only ever runs open-loop. Before
      this it always ran open-loop: ASSUMPTIONS above said so in as many words.
 
-     WHAT COUNTS AS A DETECTION WORTH REACTING TO. Not a signal on its own
-     (falsePositiveEngine already shows two in three of this module's own
-     traces carry a documented benign cause, so reacting to a single signal
-     would be an actor with certainty no signal in this build ever earns) and
-     not a bare case (moEngine opens one from as few as MIN_SIGNAL_TYPES
-     distinct traces, which is correlation, not recognition). What this reacts
-     to is moEngine's own classification reaching MO_VARIANT or KNOWN_MO for a
-     case tied to the actor's driver -- the moment the correlation layer has
-     decided the case resembles a documented pattern, whether for the first
-     time or the tenth. A POTENTIAL_NEW_MO case (seen too few times for the
-     count to say either way) or an EMERGING_BEHAVIOR case (matching no
-     documented pattern) is left alone: neither is the correlation layer
-     recognizing this actor's own shape, so reacting to either would be the
-     actor knowing more than the record does.
+     THE SYNTHETIC RESPONSE TRIGGER. This build has no modeled channel through
+     which a driver can observe an investigation or its classification. The
+     rule below is therefore a declared simulation assumption, not a claim
+     about real actor knowledge: a plan responds when the engine classifies a
+     case tied to that actor as MO_VARIANT or KNOWN_MO. A raw signal or bare
+     case does not trigger this rule: the simulation waits for one of those
+     two declared correlation labels. They mean the case resembles a
+     documented pattern under moEngine's rules; neither label proves fraud or
+     that an actor received a notification. POTENTIAL_NEW_MO and
+     EMERGING_BEHAVIOR deliberately do not trigger this bounded response rule.
 
-     WHAT ADAPTING MEANS. The actor's next lap steps down to the ABBREVIATED
-     variant, one fewer step and one fewer type on record, still enough to
-     correlate (availableVariants already only offers ABBREVIATED where that
-     holds), if it is not on that variant already and its kind has one to
+     WHAT ADAPTING MEANS. The next planned step uses the ABBREVIATED variant,
+     starting from its first step: one fewer step and one fewer type on record,
+     still enough to correlate (availableVariants only offers ABBREVIATED
+     where that holds), if the plan is not already on that variant and its kind has one to
      offer. \`fired\` is never rewritten: the laps already on record stay
      exactly as fired, because the point is that a real investigator would see
      the shape change, not a record with its past quietly edited. Bounded to
@@ -1064,18 +1060,18 @@ const FWIntentEngine = (() => {
      the honest answer for that case (noticed, nothing left to do about it)
      rather than a silent no-op repeated every tick.
 
-     THE READ THIS ADDS, AND WHY IT IS A DIFFERENT DIRECTION FROM THE ONE
+     HOW THIS IS DIFFERENT FROM THE
      GROUND_TRUTH GUARDS. GROUND_TRUTH (above) forbids moEngine and everything
      downstream of it from ever reading the PLAN; that direction is completely
      unchanged here, moEngine still classifies from its own keyword table
      alone and still cannot see book.plans. This function reads the other
      direction: intentEngine, here, reads moEngine's classification of a case,
      which is derived evidence built from traces already on the record, not
-     the plan itself. An adversary reacting to being noticed is not a leak of
-     ground truth to a view; the view still never sees the plan or this
-     reaction to it, and every trace this produces is exactly as visible, and
-     exactly as capable of carrying a documented benign cause, as the trace it
-     replaces.
+     the plan itself. This is an explicit synthetic feedback coupling, not a
+     modeled communication or observation channel. The view still never sees
+     the plan or its response, and every trace this produces is exactly as
+     visible, and exactly as capable of carrying a documented benign cause,
+     as the trace it replaces.
 
      DETERMINISM. detections is handed in already reduced to plain
      {driverId, classification, caseId} triples, extracted by simRunner from
@@ -1095,7 +1091,18 @@ const FWIntentEngine = (() => {
     const TRIGGERING = new Set(['MO_VARIANT', 'KNOWN_MO']);
     const byDriver = new Map();
     detections.forEach(d => {
-      if (d && d.driverId != null && TRIGGERING.has(d.classification) && !byDriver.has(d.driverId)) {
+      if (!d || d.driverId == null || !TRIGGERING.has(d.classification)) return;
+      if (typeof d.caseId !== 'string' || !d.caseId.trim()) {
+        throw new Error('intentEngine.adapt: a triggering classification needs a non-empty caseId; without it, ' +
+          'the plan change would have no traceable case provenance.');
+      }
+      const current = byDriver.get(d.driverId);
+      /* A driver can have more than one open case. Which one is named as the
+         representative trigger must not depend on Map/array iteration order:
+         choose the lexically smallest case id, then classification as a stable
+         tie-break. This does not rank the cases by strength or recency. */
+      if (!current || String(d.caseId) < String(current.caseId) ||
+          (String(d.caseId) === String(current.caseId) && d.classification < current.classification)) {
         byDriver.set(d.driverId, d);
       }
     });
@@ -1236,6 +1243,9 @@ const FWIntentEngine = (() => {
       firedByType[f.type] = (firedByType[f.type] || 0) + 1;
       if (f.substituted !== null) { displacementKnown += 1; if (f.substituted) substituted += 1; }
     }));
+    const steppedDownActorIds = plans.filter(p => p.adaptedToQuieter === true).map(p => p.actorDriverId).sort();
+    const noQuieterVariantActorIds = plans.filter(p => p.adapted && p.adaptedToQuieter !== true)
+      .map(p => p.actorDriverId).sort();
     return {
       state: 'MEASURED',
       actors: plans.length, driverPool: book.driverPool, wantedActors: book.wantedActors,
@@ -1256,10 +1266,15 @@ const FWIntentEngine = (() => {
         laps: p.laps, stepIndex: p.stepIndex, state: p.state, fired: p.fired.length, adapted: !!p.adapted, retired: !!p.retired })),
       composites: plans.filter(p => p.composite).length,
       adaptedActorIds: book.adaptedActorIds.slice(),
+      steppedDownActorIds: steppedDownActorIds,
+      noQuieterVariantActorIds: noQuieterVariantActorIds,
       adaptedNote: book.adaptedActorIds.length
-        ? book.adaptedActorIds.length + ' of ' + plans.length + ' actors stepped down to a quieter variant after ' +
-          'their own case reached MO_VARIANT or KNOWN_MO; see adapt().'
-        : 'no actor has been detected to MO_VARIANT or KNOWN_MO yet, so none has adapted.',
+        ? book.adaptedActorIds.length + ' of ' + plans.length + ' actors received a MO_VARIANT/KNOWN_MO correlation ' +
+          'classification; ' + steppedDownActorIds.length + ' changed to ABBREVIATED and ' +
+          noQuieterVariantActorIds.length + ' had no shorter declared variant to switch to. These synthetic ' +
+          'classifications are not confirmed fraud findings or proof the actor knew an investigation was underway.'
+        : 'no actor case has reached MO_VARIANT or KNOWN_MO, so no plan has responded. These synthetic correlation ' +
+          'classifications are not confirmed fraud findings or proof the actor knew an investigation was underway.',
       retiredActorIds: book.retiredActorIds.slice(),
       retiredNote: book.retiredActorIds.length
         ? book.retiredActorIds.length + ' of ' + plans.length + ' actors were retired after a signature ' +
