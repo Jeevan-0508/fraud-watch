@@ -47,7 +47,7 @@ jobs:
         run: |
           git config user.name "fraud-watch-autonomous-world"
           git config user.email "actions@users.noreply.github.com"
-          git add data/world-state.json data/simulation-log.jsonl data/dashboard-summary.json
+          git add data/world-state.json data/simulation-log.jsonl data/dashboard-summary.json data/candidate-exports
           if git diff --cached --quiet; then
             echo "No change to commit (tick was skipped or produced no diff)."
           else

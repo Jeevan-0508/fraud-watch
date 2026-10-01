@@ -997,12 +997,31 @@ const FWIntentEngine = (() => {
      apply (TRAILER_SWAPPED with no spare trailer in storage, say) must not
      advance the plan: the act did not happen, so the actor is still waiting to
      do it. That is why this is a separate call and not part of nextStepFor. */
-  function commitStep(book, pending, timestamp, drawnType) {
+  function commitStep(book, pending, timestamp, drawnType, observation) {
     if (!book || !pending || !pending.fires) {
       throw new Error('intentEngine.commitStep: nothing fired, so there is no step to advance past. Advancing on a ' +
         'miss would make the plan a counter over ticks instead of a plan over places.');
     }
     const plan = pending.plan;
+    if (!plan.memory) plan.memory = { attempts: [], archivedAttempts: 0, totalAttempts: 0 };
+    const obs = observation || {};
+    const truth = obs.metadata && obs.metadata.groundTruth;
+    plan.memory.totalAttempts++;
+    plan.memory.attempts.push({
+      sequence: plan.memory.totalAttempts, at: timestamp, kind: plan.kind, variant: plan.variant,
+      lap: plan.laps, stepIndex: pending.stepIndex, type: pending.step.type,
+      eventId: typeof obs.id === 'string' ? obs.id : null,
+      simulatedLegitimate: truth && typeof truth.legitimate === 'boolean' ? truth.legitimate : null,
+      detection: 'NOT_DETECTED_YET', detectedAt: null, detectionLatencySeconds: null,
+      caseId: null, correlationIndex: null, confidenceMeaning: 'SIMULATOR_CORRELATION_INDEX_NOT_PROBABILITY',
+      investigationOutcome: 'UNKNOWN', evaluation: 'UNKNOWN', evaluationUnit: 'SIMULATED_ATTEMPT',
+      observationWindowSeconds: obs.observationWindowSeconds || null,
+      provenance: 'behaviorEngine committed step; synthetic simulator bookkeeping only'
+    });
+    if (plan.memory.attempts.length > 512) {
+      plan.memory.attempts.shift();
+      plan.memory.archivedAttempts++;
+    }
     plan.fired.push({
       stepIndex: pending.stepIndex, lap: plan.laps, type: pending.step.type, test: pending.step.test,
       nodeId: pending.step.nodeId || null, nodeType: pending.step.nodeType || null,
@@ -1027,6 +1046,36 @@ const FWIntentEngine = (() => {
     }
     book.stepsFired += 1;
     return plan;
+  }
+
+  // This memory stays inside the plan book. It is never a case, source record,
+  // analyst finding, or real-world fraud label. Unknown annotations stay unknown.
+  function observeOutcomes(book, now, observations) {
+    const byEvent = new Map();
+    (observations || []).forEach(o => (o.eventIds || []).forEach(id => {
+      if (!byEvent.has(id)) byEvent.set(id, o);
+    }));
+    book.plans.forEach(plan => {
+      if (!plan.memory) return;
+      plan.memory.attempts.forEach(a => {
+        const hit = a.eventId && byEvent.get(a.eventId);
+        if (hit) {
+          if (a.detectedAt === null) {
+            a.detectedAt = now;
+            a.detectionLatencySeconds = Math.max(0, now - a.at);
+            a.caseId = hit.caseId;
+            a.correlationIndex = typeof hit.correlationIndex === 'number' ? hit.correlationIndex : null;
+          }
+          a.detection = 'CORRELATED_IN_CASE';
+          a.investigationOutcome = hit.status || 'UNKNOWN';
+          a.evaluation = a.simulatedLegitimate === false ? 'SIMULATED_TRUE_POSITIVE'
+            : a.simulatedLegitimate === true ? 'SIMULATED_FALSE_POSITIVE' : 'UNKNOWN';
+        } else if (a.detectedAt === null && a.simulatedLegitimate === false &&
+            a.observationWindowSeconds > 0 && now - a.at >= a.observationWindowSeconds) {
+          a.evaluation = 'SIMULATED_EVASION_WITHIN_WINDOW';
+        }
+      });
+    });
   }
 
 /* ==========================================================================
@@ -1105,7 +1154,12 @@ const FWIntentEngine = (() => {
       if (plan.adapted || plan.composite || plan.retired) return;
       const hit = byDriver.get(driverId);
       if (!hit) return;
+      // A case about this driver alone is not proof that this plan was noticed.
+      // Require an actual committed event to be among that case's observations.
+      const noticed = plan.memory && plan.memory.attempts.some(a => a.caseId === hit.caseId);
+      if (!noticed) return;
       const kind = PLAN_KINDS[plan.kind];
+      if (!kind) return;
       const quieterAvailable = availableVariants(kind).indexOf('ABBREVIATED') > -1 && plan.variant !== 'ABBREVIATED';
       if (quieterAvailable) {
         plan.variant = 'ABBREVIATED';
@@ -1115,7 +1169,8 @@ const FWIntentEngine = (() => {
       }
       plan.adapted = true;
       plan.adaptedAt = now;
-      plan.adaptedTrigger = { caseId: hit.caseId, classification: hit.classification };
+      plan.adaptedTrigger = { caseId: hit.caseId, classification: hit.classification,
+        reason: 'A committed attempt was correlated in this case; shorten the next variant once.' };
       plan.adaptedToQuieter = quieterAvailable;
       book.adaptedActorIds.push(driverId);
       adaptedNow.push(driverId);
@@ -1453,7 +1508,7 @@ const FWIntentEngine = (() => {
     PLANNED_ACTOR_COUNT, PLAN_SEED_OFFSET, MOVEMENT_SAMPLE_SECONDS, assertSampleMatchesRunner, POSITION_TESTS, POSITION_TEST_NAMES, PLAN_KINDS, PLAN_KIND_NAMES,
     VARIANT_KINDS, VARIANT_KIND_NAMES, MIN_CORRELATABLE_TYPES, assertVariantFloorMatchesCorrelation, availableVariants, stepsForVariant,
     COMPOSITE_ACTOR_COUNT, combineKinds,
-    ADAPT_SEED_OFFSET, adapt, retire,
+    ADAPT_SEED_OFFSET, adapt, retire, observeOutcomes,
     PLAN_STATES, MISS_REASONS, GROUND_TRUTH, ASSUMPTIONS, NOT_MODELLED, POSITION_TEST_DRIVE,
     nodeAffordances, candidateTargets, assertPlanFeasible, positionMatches,
     createBook, plantCandidateActor, nextStepFor, commitStep, latencyReport, summary,

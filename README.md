@@ -279,6 +279,21 @@ project, the Discovery Lab is barred from reading the actor's plan: "validated" 
 judged the recurring signature worth naming, not that it matched anything in the hidden ground truth,
 and the two are never compared on screen.
 
+### Automatic synthetic handoff to Risk OS
+
+Each autonomous tick also writes `data/candidate-exports/` (or the directory in
+`FW_CANDIDATE_EXPORT_DIR`). It exports complete `candidateStore` records through
+`FWCandidateExport` and records every persisted MO row through `FWMoExport`. The source
+classification is retained for context, while Risk OS treats every imported row as a potential
+hypothesis. Every file is marked
+`synthetic_simulation` with `unverified_export` authenticity, and the manifest repeats the
+boundary that these are hypotheses only. A record that fails provenance or taxonomy validation
+is recorded as refused and produces no partial file.
+
+Risk OS can import this directory with `npm run import:fraud-watch -- <candidate-export-dir> <risk-intake-inbox>`. The importer creates hypothesis-state `risk-intake.v1` records with empty
+evidence and null scoring fields. Operator review and independent real-world evidence are still
+required before any intake can become a scored risk.
+
 Validating a candidate has a real consequence downstream, and it is never rendered on screen. Every
 driver whose case contributed to a VALIDATED signature has their plan retired -- permanently, the same
 tick the decision is picked up. That is deterrence, not detection: it changes what a caught actor does

@@ -286,7 +286,9 @@
         <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Discovery Lab</h3>
       </div>
       <p class="text-[10px] text-slate-500 mb-2">A candidate is auto-derived, purely informational: it names a signature moEngine still classifies Potential New MO or Emerging Behavior, sighted often enough to be worth naming. Nothing past that moves on its own -- Start Review, then Validate or Reject, are the only two actions that ever change a record's state, and skipping Start Review is refused.</p>
+      <p class="text-[10px] text-amber-300/80 mb-2">Candidate JSON downloads are synthetic simulator output, not real incidents or taxonomy entries. Export does not upload or promote anything.</p>
       <div id="discovery-lab-scoreboard" class="mb-3"></div>
+      <div id="discovery-lab-export-status" class="text-[10px] text-slate-400 mb-2" role="status" aria-live="polite"></div>
       <div class="text-[10px] text-slate-500 mb-1">State</div>
       <div id="discovery-lab-tabs" class="flex gap-1 mb-3 flex-wrap"></div>
       <div id="discovery-lab-list" class="space-y-2 max-h-[600px] overflow-y-auto scrollbar-thin"></div>
@@ -463,6 +465,7 @@
 <script src="js/simulation/actEngine.js"></script>
 <script src="js/simulation/investigationEngine.js"></script>
 <script src="js/simulation/candidateEngine.js"></script>
+<script src="js/simulation/candidate-export.js"></script>
 <script src="js/simulation/adviceEngine.js"></script>
 <script src="js/simulation/outcomeEngine.js"></script>
 <script src="js/simulation/exposureModel.js"></script>

@@ -1,0 +1,22 @@
+name: Validate simulation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test simulation and candidate export contracts
+        run: |
+          node tests/evolution-runner.test.js
+          node tests/evolution.test.js
+          node tests/tick.test.js
+          node tests/candidate-export.test.js
+          node tests/mo-export.test.js

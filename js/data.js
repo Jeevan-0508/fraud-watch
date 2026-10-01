@@ -3,6 +3,7 @@
    this file; every string surfaced to the player comes from fraud-data.json. */
 const FW = (() => {
   let raw = null;
+  let rawSnapshotSha256 = null;
 
   const CATEGORY_COLOR = {
     cargo_loss:  '#f87171',
@@ -67,7 +68,17 @@ const FW = (() => {
   async function load() {
     if (raw) return raw;
     const res = await fetch('data/fraud-data.json');
-    raw = await res.json();
+    const bytes = await res.arrayBuffer();
+    raw = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+        rawSnapshotSha256 = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+      } catch (_) {
+        // A missing digest is explicit in candidate exports; never substitute a guessed revision.
+        rawSnapshotSha256 = null;
+      }
+    }
     measureIndicatorWeights();
     checkSeverityTokens();
     checkCategoryTokens();
@@ -213,6 +224,7 @@ const FW = (() => {
   function loaded() { return raw != null; }
   function patterns() { return raw ? raw.patterns : null; }
   function meta() { return raw ? raw.meta : null; }
+  function snapshotSha256() { return rawSnapshotSha256; }
 
   function randomPattern() {
     const p = raw.patterns;
@@ -307,7 +319,7 @@ const FW = (() => {
   function severityColor(sev) { return SEVERITY_COLOR[sev] || UNKNOWN_TOKEN_COLOR; }
 
   return {
-    load, loaded, patterns, meta, randomPattern, pickIndicators, pickDecoy,
+    load, loaded, patterns, meta, snapshotSha256, randomPattern, pickIndicators, pickDecoy,
     bestCountermeasure, categoryColor, severityColor, CATEGORY_COLOR, SEVERITY_COLOR,
     indicatorWeightScale, severityScale, categoryScale,
     UNKNOWN_TOKEN_COLOR, COLOR_BASIS, colorBasis, COLOR_SPACES,

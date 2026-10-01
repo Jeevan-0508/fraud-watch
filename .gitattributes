@@ -1,0 +1,2 @@
+# Preserve the existing Windows line endings so small UI edits stay reviewable.
+js/ui/discovery-lab.js -text
