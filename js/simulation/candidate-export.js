@@ -175,6 +175,35 @@ const FWCandidateExport = (() => {
         resolved_at: resolvedAt,
         resolution_note: resolutionNote,
         supporting_cases: supportingCases
+        ,context: {
+          kind: 'fraud-watch-candidate.v1',
+          disclaimer: 'Synthetic simulation context only. This candidate groups simulator observations; it is not real-world evidence, a probability, a finding, or an accepted risk.',
+          status: null,
+          classification: null,
+          title: null,
+          signature: record.signature,
+          correlationIndex: null,
+          correlationIndexSemantics: 'synthetic_signal_index_not_probability',
+          confidenceBand: null,
+          recurrenceCount: null,
+          firstObservedAt: firstSeenAt,
+          openedAt: candidateSince,
+          lastObservedAt: null,
+          relatedPatternId: null,
+          signalTypes: [...new Set(supportingCases.flatMap((item) => item.signal_types))].sort(),
+          entityIds: {},
+          timeline: supportingCases.map((item) => ({ at: item.recorded_at, signalType: item.signal_types.join(' + ') })),
+          signals: [],
+          sites: [],
+          unsitedSignalCount: null,
+          siteSpread: null,
+          classificationReason: null,
+          classificationReasonNote: null,
+          relatedPatterns: [],
+          resemblanceNotes: [],
+          legitimateExplanations: [],
+          countermeasures: []
+        }
       }
     };
   }
