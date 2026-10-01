@@ -28,6 +28,10 @@ const DATA_DIR = process.env.FW_DATA_DIR || path.join(REPO_ROOT, 'data');
 const WORLD_STATE_PATH = process.env.FW_WORLD_STATE_PATH || path.join(DATA_DIR, 'world-state.json');
 const LOG_PATH = process.env.FW_LOG_PATH || path.join(DATA_DIR, 'simulation-log.jsonl');
 const SUMMARY_PATH = process.env.FW_SUMMARY_PATH || path.join(DATA_DIR, 'dashboard-summary.json');
+// Synthetic candidate exports are opt-in by location but automatic per tick.
+// Point this at a Risk OS intake inbox for a local bridge, or leave the
+// default inside data/ so the scheduled workflow can commit the exports.
+const CANDIDATE_EXPORT_DIR = process.env.FW_CANDIDATE_EXPORT_DIR || path.join(DATA_DIR, 'candidate-exports');
 
 /* The tick contract, stated as numbers so a test can assert on them by
    name instead of guessing this file's internals.
@@ -65,6 +69,46 @@ function writeJsonAtomic(p, obj) {
   const tmp = p + '.tmp-' + process.pid;
   fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + '\n');
   fs.renameSync(tmp, p);
+}
+
+function candidateRecords(state) {
+  const records = state && state.candidateStore && state.candidateStore.records;
+  if (!records) return [];
+  if (typeof records.values === 'function') return Array.from(records.values());
+  return Array.isArray(records) ? records.slice() : [];
+}
+
+/* Export only candidateStore records. The underlying moEngine is deliberately
+   excluded: it contains simulator observations, not real-world evidence. A
+   malformed or incomplete candidate is refused independently so one bad
+   hypothesis cannot block the world tick or create a partial export. */
+function exportCandidates(M, state, exportedAt) {
+  const result = { directory: CANDIDATE_EXPORT_DIR, exported: 0, refused: 0, candidates: [] };
+  if (!M.FWCandidateExport) return result;
+
+  for (const record of candidateRecords(state)) {
+    const signature = record && typeof record.signature === 'string' ? record.signature : 'unknown';
+    try {
+      const payload = M.FWCandidateExport.build(record, state, { exportedAt });
+      const digest = require('crypto').createHash('sha256').update(payload.candidate.id).digest('hex').slice(0, 32);
+      const filename = `candidate-mo-${digest}.json`;
+      writeJsonAtomic(path.join(CANDIDATE_EXPORT_DIR, filename), payload);
+      result.exported += 1;
+      result.candidates.push({ id: payload.candidate.id, lifecycle_state: payload.candidate.lifecycle_state, file: filename });
+    } catch (e) {
+      result.refused += 1;
+      result.candidates.push({ id: 'fraud-watch:' + signature, refused: true, reason: String(e && e.message || e) });
+    }
+  }
+
+  writeJsonAtomic(path.join(CANDIDATE_EXPORT_DIR, 'manifest.json'), {
+    schema_version: 'candidate-export-manifest.v1',
+    exported_at: exportedAt,
+    source: { repository: 'Jeevan-0508/fraud-watch', authenticity: 'unverified_export', data_class: 'synthetic_simulation' },
+    boundary: 'candidate hypotheses only; never real-world evidence or scored risks',
+    candidates: result.candidates
+  });
+  return result;
 }
 
 function appendLog(entry) {
@@ -124,13 +168,16 @@ function main() {
     M.FWSimRunner.fastForward(TICK_SIM_SECONDS);
     const after = simTimestamp(state.clock);
     const evolution = runEvolutionStep(M, state, execAt);
+    const candidateExports = exportCandidates(M, state, execAt);
     const snapshot = M.FWLiveSimStore.capture(state);
     snapshot.meta = { tick: 1, lastTickReal: execAt, seedOrigin: 'GENESIS', seed: GENESIS_SEED,
       tickSimSeconds: TICK_SIM_SECONDS, cadenceMs: CADENCE_MS };
     writeJsonAtomic(WORLD_STATE_PATH, snapshot);
-    writeJsonAtomic(SUMMARY_PATH, summarize(state, {
+    const summary = summarize(state, {
       tick: 1, lastTickReal: execAt, nextExpectedTickReal: new Date(nowMs() + CADENCE_MS).toISOString()
-    }));
+    });
+    summary.candidateExports = candidateExports;
+    writeJsonAtomic(SUMMARY_PATH, summary);
     appendLog({
       outcome: 'GENESIS_TICK', tick: 1, triggeredAt: execAt,
       previousSimTimestamp: before, newSimTimestamp: after,
@@ -139,6 +186,7 @@ function main() {
       seed: GENESIS_SEED
     });
     if (evolution) appendLog(Object.assign({ outcome: 'EVOLUTION_GENERATION', triggeredAt: execAt }, evolution));
+    appendLog(Object.assign({ outcome: 'CANDIDATE_EXPORT', triggeredAt: execAt }, candidateExports));
     console.log(`GENESIS_TICK #1: day ${before.day} ${before.timeOfDay} -> day ${after.day} ${after.timeOfDay}` +
       (evolution ? ` evolution gen ${evolution.generation}: ${evolution.produced} produced, ${evolution.nominated} nominated.` : ''));
     return;
@@ -194,12 +242,16 @@ function main() {
 
     const nextExpectedTickReal = new Date(nowMs() + CADENCE_MS).toISOString();
     const evolution = runEvolutionStep(M, state, execAt);
+    const candidateExports = exportCandidates(M, state, execAt);
     const snapshot = M.FWLiveSimStore.capture(state);
     snapshot.meta = { tick, lastTickReal: execAt, seedOrigin: existing.meta ? existing.meta.seedOrigin : 'UNKNOWN',
       seed: state.seed, tickSimSeconds: TICK_SIM_SECONDS, cadenceMs: CADENCE_MS };
     writeJsonAtomic(WORLD_STATE_PATH, snapshot);
-    writeJsonAtomic(SUMMARY_PATH, summarize(state, { tick, lastTickReal: execAt, nextExpectedTickReal }));
+    const summary = summarize(state, { tick, lastTickReal: execAt, nextExpectedTickReal });
+    summary.candidateExports = candidateExports;
+    writeJsonAtomic(SUMMARY_PATH, summary);
     if (evolution) appendLog(Object.assign({ outcome: 'EVOLUTION_GENERATION', triggeredAt: execAt }, evolution));
+    appendLog(Object.assign({ outcome: 'CANDIDATE_EXPORT', triggeredAt: execAt }, candidateExports));
 
     console.log(`TICK(s) #${lastTick + 1}..#${tick} of ${ranTicks} run (owed ${owedTicks}${capped ? ', capped at ' + MAX_CATCHUP_TICKS : ''}). ` +
       `events this run: ${state.totalEvents - eventsAtStart}. now: day ${state.clock.day} ${state.clock.timeOfDay()}.` +

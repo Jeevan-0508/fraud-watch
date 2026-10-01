@@ -38,6 +38,7 @@ function runTick(dataDir, nowMs, extraEnv) {
 
 function readWorldState(dataDir) { return JSON.parse(fs.readFileSync(path.join(dataDir, 'world-state.json'), 'utf8')); }
 function readSummary(dataDir) { return JSON.parse(fs.readFileSync(path.join(dataDir, 'dashboard-summary.json'), 'utf8')); }
+function readCandidateManifest(dataDir) { return JSON.parse(fs.readFileSync(path.join(dataDir, 'candidate-exports', 'manifest.json'), 'utf8')); }
 function readLog(dataDir) {
   return fs.readFileSync(path.join(dataDir, 'simulation-log.jsonl'), 'utf8')
     .trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
@@ -51,6 +52,12 @@ function readLog(dataDir) {
   const ws = readWorldState(dir);
   eq(ws.clock.simSeconds, 12 * 3600, 'test1: genesis tick lands on hour 12 (started at 06:00, +6h)');
   eq(ws.meta.tick, 1, 'test1: tick number is 1 after one trigger');
+  const summary = readSummary(dir);
+  eq(summary.candidateExports.exported, 0, 'test1: genesis records the automatic candidate export pass');
+  const manifest = readCandidateManifest(dir);
+  eq(manifest.schema_version, 'candidate-export-manifest.v1', 'test1: candidate export manifest is written with a versioned contract');
+  eq(manifest.source.data_class, 'synthetic_simulation', 'test1: candidate manifest labels exports synthetic');
+  ok(manifest.boundary.includes('never real-world evidence'), 'test1: candidate manifest states the evidence boundary');
 })();
 
 // 2. Four triggers advance exactly 24 simulated hours.
