@@ -71,7 +71,7 @@ async function main() {
   check(payload.exported_at === EXPORTED_AT, 'preserves timezone-qualified export time');
   check(payload.simulation.seed === 424242 && payload.simulation.sim_time_seconds_from_genesis === 90000.5, 'preserves seed and fractional simulation time');
   check(payload.source.revision === null && payload.taxonomy.source_commit === null, 'leaves unavailable source commits unknown');
-  check(payload.taxonomy.version === '1.0.0' && payload.taxonomy.snapshot_sha256 === expectedHash, 'uses loaded taxonomy version and exact-byte digest');
+  check(payload.taxonomy.version === '1.2.0' && payload.taxonomy.snapshot_sha256 === expectedHash, 'uses loaded taxonomy version and exact-byte digest');
   check(payload.candidate.id === 'fraud-watch:' + record.signature, 'namespaces candidate id from signature');
   check(payload.candidate.lifecycle_state === 'DISCOVERED' && payload.candidate.source_state === 'CANDIDATE', 'maps candidate state without promotion');
   check(payload.candidate.supporting_cases[0].case_id === 'MO-0012' && payload.candidate.supporting_cases[1].case_id === 'MO-0013', 'sorts provenance deterministically by case id');
