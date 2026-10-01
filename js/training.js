@@ -65,10 +65,33 @@ const FWTraining = (() => {
     if (how) how.innerHTML = '';
     const panel = document.getElementById('tr-panel');
     if (panel) panel.innerHTML = gapNote('pattern content, because the dataset has not loaded');
+    renderSource();
+  }
+
+  function renderSource() {
+    const el = document.getElementById('tr-source');
+    if (!el) return;
+    const source = FW.source();
+    if (!source) {
+      el.textContent = 'Upstream revision unknown; no valid pinned taxonomy source manifest is available.';
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = source.source_url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.className = 'text-sky-400 hover:underline';
+    link.textContent = source.source_commit.slice(0, 12);
+    el.replaceChildren(
+      document.createTextNode('Source manifest records commit '),
+      link,
+      document.createTextNode(' and SHA-256 ' + source.content_sha256 + '. The browser does not independently verify this hash.')
+    );
   }
 
   function render() {
     if (!ready()) { renderUnloaded(); return; }
+    renderSource();
     const p = patterns()[idx];
     document.getElementById('tr-progress').textContent = `Pattern ${idx + 1} of ${patterns().length}`;
     document.getElementById('tr-name').textContent = p.name;

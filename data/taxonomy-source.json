@@ -1,0 +1,23 @@
+{
+  "source_repository": "Jeevan-0508/freight-fraud-taxonomy",
+  "source_path": "docs/data.json",
+  "source_commit": "602e71cf898b5e7ea441d2599213ad78e38af766",
+  "source_url": "https://github.com/Jeevan-0508/freight-fraud-taxonomy/blob/602e71cf898b5e7ea441d2599213ad78e38af766/docs/data.json",
+  "content_sha256": "44979d85ca2acf045e0e312001ab889ab383cbceceb3d3f570d2c03b413a5781",
+  "taxonomy_version": "1.0.0",
+  "counts": {
+    "pattern_count": 12,
+    "indicator_count": 87,
+    "countermeasure_count": 138,
+    "categories": [
+      "cargo_loss",
+      "contractual",
+      "digital",
+      "documentary",
+      "financial",
+      "identity",
+      "insider",
+      "regulatory"
+    ]
+  }
+}

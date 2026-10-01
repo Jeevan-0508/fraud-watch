@@ -260,6 +260,23 @@ A **network view** builds an entity co-occurrence graph from cases that already 
 Facilities are drawn but deliberately excluded from repeat-entity and clustering findings, because
 almost every movement passes through a gate: a site's degree measures traffic, not involvement.
 
+#### Taxonomy snapshot and review
+
+data/fraud-data.json is a static snapshot, not a live feed. The sync fetches one immutable
+upstream commit, validates its bundle against that commit's schema and index, checks counts and
+related references, and refuses markup-bearing text or non-HTTPS references. The adjacent
+data/taxonomy-source.json records the source commit, pinned URL, source-file SHA-256, version, and
+reconciled counts. The Field Guide displays that recorded provenance; its browser does not
+independently recalculate the source hash.
+
+The scheduled workflow runs the regression suites and opens a draft pull request for a changed
+snapshot. It does not write taxonomy data directly to main, merge the upstream repository, or
+promote a simulated candidate. A human must inspect and merge the mirror PR. If the source commit
+cannot be fetched or fails the contract, the sync stops without updating either data file. Draft
+PR creation uses a repository secret named TAXONOMY_SYNC_TOKEN with only this repository's contents
+and pull-request write permissions; it does not turn on the broader GitHub Actions setting that
+also permits workflow approvals.
+
 ### From classification to candidate: the Discovery Lab
 
 A classification is not the end of the story. Once a signature moEngine still calls
@@ -271,13 +288,11 @@ skipping Review is refused. A candidate's provenance -- every case that earned i
 **append-only**: it never shrinks even if that same signature later recurs enough to be called
 `KNOWN_MO`, because the record answers "why was this first flagged," not "what still qualifies now."
 
-The Discovery Lab's scoreboard reads only numbers the engines already compute and already reconcile
--- candidates surfaced, awaiting review, validated, rejected -- never a second, UI-side score. A
-validation rate is withheld until at least three candidates have been resolved, the same restraint
-Analyst Calibration applies to its own accuracy figures. And like every downstream engine in this
-project, the Discovery Lab is barred from reading the actor's plan: "validated" means an analyst
-judged the recurring signature worth naming, not that it matched anything in the hidden ground truth,
-and the two are never compared on screen.
+The Discovery Lab's scoreboard shows reconciled counts only. VALIDATED and REJECTED record analyst
+choices inside this synthetic simulator; they are not accuracy estimates, external evidence, or
+proof that a real-world pattern is new. The UI never compares those choices with the hidden actor
+plan. There is no PROMOTED state here: adding knowledge to the shared taxonomy requires a separate
+evidence-backed review in the taxonomy repository.
 
 Validating a candidate has a real consequence downstream, and it is never rendered on screen. Every
 driver whose case contributed to a VALIDATED signature has their plan retired -- permanently, the same
@@ -633,8 +648,8 @@ Select the **Live Sim** tab, then:
    the busiest site is the best-watched one, not the riskiest.
 10. **Open the Discovery Lab.** Fast-forward a few days if it is empty. A candidate appears once a
     still-novel signature is sighted twice; click **Start Review**, then **Validate** or **Reject**
-    with a note. Watch the scoreboard's counts move, and watch the validation rate stay withheld as
-    a count until three candidates have actually been resolved. Validating has a real, permanent
+    with a note. Watch the scoreboard's reconciled counts move; analyst choices are not turned into
+    an accuracy rate. Validating has a real, permanent
     effect on the simulation itself -- it is just never shown to you (see Limitations).
 
 Speed controls and a fast-forward are in the Live Sim header if you do not want to wait for the world

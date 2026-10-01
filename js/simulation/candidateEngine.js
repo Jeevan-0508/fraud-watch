@@ -62,9 +62,12 @@ const FWCandidateEngine = (() => {
      reachable only from CANDIDATE; VALIDATED and REJECTED are reachable
      only from REVIEW. Skipping REVIEW is not a shortcut, it is the missing
      step this module exists to require. */
+  // VALIDATED is an analyst label within this simulator, not proof of a
+  // real-world discovery and not promotion into the shared taxonomy. That
+  // promotion requires a separate evidence-backed, human-reviewed taxonomy PR.
   const TRANSITIONS = [
     { from: 'CANDIDATE', to: 'REVIEW', note: 'analyst opened formal review' },
-    { from: 'REVIEW', to: 'VALIDATED', note: 'analyst validated this as a genuinely new pattern' },
+    { from: 'REVIEW', to: 'VALIDATED', note: 'analyst marked this simulated candidate as validated; this is not external confirmation' },
     { from: 'REVIEW', to: 'REJECTED', note: 'analyst rejected this as coincidence or an existing pattern by another name' }
   ];
 
@@ -137,7 +140,7 @@ const FWCandidateEngine = (() => {
           signature,
           state: 'CANDIDATE',
           firstSeenAt: Math.min.apply(null, mos.map(m => m.openedAt)),
-          promotedAt: now,
+          discoveredAt: now,
           reviewStartedAt: null,
           resolvedAt: null,
           resolutionNote: null,

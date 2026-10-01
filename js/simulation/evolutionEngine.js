@@ -384,10 +384,8 @@ const FWEvolutionEngine = (() => {
   /* SCORE, WITH EVERY COMPONENT KEPT (section 8). `components` is produced by
      the caller -- here, or by the scratch runner once a candidate has
      actually been simulated -- and this function only combines and stores
-     them, never invents one. The formula is an unweighted mean, stated as
-     ASSUMED for the same reason MIN_RESOLVED_FOR_RATE in discovery-lab.js is:
-     a chosen threshold, not a fitted one, and said so instead of dressed up
-     as a measurement. */
+     them, never invents one. The formula is an unweighted mean, a declared
+     design choice rather than a fitted measurement. */
   const SCORE_FORMULA = 'unweighted mean of feasibility, observability, novelty, recurrence and ' +
     'detectionLatencyScore -- each already in [0,1]. ASSUMED, not fitted.';
 
