@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-01T19:58:06.575Z",
+  "exported_at": "2026-10-02T05:47:37.532Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 842400
+    "sim_time_seconds_from_genesis": 885600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -17,7 +17,7 @@
     "repository": "Jeevan-0508/freight-fraud-taxonomy",
     "version": "1.2.0",
     "source_commit": null,
-    "snapshot_sha256": "f43517223c490821d54f724b5ee071f60e4f549fa6e73a6bc99da347eb67333c"
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
   },
   "candidate": {
     "id": "fraud-watch:CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
