@@ -20,147 +20,151 @@
     "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
   },
   "observation": {
-    "id": "MO-0013",
-    "status": "DISMISSED",
-    "classification": "POTENTIAL_NEW_MO",
+    "id": "MO-0016",
+    "status": "NEW",
+    "classification": "MO_VARIANT",
     "title": "Possible Phantom Carrier",
-    "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+    "signature": "CARRIER_UNRESPONSIVE+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
     "correlation_index": 12,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
-    "recurrence_count": 2,
-    "first_observed_at": 819445,
-    "opened_at": 819900,
-    "last_observed_at": 830400,
+    "recurrence_count": 1,
+    "first_observed_at": 930934,
+    "opened_at": 934200,
+    "last_observed_at": 944700,
     "related_pattern_id": "FFT-002",
     "signal_types": [
       "CARRIER_UNRESPONSIVE",
-      "FALSE_MILESTONE_STAMP",
-      "HANDOVER_GAP"
+      "EQUIPMENT_CARRIER_MISMATCH",
+      "MANIFEST_CHANGED"
     ],
     "signal_count": 3,
     "entity_ids": {
-      "truck_id": "TRU-011",
-      "driver_id": "DRI-027",
-      "trailer_id": "TRA-005",
-      "carrier_id": "CAR-003",
+      "truck_id": "TRU-003",
+      "driver_id": "DRI-004",
+      "trailer_id": "TRA-015",
+      "carrier_id": "CAR-005",
       "facility_id": null
     },
-    "classification_reason": "TOO_FEW_SIGHTINGS",
-    "classification_reason_note": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+    "classification_reason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
+    "classification_reason_note": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "DISMISSED",
-      "classification": "POTENTIAL_NEW_MO",
+      "status": "NEW",
+      "classification": "MO_VARIANT",
       "title": "Possible Phantom Carrier",
-      "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+      "signature": "CARRIER_UNRESPONSIVE+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
       "correlationIndex": 12,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
-      "recurrenceCount": 2,
-      "firstObservedAt": 819445,
-      "openedAt": 819900,
-      "lastObservedAt": 830400,
+      "recurrenceCount": 1,
+      "firstObservedAt": 930934,
+      "openedAt": 934200,
+      "lastObservedAt": 944700,
       "relatedPatternId": "FFT-002",
       "signalTypes": [
         "CARRIER_UNRESPONSIVE",
-        "FALSE_MILESTONE_STAMP",
-        "HANDOVER_GAP"
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "MANIFEST_CHANGED"
       ],
       "entityIds": {
-        "truck_id": "TRU-011",
-        "driver_id": "DRI-027",
-        "trailer_id": "TRA-005",
-        "carrier_id": "CAR-003",
+        "truck_id": "TRU-003",
+        "driver_id": "DRI-004",
+        "trailer_id": "TRA-015",
+        "carrier_id": "CAR-005",
         "facility_id": null
       },
       "timeline": [
         {
-          "at": 819445,
-          "signalType": "HANDOVER_GAP"
+          "at": 930934,
+          "signalType": "MANIFEST_CHANGED"
         },
         {
-          "at": 819600,
-          "signalType": "FALSE_MILESTONE_STAMP"
+          "at": 931200,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
         },
         {
-          "at": 819900,
+          "at": 934200,
           "signalType": "CARRIER_UNRESPONSIVE"
         }
       ],
       "signals": [
         {
-          "signalType": "HANDOVER_GAP",
-          "contribution": 1.1,
-          "reliability": 0.55,
-          "at": 819445,
-          "facilityId": null,
-          "facilityName": null
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 930934,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
         },
         {
-          "signalType": "FALSE_MILESTONE_STAMP",
-          "contribution": 1.7,
-          "reliability": 0.55,
-          "at": 819600,
-          "facilityId": null,
-          "facilityName": null
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 931200,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
         },
         {
           "signalType": "CARRIER_UNRESPONSIVE",
           "contribution": 1,
           "reliability": 0.5,
-          "at": 819900,
+          "at": 934200,
           "facilityId": null,
           "facilityName": null
         }
       ],
-      "sites": [],
-      "unsitedSignalCount": 3,
-      "siteSpread": "UNSITED",
-      "classificationReason": "TOO_FEW_SIGHTINGS",
-      "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+      "sites": [
+        {
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate",
+          "signalCount": 2
+        }
+      ],
+      "unsitedSignalCount": 1,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
+      "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
       "relatedPatterns": [
         {
           "id": "FFT-002",
           "name": "Phantom Carrier",
-          "votes": 5,
+          "votes": 6,
           "keywords": [
             "carrier",
             "fictitious",
             "ghost",
+            "identity",
             "non-existent",
             "phantom"
           ]
         },
         {
-          "id": "FFT-004",
-          "name": "Fictitious Pickup",
-          "votes": 5,
+          "id": "FFT-003",
+          "name": "Carrier Identity Takeover",
+          "votes": 6,
           "keywords": [
-            "collection",
-            "deception",
-            "fictitious",
-            "load theft",
-            "pickup"
+            "carrier",
+            "hijack",
+            "identity",
+            "impersonation",
+            "operator",
+            "takeover"
           ]
         },
         {
-          "id": "FFT-010",
-          "name": "Transport Document Fraud",
-          "votes": 5,
+          "id": "FFT-001",
+          "name": "Double Brokering",
+          "votes": 1,
           "keywords": [
-            "consignment",
-            "document",
-            "falsif",
-            "forgery",
-            "proof of delivery"
+            "broker"
           ]
         }
       ],
       "resemblanceNotes": [
-        "Shares most vocabulary with Phantom Carrier (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Fictitious Pickup, Transport Document Fraud.",
+        "Shares most vocabulary with Phantom Carrier (6 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Carrier Identity Takeover, Double Brokering.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
