@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-03T05:24:29.442Z",
+  "exported_at": "2026-10-03T11:46:36.260Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 972000
+    "sim_time_seconds_from_genesis": 993600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -66,6 +66,24 @@
         "related_pattern_id": null,
         "correlation_index": 13,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0019",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 976500,
+        "case_opened_at": 976500,
+        "first_observed_at": 972863,
+        "signal_types": [
+          "EQUIPMENT_CARRIER_MISMATCH",
+          "FALSE_MILESTONE_STAMP",
+          "HANDOVER_GAP",
+          "MANIFEST_CHANGED"
+        ],
+        "related_pattern_id": "FFT-003",
+        "correlation_index": 54,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
     "context": {
@@ -97,6 +115,10 @@
         },
         {
           "at": 638100,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH + FALSE_MILESTONE_STAMP + HANDOVER_GAP + MANIFEST_CHANGED"
+        },
+        {
+          "at": 976500,
           "signalType": "EQUIPMENT_CARRIER_MISMATCH + FALSE_MILESTONE_STAMP + HANDOVER_GAP + MANIFEST_CHANGED"
         }
       ],
