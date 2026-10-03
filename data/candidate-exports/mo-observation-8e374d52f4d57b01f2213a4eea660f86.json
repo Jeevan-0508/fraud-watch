@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-03T16:27:32.621Z",
+  "exported_at": "2026-10-03T21:23:24.415Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1015200
+    "sim_time_seconds_from_genesis": 1036800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -31,7 +31,7 @@
     "recurrence_count": 1,
     "first_observed_at": 947400,
     "opened_at": 953400,
-    "last_observed_at": 1015200,
+    "last_observed_at": 1017900,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "DRIVER_CHANGED",
@@ -66,7 +66,7 @@
       "recurrenceCount": 1,
       "firstObservedAt": 947400,
       "openedAt": 953400,
-      "lastObservedAt": 1015200,
+      "lastObservedAt": 1017900,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "DRIVER_CHANGED",
