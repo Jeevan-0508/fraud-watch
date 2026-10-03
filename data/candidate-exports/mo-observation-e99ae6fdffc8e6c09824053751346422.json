@@ -20,73 +20,79 @@
     "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
   },
   "observation": {
-    "id": "MO-0011",
-    "status": "DISMISSED",
-    "classification": "MO_VARIANT",
+    "id": "MO-0017",
+    "status": "NEW",
+    "classification": "POTENTIAL_NEW_MO",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "DUPLICATE_ASSET_ID+SEAL_MISMATCH",
-    "correlation_index": 6,
+    "correlation_index": 16,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
-    "recurrence_count": 1,
-    "first_observed_at": 799200,
-    "opened_at": 800400,
-    "last_observed_at": 808800,
+    "recurrence_count": 2,
+    "first_observed_at": 947400,
+    "opened_at": 950700,
+    "last_observed_at": 964500,
     "related_pattern_id": "FFT-008",
     "signal_types": [
-      "DRIVER_CHANGED",
       "DUPLICATE_ASSET_ID",
-      "SEAL_MISMATCH"
+      "MANIFEST_CHANGED",
+      "SEAL_MISMATCH",
+      "UNEXPECTED_STOP"
     ],
-    "signal_count": 3,
+    "signal_count": 4,
     "entity_ids": {
-      "truck_id": "TRU-012",
-      "driver_id": "DRI-012",
-      "trailer_id": "TRA-028",
-      "carrier_id": "CAR-008",
+      "truck_id": "TRU-017",
+      "driver_id": "DRI-020",
+      "trailer_id": "TRA-023",
+      "carrier_id": "CAR-005",
       "facility_id": null
     },
-    "classification_reason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
-    "classification_reason_note": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
+    "classification_reason": "TOO_FEW_SIGHTINGS",
+    "classification_reason_note": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "DISMISSED",
-      "classification": "MO_VARIANT",
+      "status": "NEW",
+      "classification": "POTENTIAL_NEW_MO",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "DUPLICATE_ASSET_ID+SEAL_MISMATCH",
-      "correlationIndex": 6,
+      "correlationIndex": 16,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
-      "recurrenceCount": 1,
-      "firstObservedAt": 799200,
-      "openedAt": 800400,
-      "lastObservedAt": 808800,
+      "recurrenceCount": 2,
+      "firstObservedAt": 947400,
+      "openedAt": 950700,
+      "lastObservedAt": 964500,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
-        "DRIVER_CHANGED",
         "DUPLICATE_ASSET_ID",
-        "SEAL_MISMATCH"
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {
-        "truck_id": "TRU-012",
-        "driver_id": "DRI-012",
-        "trailer_id": "TRA-028",
-        "carrier_id": "CAR-008",
+        "truck_id": "TRU-017",
+        "driver_id": "DRI-020",
+        "trailer_id": "TRA-023",
+        "carrier_id": "CAR-005",
         "facility_id": null
       },
       "timeline": [
         {
-          "at": 799200,
+          "at": 947400,
           "signalType": "DUPLICATE_ASSET_ID"
         },
         {
-          "at": 800400,
+          "at": 950700,
           "signalType": "SEAL_MISMATCH"
         },
         {
-          "at": 801900,
-          "signalType": "DRIVER_CHANGED"
+          "at": 961200,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 962400,
+          "signalType": "UNEXPECTED_STOP"
         }
       ],
       "signals": [
@@ -94,7 +100,7 @@
           "signalType": "DUPLICATE_ASSET_ID",
           "contribution": 2,
           "reliability": 0.65,
-          "at": 799200,
+          "at": 947400,
           "facilityId": null,
           "facilityName": null
         },
@@ -102,24 +108,38 @@
           "signalType": "SEAL_MISMATCH",
           "contribution": 2.3,
           "reliability": 0.75,
-          "at": 800400,
+          "at": 950700,
           "facilityId": null,
           "facilityName": null
         },
         {
-          "signalType": "DRIVER_CHANGED",
-          "contribution": 0.5,
-          "reliability": 0.5,
-          "at": 801900,
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 961200,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 962400,
           "facilityId": null,
           "facilityName": null
         }
       ],
-      "sites": [],
+      "sites": [
+        {
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate",
+          "signalCount": 1
+        }
+      ],
       "unsitedSignalCount": 3,
-      "siteSpread": "UNSITED",
-      "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
-      "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "TOO_FEW_SIGHTINGS",
+      "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
       "relatedPatterns": [
         {
           "id": "FFT-008",
@@ -143,18 +163,18 @@
           ]
         },
         {
-          "id": "FFT-009",
-          "name": "Insider Collusion",
+          "id": "FFT-007",
+          "name": "Seal Tampering and Reseal Fraud",
           "votes": 2,
           "keywords": [
-            "collusion",
-            "insider"
+            "document",
+            "seal"
           ]
         }
       ],
       "resemblanceNotes": [
         "Shares most vocabulary with GPS Spoofing and Telematics Manipulation (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Systematic Pilferage, Insider Collusion.",
+        "Shares some vocabulary with: Systematic Pilferage, Seal Tampering and Reseal Fraud.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
@@ -172,6 +192,11 @@
           "title": "Sustained regional GNSS interference.",
           "actually": "Documented wide-area interference affecting all users in a region, which is well reported in parts of Europe and is not aimed at any particular vehicle.",
           "ruleOut": "Compare against published interference monitoring for the region and period before drawing any conclusion about a specific movement."
+        },
+        {
+          "title": "A tracker goes silent at a terminal or after a short stop.",
+          "actually": "Battery failure, planned maintenance, coverage loss, wiring fault or a device replaced during a legitimate repair.",
+          "ruleOut": "Compare with fleet-wide outages, inspect the device and wiring, and reconcile the movement with independent records before attributing intent."
         }
       ],
       "countermeasures": [
