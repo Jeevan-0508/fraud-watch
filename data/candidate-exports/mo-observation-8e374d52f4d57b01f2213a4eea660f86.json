@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-03T21:23:24.415Z",
+  "exported_at": "2026-10-04T06:00:15.961Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1036800
+    "sim_time_seconds_from_genesis": 1058400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -31,7 +31,7 @@
     "recurrence_count": 1,
     "first_observed_at": 947400,
     "opened_at": 953400,
-    "last_observed_at": 1017900,
+    "last_observed_at": 1046100,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "DRIVER_CHANGED",
@@ -43,7 +43,7 @@
       "STAGED_BREAKDOWN",
       "UNEXPECTED_STOP"
     ],
-    "signal_count": 10,
+    "signal_count": 12,
     "entity_ids": {
       "truck_id": "TRU-009",
       "driver_id": "DRI-025",
@@ -66,7 +66,7 @@
       "recurrenceCount": 1,
       "firstObservedAt": 947400,
       "openedAt": 953400,
-      "lastObservedAt": 1017900,
+      "lastObservedAt": 1046100,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "DRIVER_CHANGED",
@@ -124,6 +124,14 @@
         },
         {
           "at": 1012800,
+          "signalType": "STAGED_BREAKDOWN"
+        },
+        {
+          "at": 1040777,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 1041000,
           "signalType": "STAGED_BREAKDOWN"
         }
       ],
@@ -207,6 +215,22 @@
           "at": 1012800,
           "facilityId": "FAC-009",
           "facilityName": "Inland Depot Sud"
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 1040777,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "STAGED_BREAKDOWN",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 1041000,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -221,7 +245,7 @@
           "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 7,
+      "unsitedSignalCount": 9,
       "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
       "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
