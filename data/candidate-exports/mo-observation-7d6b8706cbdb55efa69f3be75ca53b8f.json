@@ -20,31 +20,29 @@
     "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
   },
   "observation": {
-    "id": "MO-0019",
-    "status": "DISMISSED",
+    "id": "MO-0023",
+    "status": "NEW",
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
-    "signature": "EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
-    "correlation_index": 54,
+    "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+    "correlation_index": 41,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "ELEVATED",
-    "recurrence_count": 3,
-    "first_observed_at": 972863,
-    "opened_at": 976500,
-    "last_observed_at": 979800,
+    "recurrence_count": 2,
+    "first_observed_at": 1325700,
+    "opened_at": 1327200,
+    "last_observed_at": 1330500,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
-      "FALSE_MILESTONE_STAMP",
-      "HANDOVER_GAP",
       "MANIFEST_CHANGED"
     ],
-    "signal_count": 4,
+    "signal_count": 3,
     "entity_ids": {
-      "truck_id": "TRU-011",
-      "driver_id": "DRI-027",
-      "trailer_id": "TRA-005",
-      "carrier_id": "CAR-003",
+      "truck_id": "TRU-016",
+      "driver_id": "DRI-023",
+      "trailer_id": "TRA-024",
+      "carrier_id": "CAR-007",
       "facility_id": null
     },
     "classification_reason": "TOO_FEW_SIGHTINGS",
@@ -52,63 +50,49 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "DISMISSED",
+      "status": "NEW",
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
-      "signature": "EQUIPMENT_CARRIER_MISMATCH+FALSE_MILESTONE_STAMP+HANDOVER_GAP+MANIFEST_CHANGED",
-      "correlationIndex": 54,
+      "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "correlationIndex": 41,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "ELEVATED",
-      "recurrenceCount": 3,
-      "firstObservedAt": 972863,
-      "openedAt": 976500,
-      "lastObservedAt": 979800,
+      "recurrenceCount": 2,
+      "firstObservedAt": 1325700,
+      "openedAt": 1327200,
+      "lastObservedAt": 1330500,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",
-        "FALSE_MILESTONE_STAMP",
-        "HANDOVER_GAP",
         "MANIFEST_CHANGED"
       ],
       "entityIds": {
-        "truck_id": "TRU-011",
-        "driver_id": "DRI-027",
-        "trailer_id": "TRA-005",
-        "carrier_id": "CAR-003",
+        "truck_id": "TRU-016",
+        "driver_id": "DRI-023",
+        "trailer_id": "TRA-024",
+        "carrier_id": "CAR-007",
         "facility_id": null
       },
       "timeline": [
         {
-          "at": 972863,
-          "signalType": "HANDOVER_GAP"
-        },
-        {
-          "at": 972900,
-          "signalType": "FALSE_MILESTONE_STAMP"
-        },
-        {
-          "at": 976431,
+          "at": 1325700,
           "signalType": "MANIFEST_CHANGED"
         },
         {
-          "at": 976500,
+          "at": 1327152,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 1327200,
           "signalType": "EQUIPMENT_CARRIER_MISMATCH"
         }
       ],
       "signals": [
         {
-          "signalType": "HANDOVER_GAP",
-          "contribution": 1.1,
-          "reliability": 0.55,
-          "at": 972863,
-          "facilityId": null,
-          "facilityName": null
-        },
-        {
-          "signalType": "FALSE_MILESTONE_STAMP",
-          "contribution": 1.7,
-          "reliability": 0.55,
-          "at": 972900,
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 1325700,
           "facilityId": null,
           "facilityName": null
         },
@@ -116,28 +100,22 @@
           "signalType": "MANIFEST_CHANGED",
           "contribution": 1.3,
           "reliability": 0.65,
-          "at": 976431,
-          "facilityId": "FAC-018",
-          "facilityName": "Central Gate"
+          "at": 1327152,
+          "facilityId": null,
+          "facilityName": null
         },
         {
           "signalType": "EQUIPMENT_CARRIER_MISMATCH",
           "contribution": 2.1,
           "reliability": 0.7,
-          "at": 976500,
-          "facilityId": "FAC-018",
-          "facilityName": "Central Gate"
+          "at": 1327200,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
-      "sites": [
-        {
-          "facilityId": "FAC-018",
-          "facilityName": "Central Gate",
-          "signalCount": 2
-        }
-      ],
-      "unsitedSignalCount": 2,
-      "siteSpread": "PARTLY_UNSITED",
+      "sites": [],
+      "unsitedSignalCount": 3,
+      "siteSpread": "UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
       "relatedPatterns": [
@@ -154,32 +132,26 @@
           ]
         },
         {
-          "id": "FFT-010",
-          "name": "Transport Document Fraud",
-          "votes": 5,
+          "id": "FFT-002",
+          "name": "Phantom Carrier",
+          "votes": 2,
           "keywords": [
-            "consignment",
-            "document",
-            "falsif",
-            "forgery",
-            "proof of delivery"
+            "identity",
+            "phantom"
           ]
         },
         {
-          "id": "FFT-004",
-          "name": "Fictitious Pickup",
-          "votes": 4,
+          "id": "FFT-001",
+          "name": "Double Brokering",
+          "votes": 1,
           "keywords": [
-            "collection",
-            "deception",
-            "load theft",
-            "pickup"
+            "broker"
           ]
         }
       ],
       "resemblanceNotes": [
         "Shares most vocabulary with Carrier Identity Takeover (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Transport Document Fraud, Fictitious Pickup.",
+        "Shares some vocabulary with: Phantom Carrier, Double Brokering.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
