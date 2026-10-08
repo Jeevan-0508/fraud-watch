@@ -1,6 +1,6 @@
 {
   "schema_version": "candidate-export-manifest.v1",
-  "exported_at": "2026-10-07T23:09:24.219Z",
+  "exported_at": "2026-10-08T06:13:32.350Z",
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
     "authenticity": "unverified_export",
@@ -27,6 +27,11 @@
       "id": "fraud-watch:EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
       "lifecycle_state": "DISCOVERED",
       "file": "candidate-mo-c8f33c9ef29105241d17e4790deff377.json"
+    },
+    {
+      "id": "fraud-watch:DUPLICATE_ASSET_ID+SEAL_MISMATCH",
+      "lifecycle_state": "DISCOVERED",
+      "file": "candidate-mo-8c30b3c85b93a83bc160e5adf9d802f4.json"
     },
     {
       "id": "MO-0001",
@@ -164,6 +169,12 @@
       "id": "MO-0023",
       "classification": "POTENTIAL_NEW_MO",
       "file": "mo-observation-7d6b8706cbdb55efa69f3be75ca53b8f.json",
+      "schema_version": "mo-observation.v1"
+    },
+    {
+      "id": "MO-0024",
+      "classification": "POTENTIAL_NEW_MO",
+      "file": "mo-observation-eee45b7e2c11acb0c928a54841c8b7ab.json",
       "schema_version": "mo-observation.v1"
     }
   ]

@@ -20,47 +20,49 @@
     "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
   },
   "candidate": {
-    "id": "fraud-watch:EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+    "id": "fraud-watch:DUPLICATE_ASSET_ID+SEAL_MISMATCH",
+    "signature": "DUPLICATE_ASSET_ID+SEAL_MISMATCH",
     "lifecycle_state": "DISCOVERED",
     "source_state": "CANDIDATE",
     "time_basis": "simulation_seconds_from_genesis",
-    "first_seen_at": 493500,
-    "candidate_since": 1327200,
+    "first_seen_at": 950700,
+    "candidate_since": 1406400,
     "review_started_at": null,
     "resolved_at": null,
     "resolution_note": null,
     "supporting_cases": [
       {
-        "case_id": "MO-0009",
-        "classification": "EMERGING_BEHAVIOR",
-        "current_classification": "EMERGING_BEHAVIOR",
-        "classification_reason": "no documented pattern shares a single keyword with any of this case’s signal types.",
-        "recorded_at": 1327200,
-        "case_opened_at": 493500,
-        "first_observed_at": 490200,
-        "signal_types": [
-          "EQUIPMENT_CARRIER_MISMATCH",
-          "MANIFEST_CHANGED"
-        ],
-        "related_pattern_id": null,
-        "correlation_index": 41,
-        "correlation_index_semantics": "synthetic_signal_index_not_probability"
-      },
-      {
-        "case_id": "MO-0023",
+        "case_id": "MO-0017",
         "classification": "POTENTIAL_NEW_MO",
         "current_classification": "POTENTIAL_NEW_MO",
         "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
-        "recorded_at": 1327200,
-        "case_opened_at": 1327200,
-        "first_observed_at": 1325700,
+        "recorded_at": 1406400,
+        "case_opened_at": 950700,
+        "first_observed_at": 947400,
         "signal_types": [
-          "EQUIPMENT_CARRIER_MISMATCH",
-          "MANIFEST_CHANGED"
+          "DUPLICATE_ASSET_ID",
+          "MANIFEST_CHANGED",
+          "SEAL_MISMATCH",
+          "UNEXPECTED_STOP"
         ],
-        "related_pattern_id": "FFT-003",
-        "correlation_index": 41,
+        "related_pattern_id": "FFT-008",
+        "correlation_index": 16,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0024",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 1406400,
+        "case_opened_at": 1406400,
+        "first_observed_at": 1405800,
+        "signal_types": [
+          "DUPLICATE_ASSET_ID",
+          "SEAL_MISMATCH"
+        ],
+        "related_pattern_id": "FFT-008",
+        "correlation_index": 27,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -70,28 +72,30 @@
       "status": null,
       "classification": null,
       "title": null,
-      "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "signature": "DUPLICATE_ASSET_ID+SEAL_MISMATCH",
       "correlationIndex": null,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": null,
       "recurrenceCount": null,
-      "firstObservedAt": 493500,
-      "openedAt": 1327200,
+      "firstObservedAt": 950700,
+      "openedAt": 1406400,
       "lastObservedAt": null,
       "relatedPatternId": null,
       "signalTypes": [
-        "EQUIPMENT_CARRIER_MISMATCH",
-        "MANIFEST_CHANGED"
+        "DUPLICATE_ASSET_ID",
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {},
       "timeline": [
         {
-          "at": 1327200,
-          "signalType": "EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
+          "at": 1406400,
+          "signalType": "DUPLICATE_ASSET_ID + MANIFEST_CHANGED + SEAL_MISMATCH + UNEXPECTED_STOP"
         },
         {
-          "at": 1327200,
-          "signalType": "EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
+          "at": 1406400,
+          "signalType": "DUPLICATE_ASSET_ID + SEAL_MISMATCH"
         }
       ],
       "signals": [],
