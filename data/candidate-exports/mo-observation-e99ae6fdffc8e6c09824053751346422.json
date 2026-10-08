@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-08T06:13:32.350Z",
+  "exported_at": "2026-10-08T13:41:00.655Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1425600
+    "sim_time_seconds_from_genesis": 1447200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
