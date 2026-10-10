@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-10T12:40:02.974Z",
+  "exported_at": "2026-10-10T21:49:44.777Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1620000
+    "sim_time_seconds_from_genesis": 1663200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -61,7 +61,8 @@
           "CARRIER_UNRESPONSIVE",
           "DUPLICATE_ASSET_ID",
           "EQUIPMENT_CARRIER_MISMATCH",
-          "MANIFEST_CHANGED"
+          "MANIFEST_CHANGED",
+          "SEAL_MISMATCH"
         ],
         "related_pattern_id": "FFT-002",
         "correlation_index": 12,
@@ -88,7 +89,8 @@
         "DUPLICATE_ASSET_ID",
         "EQUIPMENT_CARRIER_MISMATCH",
         "MANIFEST_CHANGED",
-        "ROUTE_DEVIATION"
+        "ROUTE_DEVIATION",
+        "SEAL_MISMATCH"
       ],
       "entityIds": {},
       "timeline": [
@@ -98,7 +100,7 @@
         },
         {
           "at": 1597500,
-          "signalType": "CARRIER_UNRESPONSIVE + DUPLICATE_ASSET_ID + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
+          "signalType": "CARRIER_UNRESPONSIVE + DUPLICATE_ASSET_ID + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED + SEAL_MISMATCH"
         }
       ],
       "signals": [],

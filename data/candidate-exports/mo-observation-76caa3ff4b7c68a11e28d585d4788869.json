@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-10T12:40:02.974Z",
+  "exported_at": "2026-10-10T21:49:44.777Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1620000
+    "sim_time_seconds_from_genesis": 1663200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -31,15 +31,16 @@
     "recurrence_count": 2,
     "first_observed_at": 1596900,
     "opened_at": 1597500,
-    "last_observed_at": 1620000,
+    "last_observed_at": 1647600,
     "related_pattern_id": "FFT-002",
     "signal_types": [
       "CARRIER_UNRESPONSIVE",
       "DUPLICATE_ASSET_ID",
       "EQUIPMENT_CARRIER_MISMATCH",
-      "MANIFEST_CHANGED"
+      "MANIFEST_CHANGED",
+      "SEAL_MISMATCH"
     ],
-    "signal_count": 4,
+    "signal_count": 6,
     "entity_ids": {
       "truck_id": "TRU-008",
       "driver_id": "DRI-033",
@@ -62,13 +63,14 @@
       "recurrenceCount": 2,
       "firstObservedAt": 1596900,
       "openedAt": 1597500,
-      "lastObservedAt": 1620000,
+      "lastObservedAt": 1647600,
       "relatedPatternId": "FFT-002",
       "signalTypes": [
         "CARRIER_UNRESPONSIVE",
         "DUPLICATE_ASSET_ID",
         "EQUIPMENT_CARRIER_MISMATCH",
-        "MANIFEST_CHANGED"
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH"
       ],
       "entityIds": {
         "truck_id": "TRU-008",
@@ -92,6 +94,14 @@
         },
         {
           "at": 1617600,
+          "signalType": "CARRIER_UNRESPONSIVE"
+        },
+        {
+          "at": 1629000,
+          "signalType": "SEAL_MISMATCH"
+        },
+        {
+          "at": 1637100,
           "signalType": "CARRIER_UNRESPONSIVE"
         }
       ],
@@ -127,6 +137,22 @@
           "at": 1617600,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 1629000,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "CARRIER_UNRESPONSIVE",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 1637100,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -136,7 +162,7 @@
           "signalCount": 3
         }
       ],
-      "unsitedSignalCount": 1,
+      "unsitedSignalCount": 3,
       "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
