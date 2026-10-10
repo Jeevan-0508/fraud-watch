@@ -20,51 +20,47 @@
     "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
   },
   "candidate": {
-    "id": "fraud-watch:DUPLICATE_ASSET_ID+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "signature": "DUPLICATE_ASSET_ID+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+    "id": "fraud-watch:FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+    "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
     "lifecycle_state": "DISCOVERED",
     "source_state": "CANDIDATE",
     "time_basis": "simulation_seconds_from_genesis",
-    "first_seen_at": 203700,
-    "candidate_since": 1597500,
+    "first_seen_at": 124800,
+    "candidate_since": 1613100,
     "review_started_at": null,
     "resolved_at": null,
     "resolution_note": null,
     "supporting_cases": [
       {
-        "case_id": "MO-0006",
+        "case_id": "MO-0003",
         "classification": "EMERGING_BEHAVIOR",
         "current_classification": "EMERGING_BEHAVIOR",
         "classification_reason": "no documented pattern shares a single keyword with any of this case’s signal types.",
-        "recorded_at": 1597500,
-        "case_opened_at": 203700,
-        "first_observed_at": 201300,
+        "recorded_at": 1613100,
+        "case_opened_at": 124800,
+        "first_observed_at": 123011,
         "signal_types": [
-          "DUPLICATE_ASSET_ID",
-          "EQUIPMENT_CARRIER_MISMATCH",
-          "MANIFEST_CHANGED",
-          "ROUTE_DEVIATION"
+          "FALSE_MILESTONE_STAMP",
+          "HANDOVER_GAP"
         ],
         "related_pattern_id": null,
-        "correlation_index": 17,
+        "correlation_index": 13,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       },
       {
-        "case_id": "MO-0026",
+        "case_id": "MO-0027",
         "classification": "POTENTIAL_NEW_MO",
         "current_classification": "POTENTIAL_NEW_MO",
         "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
-        "recorded_at": 1597500,
-        "case_opened_at": 1597500,
-        "first_observed_at": 1596900,
+        "recorded_at": 1613100,
+        "case_opened_at": 1613100,
+        "first_observed_at": 1612530,
         "signal_types": [
-          "CARRIER_UNRESPONSIVE",
-          "DUPLICATE_ASSET_ID",
-          "EQUIPMENT_CARRIER_MISMATCH",
-          "MANIFEST_CHANGED"
+          "FALSE_MILESTONE_STAMP",
+          "HANDOVER_GAP"
         ],
-        "related_pattern_id": "FFT-002",
-        "correlation_index": 12,
+        "related_pattern_id": "FFT-010",
+        "correlation_index": 13,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -74,31 +70,28 @@
       "status": null,
       "classification": null,
       "title": null,
-      "signature": "DUPLICATE_ASSET_ID+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
       "correlationIndex": null,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": null,
       "recurrenceCount": null,
-      "firstObservedAt": 203700,
-      "openedAt": 1597500,
+      "firstObservedAt": 124800,
+      "openedAt": 1613100,
       "lastObservedAt": null,
       "relatedPatternId": null,
       "signalTypes": [
-        "CARRIER_UNRESPONSIVE",
-        "DUPLICATE_ASSET_ID",
-        "EQUIPMENT_CARRIER_MISMATCH",
-        "MANIFEST_CHANGED",
-        "ROUTE_DEVIATION"
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP"
       ],
       "entityIds": {},
       "timeline": [
         {
-          "at": 1597500,
-          "signalType": "DUPLICATE_ASSET_ID + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED + ROUTE_DEVIATION"
+          "at": 1613100,
+          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP"
         },
         {
-          "at": 1597500,
-          "signalType": "CARRIER_UNRESPONSIVE + DUPLICATE_ASSET_ID + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
+          "at": 1613100,
+          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP"
         }
       ],
       "signals": [],

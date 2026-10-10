@@ -20,30 +20,29 @@
     "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
   },
   "observation": {
-    "id": "MO-0013",
-    "status": "DISMISSED",
+    "id": "MO-0027",
+    "status": "NEW",
     "classification": "POTENTIAL_NEW_MO",
-    "title": "Possible Phantom Carrier",
-    "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-    "correlation_index": 12,
+    "title": "Possible Transport Document Fraud",
+    "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+    "correlation_index": 13,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
     "recurrence_count": 2,
-    "first_observed_at": 819445,
-    "opened_at": 819900,
-    "last_observed_at": 830400,
-    "related_pattern_id": "FFT-002",
+    "first_observed_at": 1612530,
+    "opened_at": 1613100,
+    "last_observed_at": 1620000,
+    "related_pattern_id": "FFT-010",
     "signal_types": [
-      "CARRIER_UNRESPONSIVE",
       "FALSE_MILESTONE_STAMP",
       "HANDOVER_GAP"
     ],
     "signal_count": 3,
     "entity_ids": {
-      "truck_id": "TRU-011",
-      "driver_id": "DRI-027",
-      "trailer_id": "TRA-005",
-      "carrier_id": "CAR-003",
+      "truck_id": "TRU-016",
+      "driver_id": "DRI-023",
+      "trailer_id": "TRA-012",
+      "carrier_id": "CAR-007",
       "facility_id": null
     },
     "classification_reason": "TOO_FEW_SIGHTINGS",
@@ -51,42 +50,41 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "DISMISSED",
+      "status": "NEW",
       "classification": "POTENTIAL_NEW_MO",
-      "title": "Possible Phantom Carrier",
-      "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-      "correlationIndex": 12,
+      "title": "Possible Transport Document Fraud",
+      "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+      "correlationIndex": 13,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
       "recurrenceCount": 2,
-      "firstObservedAt": 819445,
-      "openedAt": 819900,
-      "lastObservedAt": 830400,
-      "relatedPatternId": "FFT-002",
+      "firstObservedAt": 1612530,
+      "openedAt": 1613100,
+      "lastObservedAt": 1620000,
+      "relatedPatternId": "FFT-010",
       "signalTypes": [
-        "CARRIER_UNRESPONSIVE",
         "FALSE_MILESTONE_STAMP",
         "HANDOVER_GAP"
       ],
       "entityIds": {
-        "truck_id": "TRU-011",
-        "driver_id": "DRI-027",
-        "trailer_id": "TRA-005",
-        "carrier_id": "CAR-003",
+        "truck_id": "TRU-016",
+        "driver_id": "DRI-023",
+        "trailer_id": "TRA-012",
+        "carrier_id": "CAR-007",
         "facility_id": null
       },
       "timeline": [
         {
-          "at": 819445,
+          "at": 1612530,
           "signalType": "HANDOVER_GAP"
         },
         {
-          "at": 819600,
+          "at": 1612800,
           "signalType": "FALSE_MILESTONE_STAMP"
         },
         {
-          "at": 819900,
-          "signalType": "CARRIER_UNRESPONSIVE"
+          "at": 1613100,
+          "signalType": "HANDOVER_GAP"
         }
       ],
       "signals": [
@@ -94,7 +92,7 @@
           "signalType": "HANDOVER_GAP",
           "contribution": 1.1,
           "reliability": 0.55,
-          "at": 819445,
+          "at": 1612530,
           "facilityId": null,
           "facilityName": null
         },
@@ -102,15 +100,15 @@
           "signalType": "FALSE_MILESTONE_STAMP",
           "contribution": 1.7,
           "reliability": 0.55,
-          "at": 819600,
+          "at": 1612800,
           "facilityId": null,
           "facilityName": null
         },
         {
-          "signalType": "CARRIER_UNRESPONSIVE",
-          "contribution": 1,
-          "reliability": 0.5,
-          "at": 819900,
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 1613100,
           "facilityId": null,
           "facilityName": null
         }
@@ -122,30 +120,6 @@
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
       "relatedPatterns": [
         {
-          "id": "FFT-002",
-          "name": "Phantom Carrier",
-          "votes": 5,
-          "keywords": [
-            "carrier",
-            "fictitious",
-            "ghost",
-            "non-existent",
-            "phantom"
-          ]
-        },
-        {
-          "id": "FFT-004",
-          "name": "Fictitious Pickup",
-          "votes": 5,
-          "keywords": [
-            "collection",
-            "deception",
-            "fictitious",
-            "load theft",
-            "pickup"
-          ]
-        },
-        {
           "id": "FFT-010",
           "name": "Transport Document Fraud",
           "votes": 5,
@@ -156,33 +130,62 @@
             "forgery",
             "proof of delivery"
           ]
+        },
+        {
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 4,
+          "keywords": [
+            "collection",
+            "deception",
+            "load theft",
+            "pickup"
+          ]
+        },
+        {
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 1,
+          "keywords": [
+            "load theft"
+          ]
         }
       ],
       "resemblanceNotes": [
-        "Shares most vocabulary with Phantom Carrier (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Fictitious Pickup, Transport Document Fraud.",
+        "Shares most vocabulary with Transport Document Fraud (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Fictitious Pickup, Systematic Pilferage.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
         {
-          "title": "A newly registered company with no transport history bidding on freight.",
-          "actually": "A genuine new entrant, or a newly incorporated vehicle of an existing operator restructuring its business.",
-          "ruleOut": "Verify operating authority directly with the issuing authority, confirm insurance with the insurer, and confirm that declared equipment exists and is registered to the entity. A real new entrant passes all three; a phantom fails at least one."
+          "title": "An unattributable delivery signature.",
+          "actually": "Genuine receipt by agency staff, a temporary worker, or a third-party site operator whom the consignee does not have on record.",
+          "ruleOut": "Ask the consignee who was actually on site in that window rather than only whether the name is on the authorised list."
         },
         {
-          "title": "A shared or serviced office address.",
-          "actually": "Small legitimate hauliers and freight agents commonly use serviced offices while operating from a separate yard.",
-          "ruleOut": "Ask for the operational depot or parking location separately from the registered address, and verify that it exists and is capable of holding the declared fleet."
+          "title": "Handwritten annotations added to a consignment note.",
+          "actually": "Legitimate reservations recorded at handover, which is exactly what the document is designed for.",
+          "ruleOut": "Establish when the annotation was made and by whom. Contemporaneous reservations are the correct use of the document; retrospective additions are not."
+        },
+        {
+          "title": "The same reference appearing twice.",
+          "actually": "A split delivery, a re-delivery after a failed attempt, or a documented partial movement.",
+          "ruleOut": "Check whether the duplication is explained by a recorded split or re-delivery event before treating it as reuse."
+        },
+        {
+          "title": "A milestone or delivery stamp has no matching independent gate record.",
+          "actually": "An asynchronous feed, a documented manual exception, a site-system outage or a legitimate handover outside the normal system path.",
+          "ruleOut": "Check the outage and exception logs, obtain the original CMR or consignee confirmation and record the reconciliation result before calling the stamp false."
         }
       ],
       "countermeasures": [
         {
           "bucket": "detective",
-          "text": "Automatically flag a first-time counterparty bidding on a load above a defined value threshold for manual release."
+          "text": "Deduplicate delivery documents automatically by image hash and reference across movements and claims."
         },
         {
           "bucket": "responsive",
-          "text": "Treat a non-contactable carrier holding loaded cargo as a theft in progress and escalate to law enforcement immediately rather than as a service failure."
+          "text": "Secure the original document before any dispute is progressed, since the evidential value of a copy is limited."
         }
       ]
     }
