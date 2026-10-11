@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-11T05:55:57.297Z",
+  "exported_at": "2026-10-11T13:00:16.457Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1684800
+    "sim_time_seconds_from_genesis": 1706400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,20 +25,22 @@
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED+SEAL_MISMATCH",
-    "correlation_index": 27,
+    "correlation_index": 7,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "WATCH",
+    "confidence_band": "MINIMAL",
     "recurrence_count": 2,
     "first_observed_at": 1656618,
     "opened_at": 1658400,
-    "last_observed_at": 1665300,
+    "last_observed_at": 1706400,
     "related_pattern_id": "FFT-003",
     "signal_types": [
+      "ACCOUNT_TAKEOVER",
       "EQUIPMENT_CARRIER_MISMATCH",
       "MANIFEST_CHANGED",
-      "SEAL_MISMATCH"
+      "SEAL_MISMATCH",
+      "UNEXPECTED_STOP"
     ],
-    "signal_count": 3,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-009",
       "driver_id": "DRI-024",
@@ -55,18 +57,20 @@
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED+SEAL_MISMATCH",
-      "correlationIndex": 27,
+      "correlationIndex": 7,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "WATCH",
+      "confidenceBand": "MINIMAL",
       "recurrenceCount": 2,
       "firstObservedAt": 1656618,
       "openedAt": 1658400,
-      "lastObservedAt": 1665300,
+      "lastObservedAt": 1706400,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
+        "ACCOUNT_TAKEOVER",
         "EQUIPMENT_CARRIER_MISMATCH",
         "MANIFEST_CHANGED",
-        "SEAL_MISMATCH"
+        "SEAL_MISMATCH",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {
         "truck_id": "TRU-009",
@@ -87,6 +91,14 @@
         {
           "at": 1658400,
           "signalType": "SEAL_MISMATCH"
+        },
+        {
+          "at": 1686900,
+          "signalType": "ACCOUNT_TAKEOVER"
+        },
+        {
+          "at": 1706100,
+          "signalType": "UNEXPECTED_STOP"
         }
       ],
       "signals": [
@@ -113,11 +125,33 @@
           "at": 1658400,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 1686900,
+          "facilityId": "FAC-016",
+          "facilityName": "Inland Depot West"
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 1706100,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
-      "sites": [],
-      "unsitedSignalCount": 3,
-      "siteSpread": "UNSITED",
+      "sites": [
+        {
+          "facilityId": "FAC-016",
+          "facilityName": "Inland Depot West",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 4,
+      "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
       "relatedPatterns": [
