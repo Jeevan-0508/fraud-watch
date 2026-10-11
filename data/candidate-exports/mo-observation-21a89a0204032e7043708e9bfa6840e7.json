@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-10T21:49:44.777Z",
+  "exported_at": "2026-10-11T05:55:57.297Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1663200
+    "sim_time_seconds_from_genesis": 1684800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -31,7 +31,7 @@
     "recurrence_count": 2,
     "first_observed_at": 1656618,
     "opened_at": 1658400,
-    "last_observed_at": 1663200,
+    "last_observed_at": 1665300,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
@@ -61,7 +61,7 @@
       "recurrenceCount": 2,
       "firstObservedAt": 1656618,
       "openedAt": 1658400,
-      "lastObservedAt": 1663200,
+      "lastObservedAt": 1665300,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",

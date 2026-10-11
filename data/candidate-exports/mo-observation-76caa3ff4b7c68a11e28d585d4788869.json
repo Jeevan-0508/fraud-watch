@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-10T21:49:44.777Z",
+  "exported_at": "2026-10-11T05:55:57.297Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1663200
+    "sim_time_seconds_from_genesis": 1684800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -31,16 +31,17 @@
     "recurrence_count": 2,
     "first_observed_at": 1596900,
     "opened_at": 1597500,
-    "last_observed_at": 1647600,
+    "last_observed_at": 1684800,
     "related_pattern_id": "FFT-002",
     "signal_types": [
       "CARRIER_UNRESPONSIVE",
       "DUPLICATE_ASSET_ID",
       "EQUIPMENT_CARRIER_MISMATCH",
       "MANIFEST_CHANGED",
+      "ROUTE_DEVIATION",
       "SEAL_MISMATCH"
     ],
-    "signal_count": 6,
+    "signal_count": 8,
     "entity_ids": {
       "truck_id": "TRU-008",
       "driver_id": "DRI-033",
@@ -63,13 +64,14 @@
       "recurrenceCount": 2,
       "firstObservedAt": 1596900,
       "openedAt": 1597500,
-      "lastObservedAt": 1647600,
+      "lastObservedAt": 1684800,
       "relatedPatternId": "FFT-002",
       "signalTypes": [
         "CARRIER_UNRESPONSIVE",
         "DUPLICATE_ASSET_ID",
         "EQUIPMENT_CARRIER_MISMATCH",
         "MANIFEST_CHANGED",
+        "ROUTE_DEVIATION",
         "SEAL_MISMATCH"
       ],
       "entityIds": {
@@ -102,6 +104,14 @@
         },
         {
           "at": 1637100,
+          "signalType": "CARRIER_UNRESPONSIVE"
+        },
+        {
+          "at": 1669800,
+          "signalType": "ROUTE_DEVIATION"
+        },
+        {
+          "at": 1676700,
           "signalType": "CARRIER_UNRESPONSIVE"
         }
       ],
@@ -153,6 +163,22 @@
           "at": 1637100,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "ROUTE_DEVIATION",
+          "contribution": 1.4,
+          "reliability": 0.7,
+          "at": 1669800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "CARRIER_UNRESPONSIVE",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 1676700,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -162,7 +188,7 @@
           "signalCount": 3
         }
       ],
-      "unsitedSignalCount": 3,
+      "unsitedSignalCount": 5,
       "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
@@ -196,9 +222,10 @@
         {
           "id": "FFT-008",
           "name": "GPS Spoofing and Telematics Manipulation",
-          "votes": 5,
+          "votes": 6,
           "keywords": [
             "gnss",
+            "gps",
             "position",
             "spoof",
             "telemat",
