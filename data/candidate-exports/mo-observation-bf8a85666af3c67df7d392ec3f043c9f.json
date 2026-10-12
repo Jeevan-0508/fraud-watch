@@ -1,0 +1,252 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-12T06:06:48.429Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 1771200
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0031",
+    "status": "NEW",
+    "classification": "KNOWN_MO",
+    "title": "Possible GPS Spoofing and Telematics Manipulation",
+    "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+    "correlation_index": 33,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "WATCH",
+    "recurrence_count": 4,
+    "first_observed_at": 1750776,
+    "opened_at": 1751700,
+    "last_observed_at": 1771200,
+    "related_pattern_id": "FFT-008",
+    "signal_types": [
+      "DUPLICATE_ASSET_ID",
+      "EQUIPMENT_CARRIER_MISMATCH",
+      "FALSE_MILESTONE_STAMP",
+      "HANDOVER_GAP",
+      "MANIFEST_CHANGED"
+    ],
+    "signal_count": 6,
+    "entity_ids": {
+      "truck_id": "TRU-020",
+      "driver_id": "DRI-015",
+      "trailer_id": "TRA-004",
+      "carrier_id": "CAR-005",
+      "facility_id": null
+    },
+    "classification_reason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
+    "classification_reason_note": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "KNOWN_MO",
+      "title": "Possible GPS Spoofing and Telematics Manipulation",
+      "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "correlationIndex": 33,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "WATCH",
+      "recurrenceCount": 4,
+      "firstObservedAt": 1750776,
+      "openedAt": 1751700,
+      "lastObservedAt": 1771200,
+      "relatedPatternId": "FFT-008",
+      "signalTypes": [
+        "DUPLICATE_ASSET_ID",
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP",
+        "MANIFEST_CHANGED"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-020",
+        "driver_id": "DRI-015",
+        "trailer_id": "TRA-004",
+        "carrier_id": "CAR-005",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 1750776,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 1750800,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 1751700,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 1760400,
+          "signalType": "DUPLICATE_ASSET_ID"
+        },
+        {
+          "at": 1768884,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 1769100,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 1750776,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 1750800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 1751700,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 1760400,
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate"
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 1768884,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 1769100,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate",
+          "signalCount": 1
+        },
+        {
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 4,
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
+      "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
+      "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-008",
+          "name": "GPS Spoofing and Telematics Manipulation",
+          "votes": 6,
+          "keywords": [
+            "falsif",
+            "gnss",
+            "position",
+            "spoof",
+            "telemat",
+            "tracker"
+          ]
+        },
+        {
+          "id": "FFT-003",
+          "name": "Carrier Identity Takeover",
+          "votes": 5,
+          "keywords": [
+            "hijack",
+            "identity",
+            "impersonation",
+            "operator",
+            "takeover"
+          ]
+        },
+        {
+          "id": "FFT-010",
+          "name": "Transport Document Fraud",
+          "votes": 5,
+          "keywords": [
+            "consignment",
+            "document",
+            "falsif",
+            "forgery",
+            "proof of delivery"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "This signal combination has recurred, and shares most vocabulary with GPS Spoofing and Telematics Manipulation (6 shared keywords). Recurrence is a fact about this simulation's own history, not about the pattern.",
+        "Shares some vocabulary with: Carrier Identity Takeover, Transport Document Fraud.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "Total loss of position data.",
+          "actually": "Genuine coverage failure, tunnel or terrain shadowing, hardware fault, SIM or data plan failure, or regional interference not directed at this vehicle.",
+          "ruleOut": "Check whether other vehicles in the same area and time lost signal too. Broad regional loss indicates environmental or infrastructure causes; an isolated single-vehicle gap does not."
+        },
+        {
+          "title": "Implausible position jumps.",
+          "actually": "Known receiver artefacts, cold-start errors, multipath in urban canyons, or platform data-processing lag.",
+          "ruleOut": "Check whether the artefact appears across the fleet on the same hardware and firmware, which points to a technical rather than deliberate cause."
+        },
+        {
+          "title": "Sustained regional GNSS interference.",
+          "actually": "Documented wide-area interference affecting all users in a region, which is well reported in parts of Europe and is not aimed at any particular vehicle.",
+          "ruleOut": "Compare against published interference monitoring for the region and period before drawing any conclusion about a specific movement."
+        },
+        {
+          "title": "A tracker goes silent at a terminal or after a short stop.",
+          "actually": "Battery failure, planned maintenance, coverage loss, wiring fault or a device replaced during a legitimate repair.",
+          "ruleOut": "Compare with fleet-wide outages, inspect the device and wiring, and reconcile the movement with independent records before attributing intent."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Run automated speed and distance plausibility checks between consecutive fixes and alert on physically impossible transitions."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Inspect and photograph the telematics installation before the vehicle re-enters service, since physical evidence of tampering disappears quickly."
+        }
+      ]
+    }
+  }
+}
