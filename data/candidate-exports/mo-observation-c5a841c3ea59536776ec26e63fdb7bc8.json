@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-12T06:06:48.429Z",
+  "exported_at": "2026-10-12T15:38:09.392Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1771200
+    "sim_time_seconds_from_genesis": 1814400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -21,7 +21,7 @@
   },
   "observation": {
     "id": "MO-0032",
-    "status": "NEW",
+    "status": "DISMISSED",
     "classification": "MO_VARIANT",
     "title": "Possible Transport Document Fraud",
     "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN",
@@ -31,7 +31,7 @@
     "recurrence_count": 1,
     "first_observed_at": 1761300,
     "opened_at": 1764900,
-    "last_observed_at": 1771200,
+    "last_observed_at": 1771800,
     "related_pattern_id": "FFT-010",
     "signal_types": [
       "FALSE_MILESTONE_STAMP",
@@ -51,7 +51,7 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "NEW",
+      "status": "DISMISSED",
       "classification": "MO_VARIANT",
       "title": "Possible Transport Document Fraud",
       "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN",
@@ -61,7 +61,7 @@
       "recurrenceCount": 1,
       "firstObservedAt": 1761300,
       "openedAt": 1764900,
-      "lastObservedAt": 1771200,
+      "lastObservedAt": 1771800,
       "relatedPatternId": "FFT-010",
       "signalTypes": [
         "FALSE_MILESTONE_STAMP",

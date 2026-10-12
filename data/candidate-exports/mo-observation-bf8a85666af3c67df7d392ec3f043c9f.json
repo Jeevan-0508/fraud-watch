@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-12T06:06:48.429Z",
+  "exported_at": "2026-10-12T15:38:09.392Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1771200
+    "sim_time_seconds_from_genesis": 1814400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,22 +25,23 @@
     "classification": "KNOWN_MO",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "correlation_index": 33,
+    "correlation_index": 22,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "WATCH",
     "recurrence_count": 4,
     "first_observed_at": 1750776,
     "opened_at": 1751700,
-    "last_observed_at": 1771200,
+    "last_observed_at": 1810800,
     "related_pattern_id": "FFT-008",
     "signal_types": [
+      "ACCOUNT_TAKEOVER",
       "DUPLICATE_ASSET_ID",
       "EQUIPMENT_CARRIER_MISMATCH",
       "FALSE_MILESTONE_STAMP",
       "HANDOVER_GAP",
       "MANIFEST_CHANGED"
     ],
-    "signal_count": 6,
+    "signal_count": 9,
     "entity_ids": {
       "truck_id": "TRU-020",
       "driver_id": "DRI-015",
@@ -57,15 +58,16 @@
       "classification": "KNOWN_MO",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-      "correlationIndex": 33,
+      "correlationIndex": 22,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "WATCH",
       "recurrenceCount": 4,
       "firstObservedAt": 1750776,
       "openedAt": 1751700,
-      "lastObservedAt": 1771200,
+      "lastObservedAt": 1810800,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
+        "ACCOUNT_TAKEOVER",
         "DUPLICATE_ASSET_ID",
         "EQUIPMENT_CARRIER_MISMATCH",
         "FALSE_MILESTONE_STAMP",
@@ -103,6 +105,18 @@
         {
           "at": 1769100,
           "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 1793535,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 1793700,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 1803900,
+          "signalType": "ACCOUNT_TAKEOVER"
         }
       ],
       "signals": [
@@ -153,6 +167,30 @@
           "at": 1769100,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 1793535,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 1793700,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 1803900,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -167,7 +205,7 @@
           "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 4,
+      "unsitedSignalCount": 7,
       "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
       "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
