@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-12T15:38:09.392Z",
+  "exported_at": "2026-10-13T00:47:26.630Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1814400
+    "sim_time_seconds_from_genesis": 1857600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -67,6 +67,25 @@
         "related_pattern_id": "FFT-010",
         "correlation_index": 16,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0035",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 1838100,
+        "case_opened_at": 1838100,
+        "first_observed_at": 1837322,
+        "signal_types": [
+          "DUPLICATE_ASSET_ID",
+          "FALSE_MILESTONE_STAMP",
+          "HANDOVER_GAP",
+          "STAGED_BREAKDOWN",
+          "UNEXPECTED_STOP"
+        ],
+        "related_pattern_id": "FFT-008",
+        "correlation_index": 23,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
     "context": {
@@ -85,6 +104,7 @@
       "lastObservedAt": null,
       "relatedPatternId": null,
       "signalTypes": [
+        "DUPLICATE_ASSET_ID",
         "FALSE_MILESTONE_STAMP",
         "HANDOVER_GAP",
         "MANIFEST_CHANGED",
@@ -100,6 +120,10 @@
         {
           "at": 810600,
           "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP + MANIFEST_CHANGED + STAGED_BREAKDOWN + UNEXPECTED_STOP"
+        },
+        {
+          "at": 1838100,
+          "signalType": "DUPLICATE_ASSET_ID + FALSE_MILESTONE_STAMP + HANDOVER_GAP + STAGED_BREAKDOWN + UNEXPECTED_STOP"
         }
       ],
       "signals": [],
