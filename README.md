@@ -5,6 +5,8 @@
 <p align="center">
   <a href="https://jeevan-0508.github.io/fraud-watch/">Play the live simulation</a> ·
   <a href="#watch-the-world-change">Watch the world change</a> ·
+  <a href="docs/architecture-audit.md">Architecture</a> ·
+  <a href="docs/getting-started.md">Technical docs</a> ·
   <a href="#run-locally">Run locally</a>
 </p>
 
