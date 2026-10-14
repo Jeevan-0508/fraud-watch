@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-14T12:01:23.556Z",
+  "exported_at": "2026-10-14T17:17:56.418Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1965600
+    "sim_time_seconds_from_genesis": 1987200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -73,10 +73,11 @@
         "first_observed_at": 1943822,
         "signal_types": [
           "FALSE_MILESTONE_STAMP",
-          "HANDOVER_GAP"
+          "HANDOVER_GAP",
+          "UNEXPECTED_STOP"
         ],
         "related_pattern_id": "FFT-010",
-        "correlation_index": 13,
+        "correlation_index": 7,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -97,7 +98,8 @@
       "relatedPatternId": null,
       "signalTypes": [
         "FALSE_MILESTONE_STAMP",
-        "HANDOVER_GAP"
+        "HANDOVER_GAP",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {},
       "timeline": [
@@ -111,7 +113,7 @@
         },
         {
           "at": 1948500,
-          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP"
+          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP + UNEXPECTED_STOP"
         }
       ],
       "signals": [],

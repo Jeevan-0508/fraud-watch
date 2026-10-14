@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-14T12:01:23.556Z",
+  "exported_at": "2026-10-14T17:17:56.418Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 1965600
+    "sim_time_seconds_from_genesis": 1987200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,19 +25,20 @@
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Transport Document Fraud",
     "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-    "correlation_index": 13,
+    "correlation_index": 7,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
     "recurrence_count": 3,
     "first_observed_at": 1943822,
     "opened_at": 1948500,
-    "last_observed_at": 1955400,
+    "last_observed_at": 1981500,
     "related_pattern_id": "FFT-010",
     "signal_types": [
       "FALSE_MILESTONE_STAMP",
-      "HANDOVER_GAP"
+      "HANDOVER_GAP",
+      "UNEXPECTED_STOP"
     ],
-    "signal_count": 4,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-018",
       "driver_id": "DRI-003",
@@ -54,17 +55,18 @@
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Transport Document Fraud",
       "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-      "correlationIndex": 13,
+      "correlationIndex": 7,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
       "recurrenceCount": 3,
       "firstObservedAt": 1943822,
       "openedAt": 1948500,
-      "lastObservedAt": 1955400,
+      "lastObservedAt": 1981500,
       "relatedPatternId": "FFT-010",
       "signalTypes": [
         "FALSE_MILESTONE_STAMP",
-        "HANDOVER_GAP"
+        "HANDOVER_GAP",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {
         "truck_id": "TRU-018",
@@ -89,6 +91,10 @@
         {
           "at": 1948500,
           "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 1980000,
+          "signalType": "UNEXPECTED_STOP"
         }
       ],
       "signals": [
@@ -123,13 +129,21 @@
           "at": 1948500,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 1980000,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
         }
       ],
       "sites": [
         {
           "facilityId": "FAC-001",
           "facilityName": "North Gate",
-          "signalCount": 2
+          "signalCount": 3
         }
       ],
       "unsitedSignalCount": 2,
