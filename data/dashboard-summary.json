@@ -1,9 +1,9 @@
 {
   "simulation": {
     "day": 23,
-    "timeOfDay": "12:00:00",
-    "shift": "peak",
-    "absSeconds": 1944000
+    "timeOfDay": "18:00:00",
+    "shift": "evening",
+    "absSeconds": 1965600
   },
   "world": {
     "status": "AUTONOMOUS",
@@ -18,161 +18,161 @@
     "totalEntities": 146,
     "activeShipments": 20,
     "activeSignals": 5,
-    "openInvestigations": 1,
-    "closedInvestigations": 35,
-    "totalCases": 36,
-    "incidents": 2,
-    "networkActivityTotal": 87652
+    "openInvestigations": 3,
+    "closedInvestigations": 36,
+    "totalCases": 39,
+    "incidents": 0,
+    "networkActivityTotal": 88994
   },
   "recentEvents": [
     {
-      "id": "EV-087640",
-      "timestamp": 1944000,
-      "type": "DEPOT_TRANSFER",
+      "id": "EV-088982",
+      "timestamp": 1965600,
+      "type": "CHECKPOINT_INSPECTION",
       "severity": "info",
-      "entityId": "TRU-004"
+      "entityId": "TRU-015"
     },
     {
-      "id": "EV-087641",
-      "timestamp": 1944000,
-      "type": "WAREHOUSE_UNLOADED",
-      "severity": "info",
-      "entityId": "TRU-020"
-    },
-    {
-      "id": "EV-087642",
-      "timestamp": 1944000,
-      "type": "DRIVER_CHECKED_OUT",
-      "severity": "info",
-      "entityId": "TRU-004"
-    },
-    {
-      "id": "EV-087643",
-      "timestamp": 1944000,
-      "type": "ROUTE_ASSIGNED",
-      "severity": "info",
-      "entityId": "TRU-023"
-    },
-    {
-      "id": "EV-087644",
-      "timestamp": 1944000,
+      "id": "EV-088983",
+      "timestamp": 1965600,
       "type": "SHIP_DEPARTED",
       "severity": "info",
-      "entityId": "TRU-023"
+      "entityId": "TRU-019"
     },
     {
-      "id": "EV-087645",
-      "timestamp": 1944000,
-      "type": "CONTAINER_MOVED",
-      "severity": "info",
-      "entityId": "TRU-023"
-    },
-    {
-      "id": "EV-087646",
-      "timestamp": 1944000,
-      "type": "DRIVER_CHECKED_OUT",
-      "severity": "info",
-      "entityId": "TRU-016"
-    },
-    {
-      "id": "EV-087647",
-      "timestamp": 1944000,
-      "type": "TRUCK_DEPARTED",
-      "severity": "info",
-      "entityId": "TRU-024"
-    },
-    {
-      "id": "EV-087648",
-      "timestamp": 1944000,
-      "type": "ROUTE_ASSIGNED",
-      "severity": "info",
-      "entityId": "TRU-002"
-    },
-    {
-      "id": "EV-087649",
-      "timestamp": 1944000,
-      "type": "TRUCK_STAGE_ADVANCED",
-      "severity": "info",
-      "entityId": "TRU-018"
-    },
-    {
-      "id": "EV-087650",
-      "timestamp": 1944000,
-      "type": "FALSE_MILESTONE_STAMP",
-      "severity": "warn",
-      "entityId": "TRU-018"
-    },
-    {
-      "id": "EV-087651",
-      "timestamp": 1943822,
-      "type": "HANDOVER_GAP",
-      "severity": "warn",
-      "entityId": "TRU-018"
-    },
-    {
-      "id": "EV-087652",
-      "timestamp": 1944000,
-      "type": "TRUCK_STAGE_ADVANCED",
-      "severity": "info",
-      "entityId": "TRU-020"
-    },
-    {
-      "id": "EV-087629",
-      "timestamp": 1943700,
+      "id": "EV-088984",
+      "timestamp": 1965600,
       "type": "TRUCK_ARRIVED",
       "severity": "info",
-      "entityId": "TRU-012"
+      "entityId": "TRU-023"
     },
     {
-      "id": "EV-087630",
-      "timestamp": 1943700,
-      "type": "CONTAINER_MOVED",
+      "id": "EV-088985",
+      "timestamp": 1965600,
+      "type": "ROUTE_COMPLETED",
       "severity": "info",
-      "entityId": "TRU-002"
+      "entityId": "TRU-018"
     },
     {
-      "id": "EV-087631",
-      "timestamp": 1943700,
-      "type": "TRUCK_DEPARTED",
+      "id": "EV-088986",
+      "timestamp": 1965600,
+      "type": "SHIP_DEPARTED",
+      "severity": "info",
+      "entityId": "TRU-004"
+    },
+    {
+      "id": "EV-088987",
+      "timestamp": 1965600,
+      "type": "CONTAINER_MOVED",
       "severity": "info",
       "entityId": "TRU-009"
     },
     {
-      "id": "EV-087632",
-      "timestamp": 1943700,
+      "id": "EV-088988",
+      "timestamp": 1965600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-001"
+    },
+    {
+      "id": "EV-088989",
+      "timestamp": 1965600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-004"
+    },
+    {
+      "id": "EV-088990",
+      "timestamp": 1965600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-005"
+    },
+    {
+      "id": "EV-088991",
+      "timestamp": 1965600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-007"
+    },
+    {
+      "id": "EV-088992",
+      "timestamp": 1965600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-009"
+    },
+    {
+      "id": "EV-088993",
+      "timestamp": 1965600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-023"
+    },
+    {
+      "id": "EV-088994",
+      "timestamp": 1965600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-024"
+    },
+    {
+      "id": "EV-088969",
+      "timestamp": 1965300,
+      "type": "SHIP_ARRIVED",
+      "severity": "info",
+      "entityId": "TRU-015"
+    },
+    {
+      "id": "EV-088970",
+      "timestamp": 1965300,
+      "type": "CHECKPOINT_INSPECTION",
+      "severity": "info",
+      "entityId": "TRU-004"
+    },
+    {
+      "id": "EV-088971",
+      "timestamp": 1965300,
       "type": "CONTAINER_MOVED",
       "severity": "info",
       "entityId": "TRU-022"
     },
     {
-      "id": "EV-087633",
-      "timestamp": 1943700,
-      "type": "DRIVER_CHECKED_IN",
-      "severity": "info",
-      "entityId": "TRU-011"
-    },
-    {
-      "id": "EV-087634",
-      "timestamp": 1943700,
+      "id": "EV-088972",
+      "timestamp": 1965300,
       "type": "DRIVER_CHECKED_OUT",
       "severity": "info",
       "entityId": "TRU-002"
     },
     {
-      "id": "EV-087635",
-      "timestamp": 1943700,
-      "type": "ROUTE_ASSIGNED",
+      "id": "EV-088973",
+      "timestamp": 1965300,
+      "type": "SHIP_DEPARTED",
       "severity": "info",
-      "entityId": "TRU-007"
+      "entityId": "TRU-003"
+    },
+    {
+      "id": "EV-088974",
+      "timestamp": 1965300,
+      "type": "DEPOT_TRANSFER",
+      "severity": "info",
+      "entityId": "TRU-006"
+    },
+    {
+      "id": "EV-088975",
+      "timestamp": 1965300,
+      "type": "DRIVER_CHECKED_OUT",
+      "severity": "info",
+      "entityId": "TRU-004"
     }
   ],
-  "tick": 89,
-  "lastTickReal": "2026-10-14T05:00:29.697Z",
-  "nextExpectedTickReal": "2026-10-14T11:00:29.821Z",
+  "tick": 90,
+  "lastTickReal": "2026-10-14T12:01:23.556Z",
+  "nextExpectedTickReal": "2026-10-14T18:01:23.690Z",
   "seed": 424242,
   "candidateExports": {
     "directory": "/home/runner/work/fraud-watch/fraud-watch/data/candidate-exports",
-    "exported": 44,
+    "exported": 48,
     "refused": 0,
     "candidates": [
       {
@@ -214,6 +214,11 @@
         "id": "fraud-watch:EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED+SEAL_MISMATCH",
         "lifecycle_state": "DISCOVERED",
         "file": "candidate-mo-9b79415d1e4bbf589e776e4f37965c64.json"
+      },
+      {
+        "id": "fraud-watch:EQUIPMENT_CARRIER_MISMATCH+HANDOVER_GAP+MANIFEST_CHANGED",
+        "lifecycle_state": "DISCOVERED",
+        "file": "candidate-mo-9c90345b7e04de0c3746eee436ebd5cb.json"
       }
     ],
     "potentialMOs": [
@@ -431,6 +436,24 @@
         "id": "MO-0036",
         "classification": "MO_VARIANT",
         "file": "mo-observation-8555b765de0ad9c2e244f5106c2ad17f.json",
+        "schema_version": "mo-observation.v1"
+      },
+      {
+        "id": "MO-0037",
+        "classification": "POTENTIAL_NEW_MO",
+        "file": "mo-observation-85c249889f783ddd62ac07f8d36f8cc0.json",
+        "schema_version": "mo-observation.v1"
+      },
+      {
+        "id": "MO-0038",
+        "classification": "POTENTIAL_NEW_MO",
+        "file": "mo-observation-4d68b4d3d8bddeb6cd8fed82683963c2.json",
+        "schema_version": "mo-observation.v1"
+      },
+      {
+        "id": "MO-0039",
+        "classification": "KNOWN_MO",
+        "file": "mo-observation-4c4c6a19393605e05c48980126e5a0b8.json",
         "schema_version": "mo-observation.v1"
       }
     ]

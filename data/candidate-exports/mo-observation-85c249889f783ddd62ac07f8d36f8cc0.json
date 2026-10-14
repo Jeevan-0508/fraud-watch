@@ -1,0 +1,211 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-14T12:01:23.556Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 1965600
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0037",
+    "status": "NEW",
+    "classification": "POTENTIAL_NEW_MO",
+    "title": "Possible Transport Document Fraud",
+    "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+    "correlation_index": 13,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "MINIMAL",
+    "recurrence_count": 3,
+    "first_observed_at": 1943822,
+    "opened_at": 1948500,
+    "last_observed_at": 1955400,
+    "related_pattern_id": "FFT-010",
+    "signal_types": [
+      "FALSE_MILESTONE_STAMP",
+      "HANDOVER_GAP"
+    ],
+    "signal_count": 4,
+    "entity_ids": {
+      "truck_id": "TRU-018",
+      "driver_id": "DRI-003",
+      "trailer_id": "TRA-029",
+      "carrier_id": "CAR-008",
+      "facility_id": null
+    },
+    "classification_reason": "TOO_FEW_SIGHTINGS",
+    "classification_reason_note": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "POTENTIAL_NEW_MO",
+      "title": "Possible Transport Document Fraud",
+      "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+      "correlationIndex": 13,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 3,
+      "firstObservedAt": 1943822,
+      "openedAt": 1948500,
+      "lastObservedAt": 1955400,
+      "relatedPatternId": "FFT-010",
+      "signalTypes": [
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-018",
+        "driver_id": "DRI-003",
+        "trailer_id": "TRA-029",
+        "carrier_id": "CAR-008",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 1943822,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 1944000,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 1948385,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 1948500,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 1943822,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 1944000,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 1948385,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 1948500,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate",
+          "signalCount": 2
+        }
+      ],
+      "unsitedSignalCount": 2,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "TOO_FEW_SIGHTINGS",
+      "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-010",
+          "name": "Transport Document Fraud",
+          "votes": 5,
+          "keywords": [
+            "consignment",
+            "document",
+            "falsif",
+            "forgery",
+            "proof of delivery"
+          ]
+        },
+        {
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 4,
+          "keywords": [
+            "collection",
+            "deception",
+            "load theft",
+            "pickup"
+          ]
+        },
+        {
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 1,
+          "keywords": [
+            "load theft"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "Shares most vocabulary with Transport Document Fraud (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Fictitious Pickup, Systematic Pilferage.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "An unattributable delivery signature.",
+          "actually": "Genuine receipt by agency staff, a temporary worker, or a third-party site operator whom the consignee does not have on record.",
+          "ruleOut": "Ask the consignee who was actually on site in that window rather than only whether the name is on the authorised list."
+        },
+        {
+          "title": "Handwritten annotations added to a consignment note.",
+          "actually": "Legitimate reservations recorded at handover, which is exactly what the document is designed for.",
+          "ruleOut": "Establish when the annotation was made and by whom. Contemporaneous reservations are the correct use of the document; retrospective additions are not."
+        },
+        {
+          "title": "The same reference appearing twice.",
+          "actually": "A split delivery, a re-delivery after a failed attempt, or a documented partial movement.",
+          "ruleOut": "Check whether the duplication is explained by a recorded split or re-delivery event before treating it as reuse."
+        },
+        {
+          "title": "A milestone or delivery stamp has no matching independent gate record.",
+          "actually": "An asynchronous feed, a documented manual exception, a site-system outage or a legitimate handover outside the normal system path.",
+          "ruleOut": "Check the outage and exception logs, obtain the original CMR or consignee confirmation and record the reconciliation result before calling the stamp false."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Deduplicate delivery documents automatically by image hash and reference across movements and claims."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Secure the original document before any dispute is progressed, since the evidential value of a copy is limited."
+        }
+      ]
+    }
+  }
+}
