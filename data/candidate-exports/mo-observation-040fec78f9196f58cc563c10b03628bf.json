@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-15T11:38:26.785Z",
+  "exported_at": "2026-10-15T17:07:02.199Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2052000
+    "sim_time_seconds_from_genesis": 2073600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,21 +25,22 @@
     "classification": "MO_VARIANT",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "ACCOUNT_TAKEOVER+DRIVER_CHANGED+ROUTE_DEVIATION",
-    "correlation_index": 23,
+    "correlation_index": 14,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "WATCH",
+    "confidence_band": "MINIMAL",
     "recurrence_count": 1,
     "first_observed_at": 2032200,
     "opened_at": 2036100,
-    "last_observed_at": 2052000,
+    "last_observed_at": 2065200,
     "related_pattern_id": "FFT-008",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
       "DRIVER_CHANGED",
       "DUPLICATE_ASSET_ID",
+      "GPS_SIGNAL_LOST",
       "ROUTE_DEVIATION"
     ],
-    "signal_count": 4,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-012",
       "driver_id": "DRI-032",
@@ -56,18 +57,19 @@
       "classification": "MO_VARIANT",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "ACCOUNT_TAKEOVER+DRIVER_CHANGED+ROUTE_DEVIATION",
-      "correlationIndex": 23,
+      "correlationIndex": 14,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "WATCH",
+      "confidenceBand": "MINIMAL",
       "recurrenceCount": 1,
       "firstObservedAt": 2032200,
       "openedAt": 2036100,
-      "lastObservedAt": 2052000,
+      "lastObservedAt": 2065200,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
         "DRIVER_CHANGED",
         "DUPLICATE_ASSET_ID",
+        "GPS_SIGNAL_LOST",
         "ROUTE_DEVIATION"
       ],
       "entityIds": {
@@ -93,6 +95,10 @@
         {
           "at": 2051100,
           "signalType": "DUPLICATE_ASSET_ID"
+        },
+        {
+          "at": 2063700,
+          "signalType": "GPS_SIGNAL_LOST"
         }
       ],
       "signals": [
@@ -127,10 +133,18 @@
           "at": 2051100,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "GPS_SIGNAL_LOST",
+          "contribution": 1.2,
+          "reliability": 0.6,
+          "at": 2063700,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [],
-      "unsitedSignalCount": 4,
+      "unsitedSignalCount": 5,
       "siteSpread": "UNSITED",
       "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
       "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",

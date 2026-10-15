@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-15T11:38:26.785Z",
+  "exported_at": "2026-10-15T17:07:02.199Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2052000
+    "sim_time_seconds_from_genesis": 2073600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,13 +25,13 @@
     "classification": "KNOWN_MO",
     "title": "Possible Transport Document Fraud",
     "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-    "correlation_index": 46,
+    "correlation_index": 13,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "ELEVATED",
+    "confidence_band": "MINIMAL",
     "recurrence_count": 5,
     "first_observed_at": 2045826,
     "opened_at": 2046900,
-    "last_observed_at": 2052000,
+    "last_observed_at": 2053800,
     "related_pattern_id": "FFT-010",
     "signal_types": [
       "FALSE_MILESTONE_STAMP",
@@ -54,13 +54,13 @@
       "classification": "KNOWN_MO",
       "title": "Possible Transport Document Fraud",
       "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-      "correlationIndex": 46,
+      "correlationIndex": 13,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "ELEVATED",
+      "confidenceBand": "MINIMAL",
       "recurrenceCount": 5,
       "firstObservedAt": 2045826,
       "openedAt": 2046900,
-      "lastObservedAt": 2052000,
+      "lastObservedAt": 2053800,
       "relatedPatternId": "FFT-010",
       "signalTypes": [
         "FALSE_MILESTONE_STAMP",
