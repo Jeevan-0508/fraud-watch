@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-15T17:07:02.199Z",
+  "exported_at": "2026-10-15T21:29:23.138Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2073600
+    "sim_time_seconds_from_genesis": 2095200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,22 +25,23 @@
     "classification": "MO_VARIANT",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "ACCOUNT_TAKEOVER+DRIVER_CHANGED+ROUTE_DEVIATION",
-    "correlation_index": 14,
+    "correlation_index": 27,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "MINIMAL",
+    "confidence_band": "WATCH",
     "recurrence_count": 1,
     "first_observed_at": 2032200,
     "opened_at": 2036100,
-    "last_observed_at": 2065200,
+    "last_observed_at": 2093100,
     "related_pattern_id": "FFT-008",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
       "DRIVER_CHANGED",
       "DUPLICATE_ASSET_ID",
       "GPS_SIGNAL_LOST",
-      "ROUTE_DEVIATION"
+      "ROUTE_DEVIATION",
+      "SEAL_MISMATCH"
     ],
-    "signal_count": 5,
+    "signal_count": 6,
     "entity_ids": {
       "truck_id": "TRU-012",
       "driver_id": "DRI-032",
@@ -57,20 +58,21 @@
       "classification": "MO_VARIANT",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "ACCOUNT_TAKEOVER+DRIVER_CHANGED+ROUTE_DEVIATION",
-      "correlationIndex": 14,
+      "correlationIndex": 27,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "MINIMAL",
+      "confidenceBand": "WATCH",
       "recurrenceCount": 1,
       "firstObservedAt": 2032200,
       "openedAt": 2036100,
-      "lastObservedAt": 2065200,
+      "lastObservedAt": 2093100,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
         "DRIVER_CHANGED",
         "DUPLICATE_ASSET_ID",
         "GPS_SIGNAL_LOST",
-        "ROUTE_DEVIATION"
+        "ROUTE_DEVIATION",
+        "SEAL_MISMATCH"
       ],
       "entityIds": {
         "truck_id": "TRU-012",
@@ -99,6 +101,10 @@
         {
           "at": 2063700,
           "signalType": "GPS_SIGNAL_LOST"
+        },
+        {
+          "at": 2086200,
+          "signalType": "SEAL_MISMATCH"
         }
       ],
       "signals": [
@@ -141,10 +147,18 @@
           "at": 2063700,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 2086200,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [],
-      "unsitedSignalCount": 5,
+      "unsitedSignalCount": 6,
       "siteSpread": "UNSITED",
       "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
       "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
@@ -175,18 +189,18 @@
           ]
         },
         {
-          "id": "FFT-009",
-          "name": "Insider Collusion",
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
           "votes": 2,
           "keywords": [
-            "collusion",
-            "insider"
+            "cargo",
+            "pilferage"
           ]
         }
       ],
       "resemblanceNotes": [
         "Shares most vocabulary with GPS Spoofing and Telematics Manipulation (6 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Carrier Identity Takeover, Insider Collusion.",
+        "Shares some vocabulary with: Carrier Identity Takeover, Systematic Pilferage.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
