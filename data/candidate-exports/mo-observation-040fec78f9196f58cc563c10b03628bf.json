@@ -1,0 +1,212 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-15T11:38:26.785Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 2052000
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0040",
+    "status": "NEW",
+    "classification": "MO_VARIANT",
+    "title": "Possible GPS Spoofing and Telematics Manipulation",
+    "signature": "ACCOUNT_TAKEOVER+DRIVER_CHANGED+ROUTE_DEVIATION",
+    "correlation_index": 23,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "WATCH",
+    "recurrence_count": 1,
+    "first_observed_at": 2032200,
+    "opened_at": 2036100,
+    "last_observed_at": 2052000,
+    "related_pattern_id": "FFT-008",
+    "signal_types": [
+      "ACCOUNT_TAKEOVER",
+      "DRIVER_CHANGED",
+      "DUPLICATE_ASSET_ID",
+      "ROUTE_DEVIATION"
+    ],
+    "signal_count": 4,
+    "entity_ids": {
+      "truck_id": "TRU-012",
+      "driver_id": "DRI-032",
+      "trailer_id": "TRA-022",
+      "carrier_id": "CAR-008",
+      "facility_id": null
+    },
+    "classification_reason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
+    "classification_reason_note": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "MO_VARIANT",
+      "title": "Possible GPS Spoofing and Telematics Manipulation",
+      "signature": "ACCOUNT_TAKEOVER+DRIVER_CHANGED+ROUTE_DEVIATION",
+      "correlationIndex": 23,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "WATCH",
+      "recurrenceCount": 1,
+      "firstObservedAt": 2032200,
+      "openedAt": 2036100,
+      "lastObservedAt": 2052000,
+      "relatedPatternId": "FFT-008",
+      "signalTypes": [
+        "ACCOUNT_TAKEOVER",
+        "DRIVER_CHANGED",
+        "DUPLICATE_ASSET_ID",
+        "ROUTE_DEVIATION"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-012",
+        "driver_id": "DRI-032",
+        "trailer_id": "TRA-022",
+        "carrier_id": "CAR-008",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 2032200,
+          "signalType": "ACCOUNT_TAKEOVER"
+        },
+        {
+          "at": 2033100,
+          "signalType": "ROUTE_DEVIATION"
+        },
+        {
+          "at": 2036100,
+          "signalType": "DRIVER_CHANGED"
+        },
+        {
+          "at": 2051100,
+          "signalType": "DUPLICATE_ASSET_ID"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 2032200,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "ROUTE_DEVIATION",
+          "contribution": 1.4,
+          "reliability": 0.7,
+          "at": 2033100,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DRIVER_CHANGED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 2036100,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 2051100,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [],
+      "unsitedSignalCount": 4,
+      "siteSpread": "UNSITED",
+      "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
+      "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-008",
+          "name": "GPS Spoofing and Telematics Manipulation",
+          "votes": 6,
+          "keywords": [
+            "gnss",
+            "gps",
+            "position",
+            "spoof",
+            "telemat",
+            "tracker"
+          ]
+        },
+        {
+          "id": "FFT-003",
+          "name": "Carrier Identity Takeover",
+          "votes": 5,
+          "keywords": [
+            "hijack",
+            "identity",
+            "impersonation",
+            "operator",
+            "takeover"
+          ]
+        },
+        {
+          "id": "FFT-009",
+          "name": "Insider Collusion",
+          "votes": 2,
+          "keywords": [
+            "collusion",
+            "insider"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "Shares most vocabulary with GPS Spoofing and Telematics Manipulation (6 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Carrier Identity Takeover, Insider Collusion.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "Total loss of position data.",
+          "actually": "Genuine coverage failure, tunnel or terrain shadowing, hardware fault, SIM or data plan failure, or regional interference not directed at this vehicle.",
+          "ruleOut": "Check whether other vehicles in the same area and time lost signal too. Broad regional loss indicates environmental or infrastructure causes; an isolated single-vehicle gap does not."
+        },
+        {
+          "title": "Implausible position jumps.",
+          "actually": "Known receiver artefacts, cold-start errors, multipath in urban canyons, or platform data-processing lag.",
+          "ruleOut": "Check whether the artefact appears across the fleet on the same hardware and firmware, which points to a technical rather than deliberate cause."
+        },
+        {
+          "title": "Sustained regional GNSS interference.",
+          "actually": "Documented wide-area interference affecting all users in a region, which is well reported in parts of Europe and is not aimed at any particular vehicle.",
+          "ruleOut": "Compare against published interference monitoring for the region and period before drawing any conclusion about a specific movement."
+        },
+        {
+          "title": "A tracker goes silent at a terminal or after a short stop.",
+          "actually": "Battery failure, planned maintenance, coverage loss, wiring fault or a device replaced during a legitimate repair.",
+          "ruleOut": "Compare with fleet-wide outages, inspect the device and wiring, and reconcile the movement with independent records before attributing intent."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Run automated speed and distance plausibility checks between consecutive fixes and alert on physically impossible transitions."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Inspect and photograph the telematics installation before the vehicle re-enters service, since physical evidence of tampering disappears quickly."
+        }
+      ]
+    }
+  }
+}
