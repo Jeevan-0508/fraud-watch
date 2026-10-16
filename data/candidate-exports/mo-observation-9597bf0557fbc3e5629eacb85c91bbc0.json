@@ -1,0 +1,195 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-16T16:44:38.896Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 2160000
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0043",
+    "status": "NEW",
+    "classification": "MO_VARIANT",
+    "title": "Possible Fictitious Pickup",
+    "signature": "HANDOVER_GAP+SEAL_MISMATCH+TRAILER_SWAPPED",
+    "correlation_index": 40,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "WATCH",
+    "recurrence_count": 1,
+    "first_observed_at": 2147700,
+    "opened_at": 2154300,
+    "last_observed_at": 2160000,
+    "related_pattern_id": "FFT-004",
+    "signal_types": [
+      "HANDOVER_GAP",
+      "SEAL_MISMATCH",
+      "TRAILER_SWAPPED"
+    ],
+    "signal_count": 3,
+    "entity_ids": {
+      "truck_id": "TRU-001",
+      "driver_id": "DRI-018",
+      "trailer_id": "TRA-021",
+      "carrier_id": "CAR-001",
+      "facility_id": null
+    },
+    "classification_reason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
+    "classification_reason_note": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "MO_VARIANT",
+      "title": "Possible Fictitious Pickup",
+      "signature": "HANDOVER_GAP+SEAL_MISMATCH+TRAILER_SWAPPED",
+      "correlationIndex": 40,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "WATCH",
+      "recurrenceCount": 1,
+      "firstObservedAt": 2147700,
+      "openedAt": 2154300,
+      "lastObservedAt": 2160000,
+      "relatedPatternId": "FFT-004",
+      "signalTypes": [
+        "HANDOVER_GAP",
+        "SEAL_MISMATCH",
+        "TRAILER_SWAPPED"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-001",
+        "driver_id": "DRI-018",
+        "trailer_id": "TRA-021",
+        "carrier_id": "CAR-001",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 2147700,
+          "signalType": "TRAILER_SWAPPED"
+        },
+        {
+          "at": 2154000,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 2154300,
+          "signalType": "SEAL_MISMATCH"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "TRAILER_SWAPPED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 2147700,
+          "facilityId": "FAC-010",
+          "facilityName": "East Gate"
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 2154000,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 2154300,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-010",
+          "facilityName": "East Gate",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 2,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
+      "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 5,
+          "keywords": [
+            "cargo",
+            "collection",
+            "deception",
+            "load theft",
+            "pickup"
+          ]
+        },
+        {
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 3,
+          "keywords": [
+            "cargo",
+            "load theft",
+            "pilferage"
+          ]
+        },
+        {
+          "id": "FFT-006",
+          "name": "Unsecured Parking Theft",
+          "votes": 1,
+          "keywords": [
+            "cargo"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "Shares most vocabulary with Fictitious Pickup (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Systematic Pilferage, Unsecured Parking Theft.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "An unexpected driver and vehicle arrive for a booked load.",
+          "actually": "A legitimate last-minute reallocation within the operator, or an approved subcontractor, that was not communicated to the dock.",
+          "ruleOut": "Verify with the operator by calling the number held on the carrier master record, never the number offered by the driver, and confirm the substitution before releasing cargo."
+        },
+        {
+          "title": "Driver presents printed or photographed paperwork.",
+          "actually": "Normal practice for many small operators, particularly on subcontracted or spot work.",
+          "ruleOut": "Do not treat document format as the test. Test identity: does the vehicle belong to the contracted operator and does the operator confirm this driver for this load."
+        },
+        {
+          "title": "A second driver or vehicle appears for the same movement after the first presentation.",
+          "actually": "A documented relay, recovery, shift change or approved substitution whose dispatch update did not reach the gate in time.",
+          "ruleOut": "Confirm the handover through the pre-existing carrier contact and retain the original and replacement identity records with the reason and time of the change."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Check the gate log against open bookings in real time so that a second presentation for the same reference is caught while the vehicle is still on site."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Treat the event as a theft from the moment of the mismatch, not from the expiry of the delivery window, since the first hours determine whether recovery is possible."
+        }
+      ]
+    }
+  }
+}
