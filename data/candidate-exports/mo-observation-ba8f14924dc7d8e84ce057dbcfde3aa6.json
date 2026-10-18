@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-18T11:17:00.492Z",
+  "exported_at": "2026-10-18T15:56:33.928Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2311200
+    "sim_time_seconds_from_genesis": 2332800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,20 +25,23 @@
     "classification": "KNOWN_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "correlation_index": 27,
+    "correlation_index": 13,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "WATCH",
+    "confidence_band": "MINIMAL",
     "recurrence_count": 6,
     "first_observed_at": 2287771,
     "opened_at": 2288100,
-    "last_observed_at": 2295600,
+    "last_observed_at": 2332800,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
+      "HANDOVER_GAP",
       "MANIFEST_CHANGED",
-      "SEAL_MISMATCH"
+      "SEAL_MISMATCH",
+      "STAGED_BREAKDOWN",
+      "UNEXPECTED_STOP"
     ],
-    "signal_count": 7,
+    "signal_count": 15,
     "entity_ids": {
       "truck_id": "TRU-016",
       "driver_id": "DRI-015",
@@ -55,18 +58,21 @@
       "classification": "KNOWN_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-      "correlationIndex": 27,
+      "correlationIndex": 13,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "WATCH",
+      "confidenceBand": "MINIMAL",
       "recurrenceCount": 6,
       "firstObservedAt": 2287771,
       "openedAt": 2288100,
-      "lastObservedAt": 2295600,
+      "lastObservedAt": 2332800,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",
+        "HANDOVER_GAP",
         "MANIFEST_CHANGED",
-        "SEAL_MISMATCH"
+        "SEAL_MISMATCH",
+        "STAGED_BREAKDOWN",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {
         "truck_id": "TRU-016",
@@ -103,6 +109,38 @@
         {
           "at": 2290800,
           "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 2314800,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 2315030,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 2315100,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 2318400,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 2321172,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 2321400,
+          "signalType": "STAGED_BREAKDOWN"
+        },
+        {
+          "at": 2325000,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 2326200,
+          "signalType": "HANDOVER_GAP"
         }
       ],
       "signals": [
@@ -161,6 +199,70 @@
           "at": 2290800,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 2314800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 2315030,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 2315100,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 2318400,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 2321172,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "STAGED_BREAKDOWN",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 2321400,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 2325000,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 2326200,
+          "facilityId": "FAC-009",
+          "facilityName": "Inland Depot Sud"
         }
       ],
       "sites": [
@@ -168,10 +270,20 @@
           "facilityId": "FAC-010",
           "facilityName": "East Gate",
           "signalCount": 5
+        },
+        {
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate",
+          "signalCount": 1
+        },
+        {
+          "facilityId": "FAC-009",
+          "facilityName": "Inland Depot Sud",
+          "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 2,
-      "siteSpread": "PARTLY_UNSITED",
+      "unsitedSignalCount": 8,
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
       "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
       "relatedPatterns": [
@@ -188,27 +300,33 @@
           ]
         },
         {
-          "id": "FFT-002",
-          "name": "Phantom Carrier",
-          "votes": 2,
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 5,
           "keywords": [
-            "identity",
-            "phantom"
+            "cargo",
+            "collection",
+            "deception",
+            "load theft",
+            "pickup"
           ]
         },
         {
-          "id": "FFT-005",
-          "name": "Systematic Pilferage",
-          "votes": 2,
+          "id": "FFT-006",
+          "name": "Unsecured Parking Theft",
+          "votes": 5,
           "keywords": [
             "cargo",
-            "pilferage"
+            "curtain",
+            "parking",
+            "roadside",
+            "truck stop"
           ]
         }
       ],
       "resemblanceNotes": [
         "This signal combination has recurred, and shares most vocabulary with Carrier Identity Takeover (5 shared keywords). Recurrence is a fact about this simulation's own history, not about the pattern.",
-        "Shares some vocabulary with: Phantom Carrier, Systematic Pilferage.",
+        "Shares some vocabulary with: Fictitious Pickup, Unsecured Parking Theft.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
