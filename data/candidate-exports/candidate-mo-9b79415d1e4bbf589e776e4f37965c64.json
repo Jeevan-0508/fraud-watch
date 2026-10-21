@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-21T17:18:51.715Z",
+  "exported_at": "2026-10-21T21:47:39.234Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2570400
+    "sim_time_seconds_from_genesis": 2592000
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
