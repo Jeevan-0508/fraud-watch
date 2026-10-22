@@ -1,0 +1,128 @@
+{
+  "schema_version": "candidate-mo.v1",
+  "kind": "candidate_mo",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-22T04:58:12.629Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 2613600
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "candidate": {
+    "id": "fraud-watch:ACCOUNT_TAKEOVER+SEAL_MISMATCH",
+    "signature": "ACCOUNT_TAKEOVER+SEAL_MISMATCH",
+    "lifecycle_state": "DISCOVERED",
+    "source_state": "CANDIDATE",
+    "time_basis": "simulation_seconds_from_genesis",
+    "first_seen_at": 129600,
+    "candidate_since": 2605500,
+    "review_started_at": null,
+    "resolved_at": null,
+    "resolution_note": null,
+    "supporting_cases": [
+      {
+        "case_id": "MO-0004",
+        "classification": "EMERGING_BEHAVIOR",
+        "current_classification": "EMERGING_BEHAVIOR",
+        "classification_reason": "no documented pattern shares a single keyword with any of this case’s signal types.",
+        "recorded_at": 2605500,
+        "case_opened_at": 129600,
+        "first_observed_at": 127800,
+        "signal_types": [
+          "ACCOUNT_TAKEOVER",
+          "DRIVER_CHANGED",
+          "DUPLICATE_ASSET_ID",
+          "GPS_SIGNAL_LOST",
+          "HANDOVER_GAP",
+          "MANIFEST_CHANGED",
+          "SEAL_MISMATCH",
+          "STAGED_BREAKDOWN",
+          "TRAILER_SWAPPED",
+          "UNEXPECTED_STOP"
+        ],
+        "related_pattern_id": null,
+        "correlation_index": 6,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0051",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 2605500,
+        "case_opened_at": 2605500,
+        "first_observed_at": 2600700,
+        "signal_types": [
+          "ACCOUNT_TAKEOVER",
+          "EQUIPMENT_CARRIER_MISMATCH",
+          "MANIFEST_CHANGED",
+          "SEAL_MISMATCH"
+        ],
+        "related_pattern_id": "FFT-003",
+        "correlation_index": 41,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      }
+    ],
+    "context": {
+      "kind": "fraud-watch-candidate.v1",
+      "disclaimer": "Synthetic simulation context only. This candidate groups simulator observations; it is not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": null,
+      "classification": null,
+      "title": null,
+      "signature": "ACCOUNT_TAKEOVER+SEAL_MISMATCH",
+      "correlationIndex": null,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": null,
+      "recurrenceCount": null,
+      "firstObservedAt": 129600,
+      "openedAt": 2605500,
+      "lastObservedAt": null,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "ACCOUNT_TAKEOVER",
+        "DRIVER_CHANGED",
+        "DUPLICATE_ASSET_ID",
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "GPS_SIGNAL_LOST",
+        "HANDOVER_GAP",
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH",
+        "STAGED_BREAKDOWN",
+        "TRAILER_SWAPPED",
+        "UNEXPECTED_STOP"
+      ],
+      "entityIds": {},
+      "timeline": [
+        {
+          "at": 2605500,
+          "signalType": "ACCOUNT_TAKEOVER + DRIVER_CHANGED + DUPLICATE_ASSET_ID + GPS_SIGNAL_LOST + HANDOVER_GAP + MANIFEST_CHANGED + SEAL_MISMATCH + STAGED_BREAKDOWN + TRAILER_SWAPPED + UNEXPECTED_STOP"
+        },
+        {
+          "at": 2605500,
+          "signalType": "ACCOUNT_TAKEOVER + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED + SEAL_MISMATCH"
+        }
+      ],
+      "signals": [],
+      "sites": [],
+      "unsitedSignalCount": null,
+      "siteSpread": null,
+      "classificationReason": null,
+      "classificationReasonNote": null,
+      "relatedPatterns": [],
+      "resemblanceNotes": [],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
+  }
+}
