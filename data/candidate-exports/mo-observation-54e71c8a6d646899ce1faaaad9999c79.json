@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-22T12:01:04.808Z",
+  "exported_at": "2026-10-22T17:16:22.282Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2635200
+    "sim_time_seconds_from_genesis": 2656800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,20 +25,20 @@
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED+TRAILER_SWAPPED",
-    "correlation_index": 47,
+    "correlation_index": 41,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "ELEVATED",
     "recurrence_count": 2,
     "first_observed_at": 2628600,
     "opened_at": 2634300,
-    "last_observed_at": 2635200,
+    "last_observed_at": 2646900,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
       "MANIFEST_CHANGED",
       "TRAILER_SWAPPED"
     ],
-    "signal_count": 3,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-018",
       "driver_id": "DRI-023",
@@ -55,13 +55,13 @@
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED+TRAILER_SWAPPED",
-      "correlationIndex": 47,
+      "correlationIndex": 41,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "ELEVATED",
       "recurrenceCount": 2,
       "firstObservedAt": 2628600,
       "openedAt": 2634300,
-      "lastObservedAt": 2635200,
+      "lastObservedAt": 2646900,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",
@@ -86,6 +86,14 @@
         },
         {
           "at": 2634300,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 2643303,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 2643600,
           "signalType": "EQUIPMENT_CARRIER_MISMATCH"
         }
       ],
@@ -113,6 +121,22 @@
           "at": 2634300,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 2643303,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 2643600,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -122,7 +146,7 @@
           "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 2,
+      "unsitedSignalCount": 4,
       "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
