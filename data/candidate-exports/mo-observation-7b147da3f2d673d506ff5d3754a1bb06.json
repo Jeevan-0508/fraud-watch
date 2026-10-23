@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-23T11:46:55.506Z",
+  "exported_at": "2026-10-23T17:14:25.094Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2721600
+    "sim_time_seconds_from_genesis": 2743200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -31,7 +31,7 @@
     "recurrence_count": 3,
     "first_observed_at": 2714400,
     "opened_at": 2719800,
-    "last_observed_at": 2721600,
+    "last_observed_at": 2726700,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
@@ -60,7 +60,7 @@
       "recurrenceCount": 3,
       "firstObservedAt": 2714400,
       "openedAt": 2719800,
-      "lastObservedAt": 2721600,
+      "lastObservedAt": 2726700,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
