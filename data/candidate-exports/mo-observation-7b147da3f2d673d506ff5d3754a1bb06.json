@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-23T17:14:25.094Z",
+  "exported_at": "2026-10-23T21:28:54.233Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2743200
+    "sim_time_seconds_from_genesis": 2764800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -21,7 +21,7 @@
   },
   "observation": {
     "id": "MO-0056",
-    "status": "NEW",
+    "status": "DISMISSED",
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "ACCOUNT_TAKEOVER+SEAL_MISMATCH",
@@ -50,7 +50,7 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "NEW",
+      "status": "DISMISSED",
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "ACCOUNT_TAKEOVER+SEAL_MISMATCH",

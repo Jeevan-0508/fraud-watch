@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-23T17:14:25.094Z",
+  "exported_at": "2026-10-23T21:28:54.233Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2743200
+    "sim_time_seconds_from_genesis": 2764800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -76,10 +76,12 @@
         "signal_types": [
           "ACCOUNT_TAKEOVER",
           "EQUIPMENT_CARRIER_MISMATCH",
-          "MANIFEST_CHANGED"
+          "MANIFEST_CHANGED",
+          "STAGED_BREAKDOWN",
+          "UNEXPECTED_STOP"
         ],
         "related_pattern_id": "FFT-003",
-        "correlation_index": 41,
+        "correlation_index": 12,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -101,7 +103,9 @@
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
         "EQUIPMENT_CARRIER_MISMATCH",
-        "MANIFEST_CHANGED"
+        "MANIFEST_CHANGED",
+        "STAGED_BREAKDOWN",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {},
       "timeline": [
@@ -115,7 +119,7 @@
         },
         {
           "at": 2712300,
-          "signalType": "ACCOUNT_TAKEOVER + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
+          "signalType": "ACCOUNT_TAKEOVER + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED + STAGED_BREAKDOWN + UNEXPECTED_STOP"
         }
       ],
       "signals": [],

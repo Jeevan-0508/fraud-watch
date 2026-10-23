@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-23T17:14:25.094Z",
+  "exported_at": "2026-10-23T21:28:54.233Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2743200
+    "sim_time_seconds_from_genesis": 2764800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,20 +25,22 @@
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "ACCOUNT_TAKEOVER+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "correlation_index": 41,
+    "correlation_index": 12,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "ELEVATED",
+    "confidence_band": "MINIMAL",
     "recurrence_count": 3,
     "first_observed_at": 2710800,
     "opened_at": 2712300,
-    "last_observed_at": 2721000,
+    "last_observed_at": 2754900,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
       "EQUIPMENT_CARRIER_MISMATCH",
-      "MANIFEST_CHANGED"
+      "MANIFEST_CHANGED",
+      "STAGED_BREAKDOWN",
+      "UNEXPECTED_STOP"
     ],
-    "signal_count": 5,
+    "signal_count": 7,
     "entity_ids": {
       "truck_id": "TRU-004",
       "driver_id": "DRI-009",
@@ -55,18 +57,20 @@
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "ACCOUNT_TAKEOVER+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-      "correlationIndex": 41,
+      "correlationIndex": 12,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "ELEVATED",
+      "confidenceBand": "MINIMAL",
       "recurrenceCount": 3,
       "firstObservedAt": 2710800,
       "openedAt": 2712300,
-      "lastObservedAt": 2721000,
+      "lastObservedAt": 2754900,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
         "EQUIPMENT_CARRIER_MISMATCH",
-        "MANIFEST_CHANGED"
+        "MANIFEST_CHANGED",
+        "STAGED_BREAKDOWN",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {
         "truck_id": "TRU-004",
@@ -95,6 +99,14 @@
         {
           "at": 2717700,
           "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 2749613,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 2749800,
+          "signalType": "STAGED_BREAKDOWN"
         }
       ],
       "signals": [
@@ -137,11 +149,33 @@
           "at": 2717700,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 2749613,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "STAGED_BREAKDOWN",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 2749800,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
         }
       ],
-      "sites": [],
+      "sites": [
+        {
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate",
+          "signalCount": 2
+        }
+      ],
       "unsitedSignalCount": 5,
-      "siteSpread": "UNSITED",
+      "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
       "relatedPatterns": [
@@ -158,6 +192,17 @@
           ]
         },
         {
+          "id": "FFT-006",
+          "name": "Unsecured Parking Theft",
+          "votes": 4,
+          "keywords": [
+            "curtain",
+            "parking",
+            "roadside",
+            "truck stop"
+          ]
+        },
+        {
           "id": "FFT-002",
           "name": "Phantom Carrier",
           "votes": 2,
@@ -165,19 +210,11 @@
             "identity",
             "phantom"
           ]
-        },
-        {
-          "id": "FFT-001",
-          "name": "Double Brokering",
-          "votes": 1,
-          "keywords": [
-            "broker"
-          ]
         }
       ],
       "resemblanceNotes": [
         "Shares most vocabulary with Carrier Identity Takeover (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Phantom Carrier, Double Brokering.",
+        "Shares some vocabulary with: Unsecured Parking Theft, Phantom Carrier.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
