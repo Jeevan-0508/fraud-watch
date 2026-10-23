@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-23T04:59:33.428Z",
+  "exported_at": "2026-10-23T11:46:55.506Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2700000
+    "sim_time_seconds_from_genesis": 2721600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -73,6 +73,22 @@
         "related_pattern_id": "FFT-003",
         "correlation_index": 7,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0056",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 2719800,
+        "case_opened_at": 2719800,
+        "first_observed_at": 2714400,
+        "signal_types": [
+          "ACCOUNT_TAKEOVER",
+          "SEAL_MISMATCH"
+        ],
+        "related_pattern_id": "FFT-003",
+        "correlation_index": 22,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
     "context": {
@@ -112,6 +128,10 @@
         {
           "at": 2605500,
           "signalType": "ACCOUNT_TAKEOVER + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED + SEAL_MISMATCH + UNEXPECTED_STOP"
+        },
+        {
+          "at": 2719800,
+          "signalType": "ACCOUNT_TAKEOVER + SEAL_MISMATCH"
         }
       ],
       "signals": [],

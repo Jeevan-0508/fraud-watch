@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-23T04:59:33.428Z",
+  "exported_at": "2026-10-23T11:46:55.506Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2700000
+    "sim_time_seconds_from_genesis": 2721600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,13 +25,13 @@
     "classification": "KNOWN_MO",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "DUPLICATE_ASSET_ID+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "correlation_index": 14,
+    "correlation_index": 23,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "MINIMAL",
+    "confidence_band": "WATCH",
     "recurrence_count": 4,
     "first_observed_at": 2648828,
     "opened_at": 2651700,
-    "last_observed_at": 2683800,
+    "last_observed_at": 2707200,
     "related_pattern_id": "FFT-008",
     "signal_types": [
       "DUPLICATE_ASSET_ID",
@@ -39,7 +39,7 @@
       "GPS_SIGNAL_LOST",
       "MANIFEST_CHANGED"
     ],
-    "signal_count": 5,
+    "signal_count": 6,
     "entity_ids": {
       "truck_id": "TRU-011",
       "driver_id": "DRI-008",
@@ -56,13 +56,13 @@
       "classification": "KNOWN_MO",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "DUPLICATE_ASSET_ID+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-      "correlationIndex": 14,
+      "correlationIndex": 23,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "MINIMAL",
+      "confidenceBand": "WATCH",
       "recurrenceCount": 4,
       "firstObservedAt": 2648828,
       "openedAt": 2651700,
-      "lastObservedAt": 2683800,
+      "lastObservedAt": 2707200,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
         "DUPLICATE_ASSET_ID",
@@ -97,6 +97,10 @@
         {
           "at": 2682300,
           "signalType": "GPS_SIGNAL_LOST"
+        },
+        {
+          "at": 2703900,
+          "signalType": "DUPLICATE_ASSET_ID"
         }
       ],
       "signals": [
@@ -139,6 +143,14 @@
           "at": 2682300,
           "facilityId": "FAC-021",
           "facilityName": "Cross-dock E (south)"
+        },
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 2703900,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -153,7 +165,7 @@
           "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 2,
+      "unsitedSignalCount": 3,
       "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
       "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
