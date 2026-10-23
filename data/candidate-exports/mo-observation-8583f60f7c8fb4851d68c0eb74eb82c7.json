@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-22T21:42:11.668Z",
+  "exported_at": "2026-10-23T04:59:33.428Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2678400
+    "sim_time_seconds_from_genesis": 2700000
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -31,7 +31,7 @@
     "recurrence_count": 4,
     "first_observed_at": 2648828,
     "opened_at": 2651700,
-    "last_observed_at": 2664900,
+    "last_observed_at": 2683800,
     "related_pattern_id": "FFT-008",
     "signal_types": [
       "DUPLICATE_ASSET_ID",
@@ -39,7 +39,7 @@
       "GPS_SIGNAL_LOST",
       "MANIFEST_CHANGED"
     ],
-    "signal_count": 4,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-011",
       "driver_id": "DRI-008",
@@ -62,7 +62,7 @@
       "recurrenceCount": 4,
       "firstObservedAt": 2648828,
       "openedAt": 2651700,
-      "lastObservedAt": 2664900,
+      "lastObservedAt": 2683800,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
         "DUPLICATE_ASSET_ID",
@@ -92,6 +92,10 @@
         },
         {
           "at": 2663400,
+          "signalType": "GPS_SIGNAL_LOST"
+        },
+        {
+          "at": 2682300,
           "signalType": "GPS_SIGNAL_LOST"
         }
       ],
@@ -127,6 +131,14 @@
           "at": 2663400,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "GPS_SIGNAL_LOST",
+          "contribution": 1.2,
+          "reliability": 0.6,
+          "at": 2682300,
+          "facilityId": "FAC-021",
+          "facilityName": "Cross-dock E (south)"
         }
       ],
       "sites": [
@@ -134,10 +146,15 @@
           "facilityId": "FAC-002",
           "facilityName": "South Gate",
           "signalCount": 2
+        },
+        {
+          "facilityId": "FAC-021",
+          "facilityName": "Cross-dock E (south)",
+          "signalCount": 1
         }
       ],
       "unsitedSignalCount": 2,
-      "siteSpread": "PARTLY_UNSITED",
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
       "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
       "relatedPatterns": [
