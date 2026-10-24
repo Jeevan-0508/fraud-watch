@@ -1,9 +1,9 @@
 {
   "simulation": {
     "day": 33,
-    "timeOfDay": "12:00:00",
-    "shift": "peak",
-    "absSeconds": 2808000
+    "timeOfDay": "18:00:00",
+    "shift": "evening",
+    "absSeconds": 2829600
   },
   "world": {
     "status": "AUTONOMOUS",
@@ -21,154 +21,154 @@
     "openInvestigations": 1,
     "closedInvestigations": 57,
     "totalCases": 58,
-    "incidents": 2,
-    "networkActivityTotal": 127091
+    "incidents": 0,
+    "networkActivityTotal": 128432
   },
   "recentEvents": [
     {
-      "id": "EV-127074",
-      "timestamp": 2808000,
-      "type": "CHECKPOINT_INSPECTION",
-      "severity": "info",
-      "entityId": "TRU-005"
-    },
-    {
-      "id": "EV-127075",
-      "timestamp": 2808000,
-      "type": "TRUCK_DEPARTED",
-      "severity": "info",
-      "entityId": "TRU-012"
-    },
-    {
-      "id": "EV-127076",
-      "timestamp": 2808000,
-      "type": "CONTAINER_MOVED",
-      "severity": "info",
-      "entityId": "TRU-004"
-    },
-    {
-      "id": "EV-127077",
-      "timestamp": 2808000,
-      "type": "TRUCK_ARRIVED",
-      "severity": "info",
-      "entityId": "TRU-010"
-    },
-    {
-      "id": "EV-127078",
-      "timestamp": 2808000,
-      "type": "ROUTE_COMPLETED",
-      "severity": "info",
-      "entityId": "TRU-001"
-    },
-    {
-      "id": "EV-127079",
-      "timestamp": 2808000,
-      "type": "WAREHOUSE_LOADED",
-      "severity": "info",
-      "entityId": "TRU-009"
-    },
-    {
-      "id": "EV-127080",
-      "timestamp": 2808000,
-      "type": "DEPOT_TRANSFER",
-      "severity": "info",
-      "entityId": "TRU-003"
-    },
-    {
-      "id": "EV-127081",
-      "timestamp": 2808000,
-      "type": "CHECKPOINT_INSPECTION",
+      "id": "EV-128420",
+      "timestamp": 2829600,
+      "type": "SHIP_ARRIVED",
       "severity": "info",
       "entityId": "TRU-021"
     },
     {
-      "id": "EV-127082",
-      "timestamp": 2808000,
-      "type": "DRIVER_CHECKED_IN",
-      "severity": "info",
-      "entityId": "TRU-013"
-    },
-    {
-      "id": "EV-127083",
-      "timestamp": 2808000,
-      "type": "WAREHOUSE_UNLOADED",
-      "severity": "info",
-      "entityId": "TRU-006"
-    },
-    {
-      "id": "EV-127084",
-      "timestamp": 2808000,
+      "id": "EV-128421",
+      "timestamp": 2829600,
       "type": "CHECKPOINT_INSPECTION",
+      "severity": "info",
+      "entityId": "TRU-002"
+    },
+    {
+      "id": "EV-128422",
+      "timestamp": 2829600,
+      "type": "SHIP_ARRIVED",
+      "severity": "info",
+      "entityId": "TRU-018"
+    },
+    {
+      "id": "EV-128423",
+      "timestamp": 2829600,
+      "type": "TRUCK_DEPARTED",
+      "severity": "info",
+      "entityId": "TRU-024"
+    },
+    {
+      "id": "EV-128424",
+      "timestamp": 2829600,
+      "type": "ROUTE_ASSIGNED",
       "severity": "info",
       "entityId": "TRU-004"
     },
     {
-      "id": "EV-127085",
-      "timestamp": 2808000,
-      "type": "CHECKPOINT_INSPECTION",
+      "id": "EV-128425",
+      "timestamp": 2829600,
+      "type": "TRUCK_ARRIVED",
       "severity": "info",
-      "entityId": "TRU-022"
+      "entityId": "TRU-006"
     },
     {
-      "id": "EV-127086",
-      "timestamp": 2808000,
-      "type": "FALSE_MILESTONE_STAMP",
-      "severity": "warn",
+      "id": "EV-128426",
+      "timestamp": 2829600,
+      "type": "ROUTE_COMPLETED",
+      "severity": "info",
+      "entityId": "TRU-020"
+    },
+    {
+      "id": "EV-128427",
+      "timestamp": 2829600,
+      "type": "DEPOT_TRANSFER",
+      "severity": "info",
+      "entityId": "TRU-001"
+    },
+    {
+      "id": "EV-128428",
+      "timestamp": 2829600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
       "entityId": "TRU-003"
     },
     {
-      "id": "EV-127087",
-      "timestamp": 2807902,
-      "type": "HANDOVER_GAP",
-      "severity": "warn",
-      "entityId": "TRU-003"
-    },
-    {
-      "id": "EV-127088",
-      "timestamp": 2808000,
-      "type": "TRUCK_STAGE_ADVANCED",
-      "severity": "info",
-      "entityId": "TRU-008"
-    },
-    {
-      "id": "EV-127089",
-      "timestamp": 2808000,
-      "type": "TRUCK_STAGE_ADVANCED",
-      "severity": "info",
-      "entityId": "TRU-010"
-    },
-    {
-      "id": "EV-127090",
-      "timestamp": 2808000,
+      "id": "EV-128429",
+      "timestamp": 2829600,
       "type": "TRUCK_STAGE_ADVANCED",
       "severity": "info",
       "entityId": "TRU-011"
     },
     {
-      "id": "EV-127091",
-      "timestamp": 2808000,
+      "id": "EV-128430",
+      "timestamp": 2829600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-021"
+    },
+    {
+      "id": "EV-128431",
+      "timestamp": 2829600,
+      "type": "TRUCK_STAGE_ADVANCED",
+      "severity": "info",
+      "entityId": "TRU-022"
+    },
+    {
+      "id": "EV-128432",
+      "timestamp": 2829600,
       "type": "TRUCK_STAGE_ADVANCED",
       "severity": "info",
       "entityId": "TRU-023"
     },
     {
-      "id": "EV-127053",
-      "timestamp": 2807700,
-      "type": "WAREHOUSE_LOADED",
+      "id": "EV-128398",
+      "timestamp": 2829300,
+      "type": "DRIVER_CHECKED_OUT",
       "severity": "info",
-      "entityId": "TRU-005"
+      "entityId": "TRU-015"
     },
     {
-      "id": "EV-127054",
-      "timestamp": 2807700,
+      "id": "EV-128399",
+      "timestamp": 2829300,
+      "type": "SHIP_DEPARTED",
+      "severity": "info",
+      "entityId": "TRU-011"
+    },
+    {
+      "id": "EV-128400",
+      "timestamp": 2829300,
+      "type": "ROUTE_COMPLETED",
+      "severity": "info",
+      "entityId": "TRU-016"
+    },
+    {
+      "id": "EV-128401",
+      "timestamp": 2829300,
+      "type": "CHECKPOINT_INSPECTION",
+      "severity": "info",
+      "entityId": "TRU-014"
+    },
+    {
+      "id": "EV-128402",
+      "timestamp": 2829300,
+      "type": "DRIVER_CHECKED_IN",
+      "severity": "info",
+      "entityId": "TRU-011"
+    },
+    {
+      "id": "EV-128403",
+      "timestamp": 2829300,
+      "type": "SHIP_DEPARTED",
+      "severity": "info",
+      "entityId": "TRU-019"
+    },
+    {
+      "id": "EV-128404",
+      "timestamp": 2829300,
       "type": "CONTAINER_MOVED",
       "severity": "info",
-      "entityId": "TRU-021"
+      "entityId": "TRU-008"
     }
   ],
-  "tick": 129,
-  "lastTickReal": "2026-10-24T11:11:37.670Z",
-  "nextExpectedTickReal": "2026-10-24T17:11:37.746Z",
+  "tick": 130,
+  "lastTickReal": "2026-10-24T16:02:08.156Z",
+  "nextExpectedTickReal": "2026-10-24T22:02:08.291Z",
   "seed": 424242,
   "candidateExports": {
     "directory": "/home/runner/work/fraud-watch/fraud-watch/data/candidate-exports",

@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-24T11:11:37.670Z",
+  "exported_at": "2026-10-24T16:02:08.156Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 2808000
+    "sim_time_seconds_from_genesis": 2829600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,20 +25,21 @@
     "classification": "MO_VARIANT",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "DUPLICATE_ASSET_ID+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-    "correlation_index": 13,
+    "correlation_index": 23,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "MINIMAL",
+    "confidence_band": "WATCH",
     "recurrence_count": 1,
     "first_observed_at": 2767386,
     "opened_at": 2770800,
-    "last_observed_at": 2783100,
+    "last_observed_at": 2826300,
     "related_pattern_id": "FFT-008",
     "signal_types": [
       "DUPLICATE_ASSET_ID",
       "FALSE_MILESTONE_STAMP",
-      "HANDOVER_GAP"
+      "HANDOVER_GAP",
+      "UNEXPECTED_STOP"
     ],
-    "signal_count": 4,
+    "signal_count": 6,
     "entity_ids": {
       "truck_id": "TRU-015",
       "driver_id": "DRI-012",
@@ -55,18 +56,19 @@
       "classification": "MO_VARIANT",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "DUPLICATE_ASSET_ID+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-      "correlationIndex": 13,
+      "correlationIndex": 23,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "MINIMAL",
+      "confidenceBand": "WATCH",
       "recurrenceCount": 1,
       "firstObservedAt": 2767386,
       "openedAt": 2770800,
-      "lastObservedAt": 2783100,
+      "lastObservedAt": 2826300,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
         "DUPLICATE_ASSET_ID",
         "FALSE_MILESTONE_STAMP",
-        "HANDOVER_GAP"
+        "HANDOVER_GAP",
+        "UNEXPECTED_STOP"
       ],
       "entityIds": {
         "truck_id": "TRU-015",
@@ -91,6 +93,14 @@
         {
           "at": 2776200,
           "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 2811900,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 2823000,
+          "signalType": "DUPLICATE_ASSET_ID"
         }
       ],
       "signals": [
@@ -125,6 +135,22 @@
           "at": 2776200,
           "facilityId": "FAC-009",
           "facilityName": "Inland Depot Sud"
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 2811900,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 2823000,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -139,7 +165,7 @@
           "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 1,
+      "unsitedSignalCount": 3,
       "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
       "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
