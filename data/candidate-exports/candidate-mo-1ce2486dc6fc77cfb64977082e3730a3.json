@@ -1,0 +1,112 @@
+{
+  "schema_version": "candidate-mo.v1",
+  "kind": "candidate_mo",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-29T05:55:26.234Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 3218400
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "candidate": {
+    "id": "fraud-watch:CARRIER_UNRESPONSIVE+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+    "signature": "CARRIER_UNRESPONSIVE+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+    "lifecycle_state": "DISCOVERED",
+    "source_state": "CANDIDATE",
+    "time_basis": "simulation_seconds_from_genesis",
+    "first_seen_at": 2736000,
+    "candidate_since": 3212700,
+    "review_started_at": null,
+    "resolved_at": null,
+    "resolution_note": null,
+    "supporting_cases": [
+      {
+        "case_id": "MO-0057",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 3212700,
+        "case_opened_at": 2736000,
+        "first_observed_at": 2732100,
+        "signal_types": [
+          "CARRIER_UNRESPONSIVE",
+          "EQUIPMENT_CARRIER_MISMATCH",
+          "MANIFEST_CHANGED"
+        ],
+        "related_pattern_id": "FFT-002",
+        "correlation_index": 12,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0064",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 3212700,
+        "case_opened_at": 3212700,
+        "first_observed_at": 3207000,
+        "signal_types": [
+          "CARRIER_UNRESPONSIVE",
+          "EQUIPMENT_CARRIER_MISMATCH",
+          "MANIFEST_CHANGED"
+        ],
+        "related_pattern_id": "FFT-002",
+        "correlation_index": 12,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      }
+    ],
+    "context": {
+      "kind": "fraud-watch-candidate.v1",
+      "disclaimer": "Synthetic simulation context only. This candidate groups simulator observations; it is not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": null,
+      "classification": null,
+      "title": null,
+      "signature": "CARRIER_UNRESPONSIVE+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "correlationIndex": null,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": null,
+      "recurrenceCount": null,
+      "firstObservedAt": 2736000,
+      "openedAt": 3212700,
+      "lastObservedAt": null,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "CARRIER_UNRESPONSIVE",
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "MANIFEST_CHANGED"
+      ],
+      "entityIds": {},
+      "timeline": [
+        {
+          "at": 3212700,
+          "signalType": "CARRIER_UNRESPONSIVE + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
+        },
+        {
+          "at": 3212700,
+          "signalType": "CARRIER_UNRESPONSIVE + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
+        }
+      ],
+      "signals": [],
+      "sites": [],
+      "unsitedSignalCount": null,
+      "siteSpread": null,
+      "classificationReason": null,
+      "classificationReasonNote": null,
+      "relatedPatterns": [],
+      "resemblanceNotes": [],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
+  }
+}
