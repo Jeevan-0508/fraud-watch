@@ -1,0 +1,215 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-30T22:26:42.362Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 3369600
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0068",
+    "status": "NEW",
+    "classification": "KNOWN_MO",
+    "title": "Possible Carrier Identity Takeover",
+    "signature": "ACCOUNT_TAKEOVER+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+    "correlation_index": 54,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "ELEVATED",
+    "recurrence_count": 4,
+    "first_observed_at": 3350196,
+    "opened_at": 3351900,
+    "last_observed_at": 3369600,
+    "related_pattern_id": "FFT-003",
+    "signal_types": [
+      "ACCOUNT_TAKEOVER",
+      "EQUIPMENT_CARRIER_MISMATCH",
+      "MANIFEST_CHANGED",
+      "SEAL_MISMATCH"
+    ],
+    "signal_count": 5,
+    "entity_ids": {
+      "truck_id": "TRU-007",
+      "driver_id": "DRI-007",
+      "trailer_id": "TRA-013",
+      "carrier_id": "CAR-007",
+      "facility_id": null
+    },
+    "classification_reason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
+    "classification_reason_note": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "KNOWN_MO",
+      "title": "Possible Carrier Identity Takeover",
+      "signature": "ACCOUNT_TAKEOVER+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
+      "correlationIndex": 54,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "ELEVATED",
+      "recurrenceCount": 4,
+      "firstObservedAt": 3350196,
+      "openedAt": 3351900,
+      "lastObservedAt": 3369600,
+      "relatedPatternId": "FFT-003",
+      "signalTypes": [
+        "ACCOUNT_TAKEOVER",
+        "EQUIPMENT_CARRIER_MISMATCH",
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-007",
+        "driver_id": "DRI-007",
+        "trailer_id": "TRA-013",
+        "carrier_id": "CAR-007",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 3350196,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 3350400,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 3351900,
+          "signalType": "ACCOUNT_TAKEOVER"
+        },
+        {
+          "at": 3364500,
+          "signalType": "SEAL_MISMATCH"
+        },
+        {
+          "at": 3366600,
+          "signalType": "SEAL_MISMATCH"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 3350196,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 3350400,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 3351900,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 3364500,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 3366600,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [],
+      "unsitedSignalCount": 5,
+      "siteSpread": "UNSITED",
+      "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
+      "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-003",
+          "name": "Carrier Identity Takeover",
+          "votes": 5,
+          "keywords": [
+            "hijack",
+            "identity",
+            "impersonation",
+            "operator",
+            "takeover"
+          ]
+        },
+        {
+          "id": "FFT-002",
+          "name": "Phantom Carrier",
+          "votes": 2,
+          "keywords": [
+            "identity",
+            "phantom"
+          ]
+        },
+        {
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 2,
+          "keywords": [
+            "cargo",
+            "pilferage"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "This signal combination has recurred, and shares most vocabulary with Carrier Identity Takeover (5 shared keywords). Recurrence is a fact about this simulation's own history, not about the pattern.",
+        "Shares some vocabulary with: Phantom Carrier, Systematic Pilferage.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "Contact details for an existing carrier have changed.",
+          "actually": "Genuine rebranding, domain migration, office relocation, or acquisition.",
+          "ruleOut": "Confirm the change through the pre-existing channel, not the new one, and require confirmation from a known contact. A genuine change survives verification through the old channel; a takeover does not."
+        },
+        {
+          "title": "Bank account name differs from the operator name.",
+          "actually": "Legitimate use of a factoring company or a group treasury account, which is common in road freight.",
+          "ruleOut": "Require a written assignment or factoring agreement, and verify it with the factor directly. Legitimate factoring is documented and verifiable."
+        },
+        {
+          "title": "A primary administrator or account owner changes shortly before a movement.",
+          "actually": "A genuine ownership transfer, staff change, leave cover or managed-service transition.",
+          "ruleOut": "Verify the change through the previously known operator channel, record the effective date and preserve the old-to-new administrator audit trail."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Run automated lookalike-domain detection against the domains of onboarded carriers."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Notify the impersonated operator, which is a victim and will usually cooperate, and which may already hold evidence."
+        }
+      ]
+    }
+  }
+}
