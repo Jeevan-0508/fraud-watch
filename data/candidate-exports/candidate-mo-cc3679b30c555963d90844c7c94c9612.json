@@ -1,0 +1,113 @@
+{
+  "schema_version": "candidate-mo.v1",
+  "kind": "candidate_mo",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-31T05:53:12.823Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 3391200
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "candidate": {
+    "id": "fraud-watch:MANIFEST_CHANGED+SEAL_MISMATCH",
+    "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
+    "lifecycle_state": "DISCOVERED",
+    "source_state": "CANDIDATE",
+    "time_basis": "simulation_seconds_from_genesis",
+    "first_seen_at": 2985300,
+    "candidate_since": 3384900,
+    "review_started_at": null,
+    "resolved_at": null,
+    "resolution_note": null,
+    "supporting_cases": [
+      {
+        "case_id": "MO-0059",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is below the declared floor. This is a statement about shared words, not about how often it has been seen.",
+        "recorded_at": 3384900,
+        "case_opened_at": 2985300,
+        "first_observed_at": 2985000,
+        "signal_types": [
+          "DRIVER_CHANGED",
+          "MANIFEST_CHANGED",
+          "SEAL_MISMATCH",
+          "TRAILER_SWAPPED"
+        ],
+        "related_pattern_id": "FFT-002",
+        "correlation_index": 6,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      },
+      {
+        "case_id": "MO-0070",
+        "classification": "POTENTIAL_NEW_MO",
+        "current_classification": "POTENTIAL_NEW_MO",
+        "classification_reason": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+        "recorded_at": 3384900,
+        "case_opened_at": 3384900,
+        "first_observed_at": 3384000,
+        "signal_types": [
+          "MANIFEST_CHANGED",
+          "SEAL_MISMATCH"
+        ],
+        "related_pattern_id": "FFT-005",
+        "correlation_index": 27,
+        "correlation_index_semantics": "synthetic_signal_index_not_probability"
+      }
+    ],
+    "context": {
+      "kind": "fraud-watch-candidate.v1",
+      "disclaimer": "Synthetic simulation context only. This candidate groups simulator observations; it is not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": null,
+      "classification": null,
+      "title": null,
+      "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
+      "correlationIndex": null,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": null,
+      "recurrenceCount": null,
+      "firstObservedAt": 2985300,
+      "openedAt": 3384900,
+      "lastObservedAt": null,
+      "relatedPatternId": null,
+      "signalTypes": [
+        "DRIVER_CHANGED",
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH",
+        "TRAILER_SWAPPED"
+      ],
+      "entityIds": {},
+      "timeline": [
+        {
+          "at": 3384900,
+          "signalType": "DRIVER_CHANGED + MANIFEST_CHANGED + SEAL_MISMATCH + TRAILER_SWAPPED"
+        },
+        {
+          "at": 3384900,
+          "signalType": "MANIFEST_CHANGED + SEAL_MISMATCH"
+        }
+      ],
+      "signals": [],
+      "sites": [],
+      "unsitedSignalCount": null,
+      "siteSpread": null,
+      "classificationReason": null,
+      "classificationReasonNote": null,
+      "relatedPatterns": [],
+      "resemblanceNotes": [],
+      "legitimateExplanations": [],
+      "countermeasures": []
+    }
+  }
+}

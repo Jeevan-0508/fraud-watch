@@ -1,0 +1,177 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-10-31T05:53:12.823Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 3391200
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0070",
+    "status": "NEW",
+    "classification": "POTENTIAL_NEW_MO",
+    "title": "Possible Systematic Pilferage",
+    "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
+    "correlation_index": 27,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "WATCH",
+    "recurrence_count": 2,
+    "first_observed_at": 3384000,
+    "opened_at": 3384900,
+    "last_observed_at": 3391200,
+    "related_pattern_id": "FFT-005",
+    "signal_types": [
+      "MANIFEST_CHANGED",
+      "SEAL_MISMATCH"
+    ],
+    "signal_count": 2,
+    "entity_ids": {
+      "truck_id": "TRU-018",
+      "driver_id": "DRI-022",
+      "trailer_id": "TRA-002",
+      "carrier_id": "CAR-008",
+      "facility_id": "FAC-002"
+    },
+    "classification_reason": "TOO_FEW_SIGHTINGS",
+    "classification_reason_note": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "POTENTIAL_NEW_MO",
+      "title": "Possible Systematic Pilferage",
+      "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
+      "correlationIndex": 27,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "WATCH",
+      "recurrenceCount": 2,
+      "firstObservedAt": 3384000,
+      "openedAt": 3384900,
+      "lastObservedAt": 3391200,
+      "relatedPatternId": "FFT-005",
+      "signalTypes": [
+        "MANIFEST_CHANGED",
+        "SEAL_MISMATCH"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-018",
+        "driver_id": "DRI-022",
+        "trailer_id": "TRA-002",
+        "carrier_id": "CAR-008",
+        "facility_id": "FAC-002"
+      },
+      "timeline": [
+        {
+          "at": 3384000,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 3384900,
+          "signalType": "SEAL_MISMATCH"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 3384000,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 3384900,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate",
+          "signalCount": 2
+        }
+      ],
+      "unsitedSignalCount": 0,
+      "siteSpread": "SINGLE_SITE",
+      "classificationReason": "TOO_FEW_SIGHTINGS",
+      "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 2,
+          "keywords": [
+            "cargo",
+            "pilferage"
+          ]
+        },
+        {
+          "id": "FFT-007",
+          "name": "Seal Tampering and Reseal Fraud",
+          "votes": 2,
+          "keywords": [
+            "document",
+            "seal"
+          ]
+        },
+        {
+          "id": "FFT-001",
+          "name": "Double Brokering",
+          "votes": 1,
+          "keywords": [
+            "broker"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "Shares most vocabulary with Systematic Pilferage (2 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Seal Tampering and Reseal Fraud, Double Brokering.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "Persistent shortages on a lane.",
+          "actually": "A genuine count, labelling or system error at origin, or a units-of-measure mismatch between systems.",
+          "ruleOut": "Run a controlled count at origin and at destination for a defined period before treating the pattern as theft. Process error survives a controlled count; pilferage usually stops during it."
+        },
+        {
+          "title": "Shortages concentrated on one driver.",
+          "actually": "That driver is simply assigned disproportionately to the affected lane or shift.",
+          "ruleOut": "Normalise by exposure. Compare shortages per movement or per consignment handled, never absolute counts, and test whether the lane or the individual is the better explanation."
+        },
+        {
+          "title": "Losses concentrated on high-value items.",
+          "actually": "High-value items are more likely to be counted carefully and therefore more likely to have discrepancies detected at all.",
+          "ruleOut": "Compare detection rates as well as loss rates, and check whether low-value shortages are simply not being recorded."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Aggregate discrepancies continuously by route, driver, vehicle, transfer point, consignee and SKU class, and alert on sustained deviation from baseline rather than on individual events."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Establish process error or theft with a controlled count before any accusation, because this pattern has a genuinely high false-positive rate."
+        }
+      ]
+    }
+  }
+}

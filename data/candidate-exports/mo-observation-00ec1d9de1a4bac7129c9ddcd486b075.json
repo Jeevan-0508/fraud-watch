@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-30T22:26:42.362Z",
+  "exported_at": "2026-10-31T05:53:12.823Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 3369600
+    "sim_time_seconds_from_genesis": 3391200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,13 +25,13 @@
     "classification": "KNOWN_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "ACCOUNT_TAKEOVER+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "correlation_index": 54,
+    "correlation_index": 27,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "ELEVATED",
+    "confidence_band": "WATCH",
     "recurrence_count": 4,
     "first_observed_at": 3350196,
     "opened_at": 3351900,
-    "last_observed_at": 3369600,
+    "last_observed_at": 3373500,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
@@ -56,13 +56,13 @@
       "classification": "KNOWN_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "ACCOUNT_TAKEOVER+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-      "correlationIndex": 54,
+      "correlationIndex": 27,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "ELEVATED",
+      "confidenceBand": "WATCH",
       "recurrenceCount": 4,
       "firstObservedAt": 3350196,
       "openedAt": 3351900,
-      "lastObservedAt": 3369600,
+      "lastObservedAt": 3373500,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",

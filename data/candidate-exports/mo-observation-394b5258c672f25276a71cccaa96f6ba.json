@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-10-30T22:26:42.362Z",
+  "exported_at": "2026-10-31T05:53:12.823Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 3369600
+    "sim_time_seconds_from_genesis": 3391200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,21 +25,22 @@
     "classification": "MO_VARIANT",
     "title": "Possible Carrier Identity Takeover",
     "signature": "DRIVER_CHANGED+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-    "correlation_index": 27,
+    "correlation_index": 17,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "WATCH",
+    "confidence_band": "MINIMAL",
     "recurrence_count": 1,
     "first_observed_at": 3334800,
     "opened_at": 3336000,
-    "last_observed_at": 3360900,
+    "last_observed_at": 3384900,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "DRIVER_CHANGED",
       "EQUIPMENT_CARRIER_MISMATCH",
       "MANIFEST_CHANGED",
+      "ROUTE_DEVIATION",
       "SEAL_MISMATCH"
     ],
-    "signal_count": 4,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-002",
       "driver_id": "DRI-002",
@@ -56,18 +57,19 @@
       "classification": "MO_VARIANT",
       "title": "Possible Carrier Identity Takeover",
       "signature": "DRIVER_CHANGED+EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED",
-      "correlationIndex": 27,
+      "correlationIndex": 17,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "WATCH",
+      "confidenceBand": "MINIMAL",
       "recurrenceCount": 1,
       "firstObservedAt": 3334800,
       "openedAt": 3336000,
-      "lastObservedAt": 3360900,
+      "lastObservedAt": 3384900,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "DRIVER_CHANGED",
         "EQUIPMENT_CARRIER_MISMATCH",
         "MANIFEST_CHANGED",
+        "ROUTE_DEVIATION",
         "SEAL_MISMATCH"
       ],
       "entityIds": {
@@ -93,6 +95,10 @@
         {
           "at": 3354000,
           "signalType": "SEAL_MISMATCH"
+        },
+        {
+          "at": 3381600,
+          "signalType": "ROUTE_DEVIATION"
         }
       ],
       "signals": [
@@ -127,11 +133,25 @@
           "at": 3354000,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "ROUTE_DEVIATION",
+          "contribution": 1.4,
+          "reliability": 0.7,
+          "at": 3381600,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
         }
       ],
-      "sites": [],
+      "sites": [
+        {
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate",
+          "signalCount": 1
+        }
+      ],
       "unsitedSignalCount": 4,
-      "siteSpread": "UNSITED",
+      "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
       "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
       "relatedPatterns": [
