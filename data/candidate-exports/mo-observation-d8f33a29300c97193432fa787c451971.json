@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-01T17:57:17.382Z",
+  "exported_at": "2026-11-01T22:07:59.337Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 3499200
+    "sim_time_seconds_from_genesis": 3520800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -23,23 +23,24 @@
     "id": "MO-0072",
     "status": "NEW",
     "classification": "KNOWN_MO",
-    "title": "Possible Fictitious Pickup",
+    "title": "Possible Phantom Carrier",
     "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-    "correlation_index": 6,
+    "correlation_index": 22,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "MINIMAL",
+    "confidence_band": "WATCH",
     "recurrence_count": 4,
     "first_observed_at": 3464334,
     "opened_at": 3468300,
-    "last_observed_at": 3499200,
-    "related_pattern_id": "FFT-004",
+    "last_observed_at": 3519300,
+    "related_pattern_id": "FFT-002",
     "signal_types": [
+      "ACCOUNT_TAKEOVER",
       "CARRIER_UNRESPONSIVE",
       "FALSE_MILESTONE_STAMP",
       "HANDOVER_GAP",
       "TRAILER_SWAPPED"
     ],
-    "signal_count": 4,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-013",
       "driver_id": "DRI-013",
@@ -54,17 +55,18 @@
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
       "status": "NEW",
       "classification": "KNOWN_MO",
-      "title": "Possible Fictitious Pickup",
+      "title": "Possible Phantom Carrier",
       "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-      "correlationIndex": 6,
+      "correlationIndex": 22,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "MINIMAL",
+      "confidenceBand": "WATCH",
       "recurrenceCount": 4,
       "firstObservedAt": 3464334,
       "openedAt": 3468300,
-      "lastObservedAt": 3499200,
-      "relatedPatternId": "FFT-004",
+      "lastObservedAt": 3519300,
+      "relatedPatternId": "FFT-002",
       "signalTypes": [
+        "ACCOUNT_TAKEOVER",
         "CARRIER_UNRESPONSIVE",
         "FALSE_MILESTONE_STAMP",
         "HANDOVER_GAP",
@@ -93,6 +95,10 @@
         {
           "at": 3498300,
           "signalType": "TRAILER_SWAPPED"
+        },
+        {
+          "at": 3512400,
+          "signalType": "ACCOUNT_TAKEOVER"
         }
       ],
       "signals": [
@@ -127,6 +133,14 @@
           "at": 3498300,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "ACCOUNT_TAKEOVER",
+          "contribution": 1.8,
+          "reliability": 0.6,
+          "at": 3512400,
+          "facilityId": "FAC-016",
+          "facilityName": "Inland Depot West"
         }
       ],
       "sites": [
@@ -134,13 +148,44 @@
           "facilityId": "FAC-002",
           "facilityName": "South Gate",
           "signalCount": 1
+        },
+        {
+          "facilityId": "FAC-016",
+          "facilityName": "Inland Depot West",
+          "signalCount": 1
         }
       ],
       "unsitedSignalCount": 3,
-      "siteSpread": "PARTLY_UNSITED",
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
       "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
       "relatedPatterns": [
+        {
+          "id": "FFT-002",
+          "name": "Phantom Carrier",
+          "votes": 6,
+          "keywords": [
+            "carrier",
+            "fictitious",
+            "ghost",
+            "identity",
+            "non-existent",
+            "phantom"
+          ]
+        },
+        {
+          "id": "FFT-003",
+          "name": "Carrier Identity Takeover",
+          "votes": 6,
+          "keywords": [
+            "carrier",
+            "hijack",
+            "identity",
+            "impersonation",
+            "operator",
+            "takeover"
+          ]
+        },
         {
           "id": "FFT-004",
           "name": "Fictitious Pickup",
@@ -153,62 +198,33 @@
             "load theft",
             "pickup"
           ]
-        },
-        {
-          "id": "FFT-002",
-          "name": "Phantom Carrier",
-          "votes": 5,
-          "keywords": [
-            "carrier",
-            "fictitious",
-            "ghost",
-            "non-existent",
-            "phantom"
-          ]
-        },
-        {
-          "id": "FFT-010",
-          "name": "Transport Document Fraud",
-          "votes": 5,
-          "keywords": [
-            "consignment",
-            "document",
-            "falsif",
-            "forgery",
-            "proof of delivery"
-          ]
         }
       ],
       "resemblanceNotes": [
-        "This signal combination has recurred, and shares most vocabulary with Fictitious Pickup (6 shared keywords). Recurrence is a fact about this simulation's own history, not about the pattern.",
-        "Shares some vocabulary with: Phantom Carrier, Transport Document Fraud.",
+        "This signal combination has recurred, and shares most vocabulary with Phantom Carrier (6 shared keywords). Recurrence is a fact about this simulation's own history, not about the pattern.",
+        "Shares some vocabulary with: Carrier Identity Takeover, Fictitious Pickup.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
         {
-          "title": "An unexpected driver and vehicle arrive for a booked load.",
-          "actually": "A legitimate last-minute reallocation within the operator, or an approved subcontractor, that was not communicated to the dock.",
-          "ruleOut": "Verify with the operator by calling the number held on the carrier master record, never the number offered by the driver, and confirm the substitution before releasing cargo."
+          "title": "A newly registered company with no transport history bidding on freight.",
+          "actually": "A genuine new entrant, or a newly incorporated vehicle of an existing operator restructuring its business.",
+          "ruleOut": "Verify operating authority directly with the issuing authority, confirm insurance with the insurer, and confirm that declared equipment exists and is registered to the entity. A real new entrant passes all three; a phantom fails at least one."
         },
         {
-          "title": "Driver presents printed or photographed paperwork.",
-          "actually": "Normal practice for many small operators, particularly on subcontracted or spot work.",
-          "ruleOut": "Do not treat document format as the test. Test identity: does the vehicle belong to the contracted operator and does the operator confirm this driver for this load."
-        },
-        {
-          "title": "A second driver or vehicle appears for the same movement after the first presentation.",
-          "actually": "A documented relay, recovery, shift change or approved substitution whose dispatch update did not reach the gate in time.",
-          "ruleOut": "Confirm the handover through the pre-existing carrier contact and retain the original and replacement identity records with the reason and time of the change."
+          "title": "A shared or serviced office address.",
+          "actually": "Small legitimate hauliers and freight agents commonly use serviced offices while operating from a separate yard.",
+          "ruleOut": "Ask for the operational depot or parking location separately from the registered address, and verify that it exists and is capable of holding the declared fleet."
         }
       ],
       "countermeasures": [
         {
           "bucket": "detective",
-          "text": "Check the gate log against open bookings in real time so that a second presentation for the same reference is caught while the vehicle is still on site."
+          "text": "Automatically flag a first-time counterparty bidding on a load above a defined value threshold for manual release."
         },
         {
           "bucket": "responsive",
-          "text": "Treat the event as a theft from the moment of the mismatch, not from the expiry of the delivery window, since the first hours determine whether recovery is possible."
+          "text": "Treat a non-contactable carrier holding loaded cargo as a theft in progress and escalate to law enforcement immediately rather than as a service failure."
         }
       ]
     }
