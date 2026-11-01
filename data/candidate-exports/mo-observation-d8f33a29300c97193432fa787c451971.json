@@ -1,0 +1,216 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-11-01T17:57:17.382Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 3499200
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0072",
+    "status": "NEW",
+    "classification": "KNOWN_MO",
+    "title": "Possible Fictitious Pickup",
+    "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+    "correlation_index": 6,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "MINIMAL",
+    "recurrence_count": 4,
+    "first_observed_at": 3464334,
+    "opened_at": 3468300,
+    "last_observed_at": 3499200,
+    "related_pattern_id": "FFT-004",
+    "signal_types": [
+      "CARRIER_UNRESPONSIVE",
+      "FALSE_MILESTONE_STAMP",
+      "HANDOVER_GAP",
+      "TRAILER_SWAPPED"
+    ],
+    "signal_count": 4,
+    "entity_ids": {
+      "truck_id": "TRU-013",
+      "driver_id": "DRI-013",
+      "trailer_id": "TRA-033",
+      "carrier_id": "CAR-008",
+      "facility_id": null
+    },
+    "classification_reason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
+    "classification_reason_note": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "KNOWN_MO",
+      "title": "Possible Fictitious Pickup",
+      "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
+      "correlationIndex": 6,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 4,
+      "firstObservedAt": 3464334,
+      "openedAt": 3468300,
+      "lastObservedAt": 3499200,
+      "relatedPatternId": "FFT-004",
+      "signalTypes": [
+        "CARRIER_UNRESPONSIVE",
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP",
+        "TRAILER_SWAPPED"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-013",
+        "driver_id": "DRI-013",
+        "trailer_id": "TRA-033",
+        "carrier_id": "CAR-008",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 3464334,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 3464400,
+          "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 3468300,
+          "signalType": "CARRIER_UNRESPONSIVE"
+        },
+        {
+          "at": 3498300,
+          "signalType": "TRAILER_SWAPPED"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 3464334,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 3464400,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "CARRIER_UNRESPONSIVE",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 3468300,
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate"
+        },
+        {
+          "signalType": "TRAILER_SWAPPED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 3498300,
+          "facilityId": null,
+          "facilityName": null
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-002",
+          "facilityName": "South Gate",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 3,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "SIGHTINGS_AT_OR_ABOVE_FLOOR",
+      "classificationReasonNote": "this combination has recurred at or above the familiarity floor in this run. Familiar, which is not the same as understood.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 6,
+          "keywords": [
+            "cargo",
+            "collection",
+            "deception",
+            "fictitious",
+            "load theft",
+            "pickup"
+          ]
+        },
+        {
+          "id": "FFT-002",
+          "name": "Phantom Carrier",
+          "votes": 5,
+          "keywords": [
+            "carrier",
+            "fictitious",
+            "ghost",
+            "non-existent",
+            "phantom"
+          ]
+        },
+        {
+          "id": "FFT-010",
+          "name": "Transport Document Fraud",
+          "votes": 5,
+          "keywords": [
+            "consignment",
+            "document",
+            "falsif",
+            "forgery",
+            "proof of delivery"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "This signal combination has recurred, and shares most vocabulary with Fictitious Pickup (6 shared keywords). Recurrence is a fact about this simulation's own history, not about the pattern.",
+        "Shares some vocabulary with: Phantom Carrier, Transport Document Fraud.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "An unexpected driver and vehicle arrive for a booked load.",
+          "actually": "A legitimate last-minute reallocation within the operator, or an approved subcontractor, that was not communicated to the dock.",
+          "ruleOut": "Verify with the operator by calling the number held on the carrier master record, never the number offered by the driver, and confirm the substitution before releasing cargo."
+        },
+        {
+          "title": "Driver presents printed or photographed paperwork.",
+          "actually": "Normal practice for many small operators, particularly on subcontracted or spot work.",
+          "ruleOut": "Do not treat document format as the test. Test identity: does the vehicle belong to the contracted operator and does the operator confirm this driver for this load."
+        },
+        {
+          "title": "A second driver or vehicle appears for the same movement after the first presentation.",
+          "actually": "A documented relay, recovery, shift change or approved substitution whose dispatch update did not reach the gate in time.",
+          "ruleOut": "Confirm the handover through the pre-existing carrier contact and retain the original and replacement identity records with the reason and time of the change."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Check the gate log against open bookings in real time so that a second presentation for the same reference is caught while the vehicle is still on site."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Treat the event as a theft from the moment of the mismatch, not from the expiry of the delivery window, since the first hours determine whether recovery is possible."
+        }
+      ]
+    }
+  }
+}
