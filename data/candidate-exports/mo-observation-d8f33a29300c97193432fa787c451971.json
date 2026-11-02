@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-02T06:19:10.189Z",
+  "exported_at": "2026-11-02T21:45:18.346Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 3542400
+    "sim_time_seconds_from_genesis": 3607200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -21,7 +21,7 @@
   },
   "observation": {
     "id": "MO-0072",
-    "status": "NEW",
+    "status": "DISMISSED",
     "classification": "KNOWN_MO",
     "title": "Possible Phantom Carrier",
     "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
@@ -31,7 +31,7 @@
     "recurrence_count": 4,
     "first_observed_at": 3464334,
     "opened_at": 3468300,
-    "last_observed_at": 3542400,
+    "last_observed_at": 3545700,
     "related_pattern_id": "FFT-002",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
@@ -54,7 +54,7 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "NEW",
+      "status": "DISMISSED",
       "classification": "KNOWN_MO",
       "title": "Possible Phantom Carrier",
       "signature": "CARRIER_UNRESPONSIVE+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
@@ -64,7 +64,7 @@
       "recurrenceCount": 4,
       "firstObservedAt": 3464334,
       "openedAt": 3468300,
-      "lastObservedAt": 3542400,
+      "lastObservedAt": 3545700,
       "relatedPatternId": "FFT-002",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
