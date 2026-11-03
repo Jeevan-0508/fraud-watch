@@ -1,0 +1,209 @@
+{
+  "schema_version": "mo-observation.v1",
+  "kind": "mo_observation",
+  "data_class": "synthetic_simulation",
+  "exported_at": "2026-11-03T06:55:41.390Z",
+  "simulation": {
+    "seed": 424242,
+    "sim_time_seconds_from_genesis": 3650400
+  },
+  "source": {
+    "repository": "Jeevan-0508/fraud-watch",
+    "repository_url": "https://github.com/Jeevan-0508/fraud-watch",
+    "revision": null,
+    "authenticity": "unverified_export"
+  },
+  "taxonomy": {
+    "repository": "Jeevan-0508/freight-fraud-taxonomy",
+    "version": "1.2.0",
+    "source_commit": null,
+    "snapshot_sha256": "175f71eecd87e8f2a99995d757a8124ae6568f9a42dd46609533db9eab012e43"
+  },
+  "observation": {
+    "id": "MO-0075",
+    "status": "NEW",
+    "classification": "POTENTIAL_NEW_MO",
+    "title": "Possible Unsecured Parking Theft",
+    "signature": "SEAL_MISMATCH+STAGED_BREAKDOWN+UNEXPECTED_STOP",
+    "correlation_index": 6,
+    "correlation_index_semantics": "synthetic_signal_index_not_probability",
+    "confidence_band": "MINIMAL",
+    "recurrence_count": 2,
+    "first_observed_at": 3618900,
+    "opened_at": 3621300,
+    "last_observed_at": 3650400,
+    "related_pattern_id": "FFT-006",
+    "signal_types": [
+      "DRIVER_CHANGED",
+      "SEAL_MISMATCH",
+      "STAGED_BREAKDOWN",
+      "UNEXPECTED_STOP"
+    ],
+    "signal_count": 4,
+    "entity_ids": {
+      "truck_id": "TRU-007",
+      "driver_id": "DRI-007",
+      "trailer_id": "TRA-029",
+      "carrier_id": "CAR-007",
+      "facility_id": null
+    },
+    "classification_reason": "TOO_FEW_SIGHTINGS",
+    "classification_reason_note": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+    "context": {
+      "kind": "fraud-watch-mo.v1",
+      "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
+      "status": "NEW",
+      "classification": "POTENTIAL_NEW_MO",
+      "title": "Possible Unsecured Parking Theft",
+      "signature": "SEAL_MISMATCH+STAGED_BREAKDOWN+UNEXPECTED_STOP",
+      "correlationIndex": 6,
+      "correlationIndexSemantics": "synthetic_signal_index_not_probability",
+      "confidenceBand": "MINIMAL",
+      "recurrenceCount": 2,
+      "firstObservedAt": 3618900,
+      "openedAt": 3621300,
+      "lastObservedAt": 3650400,
+      "relatedPatternId": "FFT-006",
+      "signalTypes": [
+        "DRIVER_CHANGED",
+        "SEAL_MISMATCH",
+        "STAGED_BREAKDOWN",
+        "UNEXPECTED_STOP"
+      ],
+      "entityIds": {
+        "truck_id": "TRU-007",
+        "driver_id": "DRI-007",
+        "trailer_id": "TRA-029",
+        "carrier_id": "CAR-007",
+        "facility_id": null
+      },
+      "timeline": [
+        {
+          "at": 3618900,
+          "signalType": "SEAL_MISMATCH"
+        },
+        {
+          "at": 3621176,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 3621300,
+          "signalType": "STAGED_BREAKDOWN"
+        },
+        {
+          "at": 3645900,
+          "signalType": "DRIVER_CHANGED"
+        }
+      ],
+      "signals": [
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 3618900,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 3621176,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "STAGED_BREAKDOWN",
+          "contribution": 1,
+          "reliability": 0.5,
+          "at": 3621300,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "DRIVER_CHANGED",
+          "contribution": 0.5,
+          "reliability": 0.5,
+          "at": 3645900,
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate"
+        }
+      ],
+      "sites": [
+        {
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate",
+          "signalCount": 1
+        }
+      ],
+      "unsitedSignalCount": 3,
+      "siteSpread": "PARTLY_UNSITED",
+      "classificationReason": "TOO_FEW_SIGHTINGS",
+      "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
+      "relatedPatterns": [
+        {
+          "id": "FFT-006",
+          "name": "Unsecured Parking Theft",
+          "votes": 5,
+          "keywords": [
+            "cargo",
+            "curtain",
+            "parking",
+            "roadside",
+            "truck stop"
+          ]
+        },
+        {
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 2,
+          "keywords": [
+            "cargo",
+            "pilferage"
+          ]
+        },
+        {
+          "id": "FFT-009",
+          "name": "Insider Collusion",
+          "votes": 2,
+          "keywords": [
+            "collusion",
+            "insider"
+          ]
+        }
+      ],
+      "resemblanceNotes": [
+        "Shares most vocabulary with Unsecured Parking Theft (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Systematic Pilferage, Insider Collusion.",
+        "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
+      ],
+      "legitimateExplanations": [
+        {
+          "title": "A long unplanned stop in a high-risk area.",
+          "actually": "A breakdown, traffic incident, border queue or enforced congestion stop, none of which the driver chose.",
+          "ruleOut": "Correlate with breakdown and incident reports and with traffic data for the corridor before treating a stop as a policy breach."
+        },
+        {
+          "title": "Curtain damage at delivery.",
+          "actually": "Accidental damage from loading equipment or road debris, which is common on soft-sided equipment.",
+          "ruleOut": "Compare the cut geometry and location with the load plan, and verify against seal and count records whether anything is actually missing."
+        },
+        {
+          "title": "A loaded trailer is left at an unsecured location during a driver change or delay.",
+          "actually": "A site closure, legally required rest, breakdown or documented relay where no loss occurred.",
+          "ruleOut": "Verify the instruction, coupling status, CCTV or receipt and the trailer condition at the next controlled handover before treating the stop as theft evidence."
+        }
+      ],
+      "countermeasures": [
+        {
+          "bucket": "detective",
+          "text": "Geofence certified secure parking areas and alert on any rest period taken outside them."
+        },
+        {
+          "bucket": "responsive",
+          "text": "Report immediately with the precise stop location and time window, since recovery and investigation both depend on narrowing these."
+        }
+      ]
+    }
+  }
+}
