@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-08T22:13:27.636Z",
+  "exported_at": "2026-11-09T06:46:28.013Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4104000
+    "sim_time_seconds_from_genesis": 4125600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -58,11 +58,12 @@
         "first_observed_at": 4096860,
         "signal_types": [
           "FALSE_MILESTONE_STAMP",
+          "GPS_SIGNAL_LOST",
           "HANDOVER_GAP",
           "ROUTE_DEVIATION"
         ],
         "related_pattern_id": "FFT-010",
-        "correlation_index": 13,
+        "correlation_index": 14,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -83,6 +84,7 @@
       "relatedPatternId": null,
       "signalTypes": [
         "FALSE_MILESTONE_STAMP",
+        "GPS_SIGNAL_LOST",
         "HANDOVER_GAP",
         "ROUTE_DEVIATION"
       ],
@@ -94,7 +96,7 @@
         },
         {
           "at": 4097700,
-          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP + ROUTE_DEVIATION"
+          "signalType": "FALSE_MILESTONE_STAMP + GPS_SIGNAL_LOST + HANDOVER_GAP + ROUTE_DEVIATION"
         }
       ],
       "signals": [],
