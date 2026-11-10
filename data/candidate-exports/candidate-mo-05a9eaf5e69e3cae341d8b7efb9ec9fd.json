@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-10T07:26:34.988Z",
+  "exported_at": "2026-11-10T19:49:25.384Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4212000
+    "sim_time_seconds_from_genesis": 4255200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -63,10 +63,11 @@
           "GPS_SIGNAL_LOST",
           "HANDOVER_GAP",
           "ROUTE_DEVIATION",
-          "SEAL_MISMATCH"
+          "SEAL_MISMATCH",
+          "TRAILER_SWAPPED"
         ],
         "related_pattern_id": "FFT-003",
-        "correlation_index": 17,
+        "correlation_index": 6,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -91,7 +92,8 @@
         "GPS_SIGNAL_LOST",
         "HANDOVER_GAP",
         "ROUTE_DEVIATION",
-        "SEAL_MISMATCH"
+        "SEAL_MISMATCH",
+        "TRAILER_SWAPPED"
       ],
       "entityIds": {},
       "timeline": [
@@ -101,7 +103,7 @@
         },
         {
           "at": 4137600,
-          "signalType": "ACCOUNT_TAKEOVER + FALSE_MILESTONE_STAMP + GPS_SIGNAL_LOST + HANDOVER_GAP + ROUTE_DEVIATION + SEAL_MISMATCH"
+          "signalType": "ACCOUNT_TAKEOVER + FALSE_MILESTONE_STAMP + GPS_SIGNAL_LOST + HANDOVER_GAP + ROUTE_DEVIATION + SEAL_MISMATCH + TRAILER_SWAPPED"
         }
       ],
       "signals": [],
