@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-09T22:27:53.251Z",
+  "exported_at": "2026-11-10T07:26:34.988Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4190400
+    "sim_time_seconds_from_genesis": 4212000
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,22 +25,23 @@
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "ACCOUNT_TAKEOVER+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-    "correlation_index": 14,
+    "correlation_index": 17,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
     "recurrence_count": 3,
     "first_observed_at": 4135200,
     "opened_at": 4137600,
-    "last_observed_at": 4188900,
+    "last_observed_at": 4200000,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
       "FALSE_MILESTONE_STAMP",
       "GPS_SIGNAL_LOST",
       "HANDOVER_GAP",
+      "ROUTE_DEVIATION",
       "SEAL_MISMATCH"
     ],
-    "signal_count": 5,
+    "signal_count": 6,
     "entity_ids": {
       "truck_id": "TRU-022",
       "driver_id": "DRI-003",
@@ -57,19 +58,20 @@
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "ACCOUNT_TAKEOVER+FALSE_MILESTONE_STAMP+HANDOVER_GAP",
-      "correlationIndex": 14,
+      "correlationIndex": 17,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
       "recurrenceCount": 3,
       "firstObservedAt": 4135200,
       "openedAt": 4137600,
-      "lastObservedAt": 4188900,
+      "lastObservedAt": 4200000,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
         "FALSE_MILESTONE_STAMP",
         "GPS_SIGNAL_LOST",
         "HANDOVER_GAP",
+        "ROUTE_DEVIATION",
         "SEAL_MISMATCH"
       ],
       "entityIds": {
@@ -99,6 +101,10 @@
         {
           "at": 4187400,
           "signalType": "GPS_SIGNAL_LOST"
+        },
+        {
+          "at": 4196700,
+          "signalType": "ROUTE_DEVIATION"
         }
       ],
       "signals": [
@@ -141,6 +147,14 @@
           "at": 4187400,
           "facilityId": "FAC-009",
           "facilityName": "Inland Depot Sud"
+        },
+        {
+          "signalType": "ROUTE_DEVIATION",
+          "contribution": 1.4,
+          "reliability": 0.7,
+          "at": 4196700,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -150,7 +164,7 @@
           "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 4,
+      "unsitedSignalCount": 5,
       "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
