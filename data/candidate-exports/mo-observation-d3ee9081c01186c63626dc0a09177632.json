@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-10T19:49:25.384Z",
+  "exported_at": "2026-11-11T06:37:52.979Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4255200
+    "sim_time_seconds_from_genesis": 4298400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -21,7 +21,7 @@
   },
   "observation": {
     "id": "MO-0087",
-    "status": "NEW",
+    "status": "DISMISSED",
     "classification": "KNOWN_MO",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED+SEAL_MISMATCH",
@@ -31,7 +31,7 @@
     "recurrence_count": 4,
     "first_observed_at": 4178700,
     "opened_at": 4182900,
-    "last_observed_at": 4255200,
+    "last_observed_at": 4255800,
     "related_pattern_id": "FFT-008",
     "signal_types": [
       "DUPLICATE_ASSET_ID",
@@ -55,7 +55,7 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "NEW",
+      "status": "DISMISSED",
       "classification": "KNOWN_MO",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+MANIFEST_CHANGED+SEAL_MISMATCH",
@@ -65,7 +65,7 @@
       "recurrenceCount": 4,
       "firstObservedAt": 4178700,
       "openedAt": 4182900,
-      "lastObservedAt": 4255200,
+      "lastObservedAt": 4255800,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
         "DUPLICATE_ASSET_ID",
