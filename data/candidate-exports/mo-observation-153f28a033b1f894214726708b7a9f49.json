@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-13T06:53:04.739Z",
+  "exported_at": "2026-11-13T19:49:16.220Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4471200
+    "sim_time_seconds_from_genesis": 4514400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -21,17 +21,17 @@
   },
   "observation": {
     "id": "MO-0094",
-    "status": "NEW",
+    "status": "DISMISSED",
     "classification": "MO_VARIANT",
     "title": "Possible Carrier Identity Takeover",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+GPS_SIGNAL_LOST+MANIFEST_CHANGED",
-    "correlation_index": 17,
+    "correlation_index": 41,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "MINIMAL",
+    "confidence_band": "ELEVATED",
     "recurrence_count": 1,
     "first_observed_at": 4440071,
     "opened_at": 4443600,
-    "last_observed_at": 4467000,
+    "last_observed_at": 4483800,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
@@ -39,7 +39,7 @@
       "MANIFEST_CHANGED",
       "ROUTE_DEVIATION"
     ],
-    "signal_count": 4,
+    "signal_count": 6,
     "entity_ids": {
       "truck_id": "TRU-024",
       "driver_id": "DRI-018",
@@ -52,17 +52,17 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "NEW",
+      "status": "DISMISSED",
       "classification": "MO_VARIANT",
       "title": "Possible Carrier Identity Takeover",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+GPS_SIGNAL_LOST+MANIFEST_CHANGED",
-      "correlationIndex": 17,
+      "correlationIndex": 41,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "MINIMAL",
+      "confidenceBand": "ELEVATED",
       "recurrenceCount": 1,
       "firstObservedAt": 4440071,
       "openedAt": 4443600,
-      "lastObservedAt": 4467000,
+      "lastObservedAt": 4483800,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",
@@ -93,6 +93,14 @@
         {
           "at": 4463700,
           "signalType": "ROUTE_DEVIATION"
+        },
+        {
+          "at": 4480402,
+          "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 4480500,
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH"
         }
       ],
       "signals": [
@@ -127,10 +135,26 @@
           "at": 4463700,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 4480402,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "EQUIPMENT_CARRIER_MISMATCH",
+          "contribution": 2.1,
+          "reliability": 0.7,
+          "at": 4480500,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [],
-      "unsitedSignalCount": 4,
+      "unsitedSignalCount": 6,
       "siteSpread": "UNSITED",
       "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
       "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
