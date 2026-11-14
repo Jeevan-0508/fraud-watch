@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-14T06:37:16.005Z",
+  "exported_at": "2026-11-14T18:13:18.753Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4557600
+    "sim_time_seconds_from_genesis": 4600800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -21,7 +21,7 @@
   },
   "observation": {
     "id": "MO-0096",
-    "status": "NEW",
+    "status": "DISMISSED",
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+HANDOVER_GAP+MANIFEST_CHANGED",
@@ -31,7 +31,7 @@
     "recurrence_count": 3,
     "first_observed_at": 4549793,
     "opened_at": 4555200,
-    "last_observed_at": 4557600,
+    "last_observed_at": 4558500,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
@@ -51,7 +51,7 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "NEW",
+      "status": "DISMISSED",
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+HANDOVER_GAP+MANIFEST_CHANGED",
@@ -61,7 +61,7 @@
       "recurrenceCount": 3,
       "firstObservedAt": 4549793,
       "openedAt": 4555200,
-      "lastObservedAt": 4557600,
+      "lastObservedAt": 4558500,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",

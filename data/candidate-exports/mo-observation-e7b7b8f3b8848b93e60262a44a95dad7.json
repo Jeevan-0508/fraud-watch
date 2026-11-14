@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-14T06:37:16.005Z",
+  "exported_at": "2026-11-14T18:13:18.753Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4557600
+    "sim_time_seconds_from_genesis": 4600800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -21,25 +21,26 @@
   },
   "observation": {
     "id": "MO-0095",
-    "status": "NEW",
+    "status": "DISMISSED",
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Fictitious Pickup",
     "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
-    "correlation_index": 13,
+    "correlation_index": 14,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
     "recurrence_count": 3,
     "first_observed_at": 4498800,
     "opened_at": 4503300,
-    "last_observed_at": 4534500,
+    "last_observed_at": 4562700,
     "related_pattern_id": "FFT-004",
     "signal_types": [
       "FALSE_MILESTONE_STAMP",
+      "GPS_SIGNAL_LOST",
       "HANDOVER_GAP",
       "MANIFEST_CHANGED",
       "SEAL_MISMATCH"
     ],
-    "signal_count": 4,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-019",
       "driver_id": "DRI-017",
@@ -52,20 +53,21 @@
     "context": {
       "kind": "fraud-watch-mo.v1",
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
-      "status": "NEW",
+      "status": "DISMISSED",
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Fictitious Pickup",
       "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
-      "correlationIndex": 13,
+      "correlationIndex": 14,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
       "recurrenceCount": 3,
       "firstObservedAt": 4498800,
       "openedAt": 4503300,
-      "lastObservedAt": 4534500,
+      "lastObservedAt": 4562700,
       "relatedPatternId": "FFT-004",
       "signalTypes": [
         "FALSE_MILESTONE_STAMP",
+        "GPS_SIGNAL_LOST",
         "HANDOVER_GAP",
         "MANIFEST_CHANGED",
         "SEAL_MISMATCH"
@@ -93,6 +95,10 @@
         {
           "at": 4527600,
           "signalType": "FALSE_MILESTONE_STAMP"
+        },
+        {
+          "at": 4561200,
+          "signalType": "GPS_SIGNAL_LOST"
         }
       ],
       "signals": [
@@ -127,18 +133,26 @@
           "at": 4527600,
           "facilityId": "FAC-018",
           "facilityName": "Central Gate"
+        },
+        {
+          "signalType": "GPS_SIGNAL_LOST",
+          "contribution": 1.2,
+          "reliability": 0.6,
+          "at": 4561200,
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate"
         }
       ],
       "sites": [
         {
-          "facilityId": "FAC-018",
-          "facilityName": "Central Gate",
+          "facilityId": "FAC-001",
+          "facilityName": "North Gate",
           "signalCount": 2
         },
         {
-          "facilityId": "FAC-001",
-          "facilityName": "North Gate",
-          "signalCount": 1
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate",
+          "signalCount": 2
         }
       ],
       "unsitedSignalCount": 1,
@@ -171,19 +185,20 @@
           ]
         },
         {
-          "id": "FFT-005",
-          "name": "Systematic Pilferage",
-          "votes": 3,
+          "id": "FFT-008",
+          "name": "GPS Spoofing and Telematics Manipulation",
+          "votes": 4,
           "keywords": [
-            "cargo",
-            "load theft",
-            "pilferage"
+            "falsif",
+            "gps",
+            "spoof",
+            "telemat"
           ]
         }
       ],
       "resemblanceNotes": [
         "Shares most vocabulary with Fictitious Pickup (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Transport Document Fraud, Systematic Pilferage.",
+        "Shares some vocabulary with: Transport Document Fraud, GPS Spoofing and Telematics Manipulation.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
