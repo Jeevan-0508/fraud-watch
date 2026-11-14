@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-13T19:49:16.220Z",
+  "exported_at": "2026-11-14T06:37:16.005Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4514400
+    "sim_time_seconds_from_genesis": 4557600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -23,21 +23,23 @@
     "id": "MO-0095",
     "status": "NEW",
     "classification": "POTENTIAL_NEW_MO",
-    "title": "Possible Systematic Pilferage",
+    "title": "Possible Fictitious Pickup",
     "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
-    "correlation_index": 16,
+    "correlation_index": 13,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
     "recurrence_count": 3,
     "first_observed_at": 4498800,
     "opened_at": 4503300,
-    "last_observed_at": 4506600,
-    "related_pattern_id": "FFT-005",
+    "last_observed_at": 4534500,
+    "related_pattern_id": "FFT-004",
     "signal_types": [
+      "FALSE_MILESTONE_STAMP",
+      "HANDOVER_GAP",
       "MANIFEST_CHANGED",
       "SEAL_MISMATCH"
     ],
-    "signal_count": 2,
+    "signal_count": 4,
     "entity_ids": {
       "truck_id": "TRU-019",
       "driver_id": "DRI-017",
@@ -52,17 +54,19 @@
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
       "status": "NEW",
       "classification": "POTENTIAL_NEW_MO",
-      "title": "Possible Systematic Pilferage",
+      "title": "Possible Fictitious Pickup",
       "signature": "MANIFEST_CHANGED+SEAL_MISMATCH",
-      "correlationIndex": 16,
+      "correlationIndex": 13,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
       "recurrenceCount": 3,
       "firstObservedAt": 4498800,
       "openedAt": 4503300,
-      "lastObservedAt": 4506600,
-      "relatedPatternId": "FFT-005",
+      "lastObservedAt": 4534500,
+      "relatedPatternId": "FFT-004",
       "signalTypes": [
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP",
         "MANIFEST_CHANGED",
         "SEAL_MISMATCH"
       ],
@@ -81,6 +85,14 @@
         {
           "at": 4503300,
           "signalType": "MANIFEST_CHANGED"
+        },
+        {
+          "at": 4527492,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 4527600,
+          "signalType": "FALSE_MILESTONE_STAMP"
         }
       ],
       "signals": [
@@ -99,9 +111,30 @@
           "at": 4503300,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 4527492,
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate"
+        },
+        {
+          "signalType": "FALSE_MILESTONE_STAMP",
+          "contribution": 1.7,
+          "reliability": 0.55,
+          "at": 4527600,
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate"
         }
       ],
       "sites": [
+        {
+          "facilityId": "FAC-018",
+          "facilityName": "Central Gate",
+          "signalCount": 2
+        },
         {
           "facilityId": "FAC-001",
           "facilityName": "North Gate",
@@ -109,67 +142,75 @@
         }
       ],
       "unsitedSignalCount": 1,
-      "siteSpread": "PARTLY_UNSITED",
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
       "relatedPatterns": [
         {
-          "id": "FFT-005",
-          "name": "Systematic Pilferage",
-          "votes": 2,
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 5,
           "keywords": [
             "cargo",
-            "pilferage"
+            "collection",
+            "deception",
+            "load theft",
+            "pickup"
           ]
         },
         {
-          "id": "FFT-007",
-          "name": "Seal Tampering and Reseal Fraud",
-          "votes": 2,
+          "id": "FFT-010",
+          "name": "Transport Document Fraud",
+          "votes": 5,
           "keywords": [
+            "consignment",
             "document",
-            "seal"
+            "falsif",
+            "forgery",
+            "proof of delivery"
           ]
         },
         {
-          "id": "FFT-001",
-          "name": "Double Brokering",
-          "votes": 1,
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 3,
           "keywords": [
-            "broker"
+            "cargo",
+            "load theft",
+            "pilferage"
           ]
         }
       ],
       "resemblanceNotes": [
-        "Shares most vocabulary with Systematic Pilferage (2 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Seal Tampering and Reseal Fraud, Double Brokering.",
+        "Shares most vocabulary with Fictitious Pickup (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Transport Document Fraud, Systematic Pilferage.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
         {
-          "title": "Persistent shortages on a lane.",
-          "actually": "A genuine count, labelling or system error at origin, or a units-of-measure mismatch between systems.",
-          "ruleOut": "Run a controlled count at origin and at destination for a defined period before treating the pattern as theft. Process error survives a controlled count; pilferage usually stops during it."
+          "title": "An unexpected driver and vehicle arrive for a booked load.",
+          "actually": "A legitimate last-minute reallocation within the operator, or an approved subcontractor, that was not communicated to the dock.",
+          "ruleOut": "Verify with the operator by calling the number held on the carrier master record, never the number offered by the driver, and confirm the substitution before releasing cargo."
         },
         {
-          "title": "Shortages concentrated on one driver.",
-          "actually": "That driver is simply assigned disproportionately to the affected lane or shift.",
-          "ruleOut": "Normalise by exposure. Compare shortages per movement or per consignment handled, never absolute counts, and test whether the lane or the individual is the better explanation."
+          "title": "Driver presents printed or photographed paperwork.",
+          "actually": "Normal practice for many small operators, particularly on subcontracted or spot work.",
+          "ruleOut": "Do not treat document format as the test. Test identity: does the vehicle belong to the contracted operator and does the operator confirm this driver for this load."
         },
         {
-          "title": "Losses concentrated on high-value items.",
-          "actually": "High-value items are more likely to be counted carefully and therefore more likely to have discrepancies detected at all.",
-          "ruleOut": "Compare detection rates as well as loss rates, and check whether low-value shortages are simply not being recorded."
+          "title": "A second driver or vehicle appears for the same movement after the first presentation.",
+          "actually": "A documented relay, recovery, shift change or approved substitution whose dispatch update did not reach the gate in time.",
+          "ruleOut": "Confirm the handover through the pre-existing carrier contact and retain the original and replacement identity records with the reason and time of the change."
         }
       ],
       "countermeasures": [
         {
           "bucket": "detective",
-          "text": "Aggregate discrepancies continuously by route, driver, vehicle, transfer point, consignee and SKU class, and alert on sustained deviation from baseline rather than on individual events."
+          "text": "Check the gate log against open bookings in real time so that a second presentation for the same reference is caught while the vehicle is still on site."
         },
         {
           "bucket": "responsive",
-          "text": "Establish process error or theft with a controlled count before any accusation, because this pattern has a genuinely high false-positive rate."
+          "text": "Treat the event as a theft from the moment of the mismatch, not from the expiry of the delivery window, since the first hours determine whether recovery is possible."
         }
       ]
     }

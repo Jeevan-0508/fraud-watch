@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-13T19:49:16.220Z",
+  "exported_at": "2026-11-14T06:37:16.005Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4514400
+    "sim_time_seconds_from_genesis": 4557600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -74,11 +74,13 @@
         "case_opened_at": 4503300,
         "first_observed_at": 4498800,
         "signal_types": [
+          "FALSE_MILESTONE_STAMP",
+          "HANDOVER_GAP",
           "MANIFEST_CHANGED",
           "SEAL_MISMATCH"
         ],
-        "related_pattern_id": "FFT-005",
-        "correlation_index": 16,
+        "related_pattern_id": "FFT-004",
+        "correlation_index": 13,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -99,6 +101,8 @@
       "relatedPatternId": null,
       "signalTypes": [
         "DRIVER_CHANGED",
+        "FALSE_MILESTONE_STAMP",
+        "HANDOVER_GAP",
         "MANIFEST_CHANGED",
         "SEAL_MISMATCH",
         "TRAILER_SWAPPED"
@@ -115,7 +119,7 @@
         },
         {
           "at": 4503300,
-          "signalType": "MANIFEST_CHANGED + SEAL_MISMATCH"
+          "signalType": "FALSE_MILESTONE_STAMP + HANDOVER_GAP + MANIFEST_CHANGED + SEAL_MISMATCH"
         }
       ],
       "signals": [],
