@@ -2,10 +2,10 @@
   "schema_version": "candidate-mo.v1",
   "kind": "candidate_mo",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-15T06:43:37.564Z",
+  "exported_at": "2026-11-15T18:55:45.340Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4644000
+    "sim_time_seconds_from_genesis": 4687200
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -61,10 +61,11 @@
         "signal_types": [
           "ACCOUNT_TAKEOVER",
           "DUPLICATE_ASSET_ID",
+          "EQUIPMENT_CARRIER_MISMATCH",
           "MANIFEST_CHANGED"
         ],
         "related_pattern_id": "FFT-003",
-        "correlation_index": 16,
+        "correlation_index": 41,
         "correlation_index_semantics": "synthetic_signal_index_not_probability"
       }
     ],
@@ -98,7 +99,7 @@
         },
         {
           "at": 4619700,
-          "signalType": "ACCOUNT_TAKEOVER + DUPLICATE_ASSET_ID + MANIFEST_CHANGED"
+          "signalType": "ACCOUNT_TAKEOVER + DUPLICATE_ASSET_ID + EQUIPMENT_CARRIER_MISMATCH + MANIFEST_CHANGED"
         }
       ],
       "signals": [],
