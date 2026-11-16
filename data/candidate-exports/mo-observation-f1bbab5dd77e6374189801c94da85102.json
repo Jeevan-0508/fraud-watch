@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-15T18:55:45.340Z",
+  "exported_at": "2026-11-16T06:42:23.377Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 4687200
+    "sim_time_seconds_from_genesis": 4730400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,21 +25,22 @@
     "classification": "KNOWN_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+HANDOVER_GAP+MANIFEST_CHANGED",
-    "correlation_index": 17,
+    "correlation_index": 27,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "MINIMAL",
+    "confidence_band": "WATCH",
     "recurrence_count": 4,
     "first_observed_at": 4657563,
     "opened_at": 4663500,
-    "last_observed_at": 4683900,
+    "last_observed_at": 4719000,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
       "HANDOVER_GAP",
       "MANIFEST_CHANGED",
-      "ROUTE_DEVIATION"
+      "ROUTE_DEVIATION",
+      "SEAL_MISMATCH"
     ],
-    "signal_count": 4,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-006",
       "driver_id": "DRI-031",
@@ -56,19 +57,20 @@
       "classification": "KNOWN_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+HANDOVER_GAP+MANIFEST_CHANGED",
-      "correlationIndex": 17,
+      "correlationIndex": 27,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "MINIMAL",
+      "confidenceBand": "WATCH",
       "recurrenceCount": 4,
       "firstObservedAt": 4657563,
       "openedAt": 4663500,
-      "lastObservedAt": 4683900,
+      "lastObservedAt": 4719000,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",
         "HANDOVER_GAP",
         "MANIFEST_CHANGED",
-        "ROUTE_DEVIATION"
+        "ROUTE_DEVIATION",
+        "SEAL_MISMATCH"
       ],
       "entityIds": {
         "truck_id": "TRU-006",
@@ -93,6 +95,10 @@
         {
           "at": 4680600,
           "signalType": "ROUTE_DEVIATION"
+        },
+        {
+          "at": 4712100,
+          "signalType": "SEAL_MISMATCH"
         }
       ],
       "signals": [
@@ -127,13 +133,21 @@
           "at": 4680600,
           "facilityId": "FAC-019",
           "facilityName": "East Border Gate"
+        },
+        {
+          "signalType": "SEAL_MISMATCH",
+          "contribution": 2.3,
+          "reliability": 0.75,
+          "at": 4712100,
+          "facilityId": "FAC-019",
+          "facilityName": "East Border Gate"
         }
       ],
       "sites": [
         {
           "facilityId": "FAC-019",
           "facilityName": "East Border Gate",
-          "signalCount": 1
+          "signalCount": 2
         }
       ],
       "unsitedSignalCount": 3,
@@ -156,8 +170,9 @@
         {
           "id": "FFT-004",
           "name": "Fictitious Pickup",
-          "votes": 4,
+          "votes": 5,
           "keywords": [
+            "cargo",
             "collection",
             "deception",
             "load theft",
@@ -165,18 +180,19 @@
           ]
         },
         {
-          "id": "FFT-002",
-          "name": "Phantom Carrier",
-          "votes": 2,
+          "id": "FFT-005",
+          "name": "Systematic Pilferage",
+          "votes": 3,
           "keywords": [
-            "identity",
-            "phantom"
+            "cargo",
+            "load theft",
+            "pilferage"
           ]
         }
       ],
       "resemblanceNotes": [
         "This signal combination has recurred, and shares most vocabulary with Carrier Identity Takeover (5 shared keywords). Recurrence is a fact about this simulation's own history, not about the pattern.",
-        "Shares some vocabulary with: Fictitious Pickup, Phantom Carrier.",
+        "Shares some vocabulary with: Fictitious Pickup, Systematic Pilferage.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
