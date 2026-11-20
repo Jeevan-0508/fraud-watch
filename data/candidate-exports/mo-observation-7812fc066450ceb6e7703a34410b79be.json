@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-19T20:44:22.253Z",
+  "exported_at": "2026-11-20T07:25:31.381Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 5054400
+    "sim_time_seconds_from_genesis": 5097600
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -23,24 +23,25 @@
     "id": "MO-0105",
     "status": "NEW",
     "classification": "POTENTIAL_NEW_MO",
-    "title": "Possible Carrier Identity Takeover",
+    "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN",
-    "correlation_index": 55,
+    "correlation_index": 23,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "ELEVATED",
+    "confidence_band": "WATCH",
     "recurrence_count": 3,
     "first_observed_at": 5045400,
     "opened_at": 5049900,
-    "last_observed_at": 5054400,
-    "related_pattern_id": "FFT-003",
+    "last_observed_at": 5077500,
+    "related_pattern_id": "FFT-008",
     "signal_types": [
       "ACCOUNT_TAKEOVER",
+      "DUPLICATE_ASSET_ID",
       "FALSE_MILESTONE_STAMP",
       "GPS_SIGNAL_LOST",
       "HANDOVER_GAP",
       "STAGED_BREAKDOWN"
     ],
-    "signal_count": 5,
+    "signal_count": 7,
     "entity_ids": {
       "truck_id": "TRU-010",
       "driver_id": "DRI-008",
@@ -55,18 +56,19 @@
       "disclaimer": "Synthetic simulation context only. These fields describe the simulator record and taxonomy context; they are not real-world evidence, a probability, a finding, or an accepted risk.",
       "status": "NEW",
       "classification": "POTENTIAL_NEW_MO",
-      "title": "Possible Carrier Identity Takeover",
+      "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "FALSE_MILESTONE_STAMP+HANDOVER_GAP+STAGED_BREAKDOWN",
-      "correlationIndex": 55,
+      "correlationIndex": 23,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "ELEVATED",
+      "confidenceBand": "WATCH",
       "recurrenceCount": 3,
       "firstObservedAt": 5045400,
       "openedAt": 5049900,
-      "lastObservedAt": 5054400,
-      "relatedPatternId": "FFT-003",
+      "lastObservedAt": 5077500,
+      "relatedPatternId": "FFT-008",
       "signalTypes": [
         "ACCOUNT_TAKEOVER",
+        "DUPLICATE_ASSET_ID",
         "FALSE_MILESTONE_STAMP",
         "GPS_SIGNAL_LOST",
         "HANDOVER_GAP",
@@ -99,6 +101,14 @@
         {
           "at": 5050800,
           "signalType": "GPS_SIGNAL_LOST"
+        },
+        {
+          "at": 5064300,
+          "signalType": "HANDOVER_GAP"
+        },
+        {
+          "at": 5074200,
+          "signalType": "DUPLICATE_ASSET_ID"
         }
       ],
       "signals": [
@@ -141,20 +151,55 @@
           "at": 5050800,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 5064300,
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)"
+        },
+        {
+          "signalType": "DUPLICATE_ASSET_ID",
+          "contribution": 2,
+          "reliability": 0.65,
+          "at": 5074200,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
+        {
+          "facilityId": "FAC-014",
+          "facilityName": "Cross-dock C (east)",
+          "signalCount": 1
+        },
         {
           "facilityId": "FAC-024",
           "facilityName": "Inland Depot Nordwest",
           "signalCount": 1
         }
       ],
-      "unsitedSignalCount": 4,
-      "siteSpread": "PARTLY_UNSITED",
+      "unsitedSignalCount": 5,
+      "siteSpread": "MULTI_SITE_PARTLY_UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
       "relatedPatterns": [
+        {
+          "id": "FFT-008",
+          "name": "GPS Spoofing and Telematics Manipulation",
+          "votes": 7,
+          "keywords": [
+            "falsif",
+            "gnss",
+            "gps",
+            "position",
+            "spoof",
+            "telemat",
+            "tracker"
+          ]
+        },
         {
           "id": "FFT-003",
           "name": "Carrier Identity Takeover",
@@ -178,49 +223,43 @@
             "forgery",
             "proof of delivery"
           ]
-        },
-        {
-          "id": "FFT-004",
-          "name": "Fictitious Pickup",
-          "votes": 4,
-          "keywords": [
-            "collection",
-            "deception",
-            "load theft",
-            "pickup"
-          ]
         }
       ],
       "resemblanceNotes": [
-        "Shares most vocabulary with Carrier Identity Takeover (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Transport Document Fraud, Fictitious Pickup.",
+        "Shares most vocabulary with GPS Spoofing and Telematics Manipulation (7 shared keywords). This exact combination of signal types has not recurred in this simulation.",
+        "Shares some vocabulary with: Carrier Identity Takeover, Transport Document Fraud.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
         {
-          "title": "Contact details for an existing carrier have changed.",
-          "actually": "Genuine rebranding, domain migration, office relocation, or acquisition.",
-          "ruleOut": "Confirm the change through the pre-existing channel, not the new one, and require confirmation from a known contact. A genuine change survives verification through the old channel; a takeover does not."
+          "title": "Total loss of position data.",
+          "actually": "Genuine coverage failure, tunnel or terrain shadowing, hardware fault, SIM or data plan failure, or regional interference not directed at this vehicle.",
+          "ruleOut": "Check whether other vehicles in the same area and time lost signal too. Broad regional loss indicates environmental or infrastructure causes; an isolated single-vehicle gap does not."
         },
         {
-          "title": "Bank account name differs from the operator name.",
-          "actually": "Legitimate use of a factoring company or a group treasury account, which is common in road freight.",
-          "ruleOut": "Require a written assignment or factoring agreement, and verify it with the factor directly. Legitimate factoring is documented and verifiable."
+          "title": "Implausible position jumps.",
+          "actually": "Known receiver artefacts, cold-start errors, multipath in urban canyons, or platform data-processing lag.",
+          "ruleOut": "Check whether the artefact appears across the fleet on the same hardware and firmware, which points to a technical rather than deliberate cause."
         },
         {
-          "title": "A primary administrator or account owner changes shortly before a movement.",
-          "actually": "A genuine ownership transfer, staff change, leave cover or managed-service transition.",
-          "ruleOut": "Verify the change through the previously known operator channel, record the effective date and preserve the old-to-new administrator audit trail."
+          "title": "Sustained regional GNSS interference.",
+          "actually": "Documented wide-area interference affecting all users in a region, which is well reported in parts of Europe and is not aimed at any particular vehicle.",
+          "ruleOut": "Compare against published interference monitoring for the region and period before drawing any conclusion about a specific movement."
+        },
+        {
+          "title": "A tracker goes silent at a terminal or after a short stop.",
+          "actually": "Battery failure, planned maintenance, coverage loss, wiring fault or a device replaced during a legitimate repair.",
+          "ruleOut": "Compare with fleet-wide outages, inspect the device and wiring, and reconcile the movement with independent records before attributing intent."
         }
       ],
       "countermeasures": [
         {
           "bucket": "detective",
-          "text": "Run automated lookalike-domain detection against the domains of onboarded carriers."
+          "text": "Run automated speed and distance plausibility checks between consecutive fixes and alert on physically impossible transitions."
         },
         {
           "bucket": "responsive",
-          "text": "Notify the impersonated operator, which is a victim and will usually cooperate, and which may already hold evidence."
+          "text": "Inspect and photograph the telematics installation before the vehicle re-enters service, since physical evidence of tampering disappears quickly."
         }
       ]
     }
