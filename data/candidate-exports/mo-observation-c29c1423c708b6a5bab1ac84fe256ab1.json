@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-21T19:23:46.137Z",
+  "exported_at": "2026-11-22T07:00:04.114Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 5227200
+    "sim_time_seconds_from_genesis": 5270400
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,20 +25,21 @@
     "classification": "POTENTIAL_NEW_MO",
     "title": "Possible Carrier Identity Takeover",
     "signature": "EQUIPMENT_CARRIER_MISMATCH+GPS_SIGNAL_LOST+MANIFEST_CHANGED",
-    "correlation_index": 55,
+    "correlation_index": 13,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
-    "confidence_band": "ELEVATED",
+    "confidence_band": "MINIMAL",
     "recurrence_count": 3,
     "first_observed_at": 5226000,
     "opened_at": 5227200,
-    "last_observed_at": 5227200,
+    "last_observed_at": 5265900,
     "related_pattern_id": "FFT-003",
     "signal_types": [
       "EQUIPMENT_CARRIER_MISMATCH",
       "GPS_SIGNAL_LOST",
+      "HANDOVER_GAP",
       "MANIFEST_CHANGED"
     ],
-    "signal_count": 3,
+    "signal_count": 4,
     "entity_ids": {
       "truck_id": "TRU-001",
       "driver_id": "DRI-003",
@@ -55,17 +56,18 @@
       "classification": "POTENTIAL_NEW_MO",
       "title": "Possible Carrier Identity Takeover",
       "signature": "EQUIPMENT_CARRIER_MISMATCH+GPS_SIGNAL_LOST+MANIFEST_CHANGED",
-      "correlationIndex": 55,
+      "correlationIndex": 13,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
-      "confidenceBand": "ELEVATED",
+      "confidenceBand": "MINIMAL",
       "recurrenceCount": 3,
       "firstObservedAt": 5226000,
       "openedAt": 5227200,
-      "lastObservedAt": 5227200,
+      "lastObservedAt": 5265900,
       "relatedPatternId": "FFT-003",
       "signalTypes": [
         "EQUIPMENT_CARRIER_MISMATCH",
         "GPS_SIGNAL_LOST",
+        "HANDOVER_GAP",
         "MANIFEST_CHANGED"
       ],
       "entityIds": {
@@ -87,6 +89,10 @@
         {
           "at": 5227200,
           "signalType": "EQUIPMENT_CARRIER_MISMATCH"
+        },
+        {
+          "at": 5259000,
+          "signalType": "HANDOVER_GAP"
         }
       ],
       "signals": [
@@ -113,10 +119,18 @@
           "at": 5227200,
           "facilityId": null,
           "facilityName": null
+        },
+        {
+          "signalType": "HANDOVER_GAP",
+          "contribution": 1.1,
+          "reliability": 0.55,
+          "at": 5259000,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [],
-      "unsitedSignalCount": 3,
+      "unsitedSignalCount": 4,
       "siteSpread": "UNSITED",
       "classificationReason": "TOO_FEW_SIGHTINGS",
       "classificationReasonNote": "seen before but fewer times than the familiarity floor, so the sighting count says nothing either way. Its vocabulary overlap may be wide; on this branch it was not consulted.",
@@ -134,6 +148,17 @@
           ]
         },
         {
+          "id": "FFT-004",
+          "name": "Fictitious Pickup",
+          "votes": 4,
+          "keywords": [
+            "collection",
+            "deception",
+            "load theft",
+            "pickup"
+          ]
+        },
+        {
           "id": "FFT-008",
           "name": "GPS Spoofing and Telematics Manipulation",
           "votes": 3,
@@ -142,20 +167,11 @@
             "spoof",
             "telemat"
           ]
-        },
-        {
-          "id": "FFT-002",
-          "name": "Phantom Carrier",
-          "votes": 2,
-          "keywords": [
-            "identity",
-            "phantom"
-          ]
         }
       ],
       "resemblanceNotes": [
         "Shares most vocabulary with Carrier Identity Takeover (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: GPS Spoofing and Telematics Manipulation, Phantom Carrier.",
+        "Shares some vocabulary with: Fictitious Pickup, GPS Spoofing and Telematics Manipulation.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
