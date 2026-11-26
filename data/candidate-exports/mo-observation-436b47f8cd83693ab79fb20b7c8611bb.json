@@ -2,10 +2,10 @@
   "schema_version": "mo-observation.v1",
   "kind": "mo_observation",
   "data_class": "synthetic_simulation",
-  "exported_at": "2026-11-26T08:30:30.746Z",
+  "exported_at": "2026-11-26T21:40:10.389Z",
   "simulation": {
     "seed": 424242,
-    "sim_time_seconds_from_genesis": 5637600
+    "sim_time_seconds_from_genesis": 5680800
   },
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
@@ -25,20 +25,21 @@
     "classification": "MO_VARIANT",
     "title": "Possible GPS Spoofing and Telematics Manipulation",
     "signature": "DUPLICATE_ASSET_ID+STAGED_BREAKDOWN+UNEXPECTED_STOP",
-    "correlation_index": 12,
+    "correlation_index": 16,
     "correlation_index_semantics": "synthetic_signal_index_not_probability",
     "confidence_band": "MINIMAL",
     "recurrence_count": 1,
     "first_observed_at": 5620500,
     "opened_at": 5621400,
-    "last_observed_at": 5626500,
+    "last_observed_at": 5660700,
     "related_pattern_id": "FFT-008",
     "signal_types": [
       "DUPLICATE_ASSET_ID",
+      "MANIFEST_CHANGED",
       "STAGED_BREAKDOWN",
       "UNEXPECTED_STOP"
     ],
-    "signal_count": 3,
+    "signal_count": 5,
     "entity_ids": {
       "truck_id": "TRU-015",
       "driver_id": "DRI-016",
@@ -55,16 +56,17 @@
       "classification": "MO_VARIANT",
       "title": "Possible GPS Spoofing and Telematics Manipulation",
       "signature": "DUPLICATE_ASSET_ID+STAGED_BREAKDOWN+UNEXPECTED_STOP",
-      "correlationIndex": 12,
+      "correlationIndex": 16,
       "correlationIndexSemantics": "synthetic_signal_index_not_probability",
       "confidenceBand": "MINIMAL",
       "recurrenceCount": 1,
       "firstObservedAt": 5620500,
       "openedAt": 5621400,
-      "lastObservedAt": 5626500,
+      "lastObservedAt": 5660700,
       "relatedPatternId": "FFT-008",
       "signalTypes": [
         "DUPLICATE_ASSET_ID",
+        "MANIFEST_CHANGED",
         "STAGED_BREAKDOWN",
         "UNEXPECTED_STOP"
       ],
@@ -87,6 +89,14 @@
         {
           "at": 5621400,
           "signalType": "STAGED_BREAKDOWN"
+        },
+        {
+          "at": 5650800,
+          "signalType": "UNEXPECTED_STOP"
+        },
+        {
+          "at": 5657400,
+          "signalType": "MANIFEST_CHANGED"
         }
       ],
       "signals": [
@@ -113,6 +123,22 @@
           "at": 5621400,
           "facilityId": "FAC-019",
           "facilityName": "East Border Gate"
+        },
+        {
+          "signalType": "UNEXPECTED_STOP",
+          "contribution": 0.6,
+          "reliability": 0.6,
+          "at": 5650800,
+          "facilityId": null,
+          "facilityName": null
+        },
+        {
+          "signalType": "MANIFEST_CHANGED",
+          "contribution": 1.3,
+          "reliability": 0.65,
+          "at": 5657400,
+          "facilityId": null,
+          "facilityName": null
         }
       ],
       "sites": [
@@ -122,7 +148,7 @@
           "signalCount": 2
         }
       ],
-      "unsitedSignalCount": 1,
+      "unsitedSignalCount": 3,
       "siteSpread": "PARTLY_UNSITED",
       "classificationReason": "VOCABULARY_SHARED_AT_FIRST_SIGHTING",
       "classificationReasonNote": "first sighting of this combination, and its vocabulary overlap with the top-ranked pattern is at or above the declared floor.",
@@ -149,11 +175,19 @@
             "roadside",
             "truck stop"
           ]
+        },
+        {
+          "id": "FFT-001",
+          "name": "Double Brokering",
+          "votes": 1,
+          "keywords": [
+            "broker"
+          ]
         }
       ],
       "resemblanceNotes": [
         "Shares most vocabulary with GPS Spoofing and Telematics Manipulation (5 shared keywords). This exact combination of signal types has not recurred in this simulation.",
-        "Shares some vocabulary with: Unsecured Parking Theft.",
+        "Shares some vocabulary with: Unsecured Parking Theft, Double Brokering.",
         "Nothing here compares the case's signal types against the pattern's documented indicators. Resemblance is a keyword vote over the pattern's name, category and aliases, and a vote count cannot produce a difference. A section headed \"What makes this different\" listing resemblance sentences stated a comparison nobody made."
       ],
       "legitimateExplanations": [
