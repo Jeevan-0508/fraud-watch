@@ -1,6 +1,6 @@
 {
   "schema_version": "candidate-export-manifest.v1",
-  "exported_at": "2026-11-28T07:57:48.594Z",
+  "exported_at": "2026-11-28T20:14:51.968Z",
   "source": {
     "repository": "Jeevan-0508/fraud-watch",
     "authenticity": "unverified_export",
@@ -802,6 +802,24 @@
       "id": "MO-0116",
       "classification": "KNOWN_MO",
       "file": "mo-observation-27e7d1067f5b1fa2fbd9e0230aea54ad.json",
+      "schema_version": "mo-observation.v1"
+    },
+    {
+      "id": "MO-0117",
+      "classification": "KNOWN_MO",
+      "file": "mo-observation-b53fd5de66228d2567f761dc7f62af91.json",
+      "schema_version": "mo-observation.v1"
+    },
+    {
+      "id": "MO-0118",
+      "classification": "KNOWN_MO",
+      "file": "mo-observation-ab1b3b96818322c7cae72f6c6f810680.json",
+      "schema_version": "mo-observation.v1"
+    },
+    {
+      "id": "MO-0119",
+      "classification": "KNOWN_MO",
+      "file": "mo-observation-6909c727357876ce6ffd71b83c080c8f.json",
       "schema_version": "mo-observation.v1"
     }
   ]
